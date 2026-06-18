@@ -12,7 +12,13 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-@RestControllerAdvice
+@RestControllerAdvice(assignableTypes = {
+        AuthController.class,
+        PublicController.class,
+        UserController.class,
+        TeacherController.class,
+        AdminController.class
+})
 public class ApiExceptionHandler {
 
     @ExceptionHandler(ApiException.class)
