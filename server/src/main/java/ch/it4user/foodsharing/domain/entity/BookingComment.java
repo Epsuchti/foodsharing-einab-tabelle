@@ -11,15 +11,15 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "slot_comments")
+@Table(name = "booking_comments")
 @Getter
 @Setter
 @NoArgsConstructor
-public class SlotComment extends BaseEntity {
+public class BookingComment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "slot_id", nullable = false)
-    private Slot slot;
+    @JoinColumn(name = "booking_user_id", nullable = false)
+    private BookingUser bookingUser;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "teacher_id", nullable = false)
@@ -27,5 +27,4 @@ public class SlotComment extends BaseEntity {
 
     @Column(nullable = false, length = 4000)
     private String comment;
-
 }

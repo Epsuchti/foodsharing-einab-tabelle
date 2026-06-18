@@ -8,9 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BookingUserRepository extends JpaRepository<BookingUser, UUID> {
 
-    Optional<BookingUser> findByEmailIgnoreCaseAndFoodsharingIdIgnoreCase(String email, String foodsharingId);
+    Optional<BookingUser> findByFoodsharingIdIgnoreCase(String foodsharingId);
 
     List<BookingUser> findAllByEmailIgnoreCase(String email);
 
     boolean existsByEmailIgnoreCase(String email);
+
+    boolean existsByFoodsharingIdIgnoreCase(String foodsharingId);
 }

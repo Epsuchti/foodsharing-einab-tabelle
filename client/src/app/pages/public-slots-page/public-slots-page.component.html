@@ -70,6 +70,7 @@
     @if (selectedSlot) {
       <p class="empty-state">{{ i18n.categoryLabel(selectedSlot.category) }} - {{ selectedSlot.startDateTime | date: 'medium' }} - {{ selectedSlot.location ?? '-' }}</p>
     }
+    <input pInputText formControlName="name" [placeholder]="i18n.t('common.name')" />
     <input pInputText formControlName="email" [placeholder]="i18n.t('common.email')" />
     <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" />
     <input pInputText formControlName="phoneNumber" [placeholder]="i18n.t('common.phoneNumber')" />

@@ -1,13 +1,15 @@
 package ch.it4user.foodsharing.service;
 
 import ch.it4user.foodsharing.domain.entity.EinAb;
+import ch.it4user.foodsharing.domain.entity.BookingComment;
+import ch.it4user.foodsharing.domain.entity.BookingUser;
 import ch.it4user.foodsharing.domain.entity.Slot;
-import ch.it4user.foodsharing.domain.entity.SlotComment;
 import ch.it4user.foodsharing.domain.entity.Teacher;
 import ch.it4user.foodsharing.domain.enumtype.EinAbCategory;
 import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
 import ch.it4user.foodsharing.repository.EinAbRepository;
-import ch.it4user.foodsharing.repository.SlotCommentRepository;
+import ch.it4user.foodsharing.repository.BookingCommentRepository;
+import ch.it4user.foodsharing.repository.BookingUserRepository;
 import ch.it4user.foodsharing.repository.SlotRepository;
 import ch.it4user.foodsharing.repository.TeacherRepository;
 import java.time.OffsetDateTime;
@@ -28,20 +30,23 @@ public class TeacherService {
     private final TeacherRepository teacherRepository;
     private final EinAbRepository einAbRepository;
     private final SlotRepository slotRepository;
-    private final SlotCommentRepository slotCommentRepository;
+    private final BookingUserRepository bookingUserRepository;
+    private final BookingCommentRepository bookingCommentRepository;
     private final NotificationService notificationService;
     private final IcalImportService icalImportService;
 
     public TeacherService(TeacherRepository teacherRepository,
                           EinAbRepository einAbRepository,
                           SlotRepository slotRepository,
-                          SlotCommentRepository slotCommentRepository,
+                          BookingUserRepository bookingUserRepository,
+                          BookingCommentRepository bookingCommentRepository,
                           NotificationService notificationService,
                           IcalImportService icalImportService) {
         this.teacherRepository = teacherRepository;
         this.einAbRepository = einAbRepository;
         this.slotRepository = slotRepository;
-        this.slotCommentRepository = slotCommentRepository;
+        this.bookingUserRepository = bookingUserRepository;
+        this.bookingCommentRepository = bookingCommentRepository;
         this.notificationService = notificationService;
         this.icalImportService = icalImportService;
     }
@@ -71,19 +76,19 @@ public class TeacherService {
         return slotRepository.findAllByTeacherAndStatuses(teacher, Set.of(SlotStatus.BOOKED, SlotStatus.DONE));
     }
 
-    public List<SlotComment> findSlotComments(Teacher teacher, UUID slotId, boolean admin) {
-        Slot slot = requireTeacherSlot(teacher, slotId, admin);
-        return slotCommentRepository.findAllBySlotOrderByCreatedAtAsc(slot);
+    public List<BookingComment> findBookingComments(UUID bookingUserId) {
+        BookingUser bookingUser = requireBookingUser(bookingUserId);
+        return bookingCommentRepository.findAllByBookingUserOrderByCreatedAtAsc(bookingUser);
     }
 
     @Transactional
-    public SlotComment addSlotComment(Teacher teacher, UUID slotId, String comment, boolean admin) {
-        Slot slot = requireTeacherSlot(teacher, slotId, admin);
-        SlotComment slotComment = new SlotComment();
-        slotComment.setSlot(slot);
-        slotComment.setTeacher(teacher);
-        slotComment.setComment(comment.trim());
-        return slotCommentRepository.save(slotComment);
+    public BookingComment addBookingComment(Teacher teacher, UUID bookingUserId, String comment) {
+        BookingUser bookingUser = requireBookingUser(bookingUserId);
+        BookingComment bookingComment = new BookingComment();
+        bookingComment.setBookingUser(bookingUser);
+        bookingComment.setTeacher(teacher);
+        bookingComment.setComment(comment.trim());
+        return bookingCommentRepository.save(bookingComment);
     }
 
     @Transactional
@@ -222,6 +227,11 @@ public class TeacherService {
             throw new ApiException(HttpStatus.FORBIDDEN, "You can only manage your own EinAbs");
         }
         return einAb;
+    }
+
+    private BookingUser requireBookingUser(UUID bookingUserId) {
+        return bookingUserRepository.findById(bookingUserId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Booking user not found"));
     }
 
     private Slot requireTeacherSlot(Teacher teacher, UUID slotId, boolean admin) {

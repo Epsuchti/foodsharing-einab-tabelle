@@ -89,6 +89,17 @@ body {
   border-radius: 8px;
 }
 
+.accordion-header {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.booking-comments {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
 .p-toast .p-toast-message,
 .p-toast .p-toast-message-content {
   opacity: 1 !important;
@@ -127,4 +138,14 @@ body {
 
 .p-toast .p-toast-message-content {
   border-radius: 8px;
+}
+
+.p-toast .p-toast-summary,
+.p-toast .p-toast-detail,
+.p-toast .p-toast-icon-close {
+  color: #000 !important;
+}
+
+.p-toast .p-toast-icon-close:hover {
+  color: #000 !important;
 }

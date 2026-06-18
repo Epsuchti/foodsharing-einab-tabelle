@@ -289,41 +289,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BookingListResponse'
-  /api/teacher/slots/{slotId}/comments:
+  /api/teacher/bookings/{bookingUserId}/comments:
     get:
       tags: [teacher]
-      operationId: getTeacherSlotComments
+      operationId: getTeacherBookingComments
       parameters:
-        - $ref: '#/components/parameters/SlotId'
+        - name: bookingUserId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
-          description: Slot comments
+          description: Booking comments
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SlotCommentListResponse'
+                $ref: '#/components/schemas/BookingCommentListResponse'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
     post:
       tags: [teacher]
-      operationId: addTeacherSlotComment
+      operationId: addTeacherBookingComment
       parameters:
-        - $ref: '#/components/parameters/SlotId'
+        - name: bookingUserId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateSlotCommentRequest'
+              $ref: '#/components/schemas/CreateBookingCommentRequest'
       responses:
         '201':
           description: Comment created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SlotCommentResponse'
+                $ref: '#/components/schemas/BookingCommentResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -524,11 +534,15 @@ components:
       enum: [USER, TEACHER, ADMIN]
     BookSlotRequest:
       type: object
-      required: [email, foodsharingId, phoneNumber]
+      required: [email, name, foodsharingId, phoneNumber]
       properties:
         email:
           type: string
           format: email
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
         foodsharingId:
           type: string
           minLength: 1
@@ -654,7 +668,7 @@ components:
                 $ref: '#/components/schemas/IcalCandidate'
     BookingUserResponse:
       type: object
-      required: [id, email, foodsharingId, phoneNumber, createdAt, updatedAt]
+      required: [id, email, name, foodsharingId, phoneNumber, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -662,6 +676,8 @@ components:
         email:
           type: string
           format: email
+        name:
+          type: string
         foodsharingId:
           type: string
         phoneNumber:
@@ -840,7 +856,7 @@ components:
           type: integer
           minimum: 1
           maximum: 3
-    CreateSlotCommentRequest:
+    CreateBookingCommentRequest:
       type: object
       required: [comment]
       properties:
@@ -848,14 +864,14 @@ components:
           type: string
           minLength: 1
           maxLength: 4000
-    SlotCommentResponse:
+    BookingCommentResponse:
       type: object
-      required: [id, slotId, teacherId, teacherName, comment, createdAt]
+      required: [id, bookingUserId, teacherId, teacherName, comment, createdAt]
       properties:
         id:
           type: string
           format: uuid
-        slotId:
+        bookingUserId:
           type: string
           format: uuid
         teacherId:
@@ -868,14 +884,14 @@ components:
         createdAt:
           type: string
           format: date-time
-    SlotCommentListResponse:
+    BookingCommentListResponse:
       type: object
       required: [comments]
       properties:
         comments:
           type: array
           items:
-            $ref: '#/components/schemas/SlotCommentResponse'
+            $ref: '#/components/schemas/BookingCommentResponse'
     UpdateSlotStatusRequest:
       type: object
       required: [status]

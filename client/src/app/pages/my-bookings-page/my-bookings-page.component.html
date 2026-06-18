@@ -3,6 +3,7 @@
   <p-table [value]="bookings()">
     <ng-template pTemplate="header">
       <tr>
+        <th>{{ i18n.t('common.name') }}</th>
         <th>{{ i18n.t('slots.category') }}</th>
         <th>{{ i18n.t('slots.date') }}</th>
         <th>{{ i18n.t('slots.teacher') }}</th>
@@ -14,6 +15,7 @@
     </ng-template>
     <ng-template pTemplate="body" let-booking>
       <tr>
+        <td>{{ booking.bookingUser?.name ?? '-' }}</td>
         <td>{{ i18n.categoryLabel(booking.category) }}</td>
         <td>{{ booking.startDateTime | date: 'medium' }}</td>
         <td>{{ booking.teacherName }}</td>

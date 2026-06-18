@@ -1,10 +1,10 @@
 package ch.it4user.foodsharing.web;
 
+import ch.it4user.foodsharing.domain.entity.BookingComment;
 import ch.it4user.foodsharing.domain.entity.BookingUser;
 import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.NotificationSubscription;
 import ch.it4user.foodsharing.domain.entity.Slot;
-import ch.it4user.foodsharing.domain.entity.SlotComment;
 import ch.it4user.foodsharing.domain.entity.Teacher;
 import ch.it4user.foodsharing.openapi.model.AdminEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.AvailableSlotListResponse;
@@ -15,8 +15,8 @@ import ch.it4user.foodsharing.openapi.model.BookingUserListResponse;
 import ch.it4user.foodsharing.openapi.model.BookingUserResponse;
 import ch.it4user.foodsharing.openapi.model.EinAbResponse;
 import ch.it4user.foodsharing.openapi.model.NotificationSubscriptionResponse;
-import ch.it4user.foodsharing.openapi.model.SlotCommentListResponse;
-import ch.it4user.foodsharing.openapi.model.SlotCommentResponse;
+import ch.it4user.foodsharing.openapi.model.BookingCommentListResponse;
+import ch.it4user.foodsharing.openapi.model.BookingCommentResponse;
 import ch.it4user.foodsharing.openapi.model.SlotResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbResponse;
@@ -60,6 +60,7 @@ public class ApiModelMapper {
         BookingUserResponse response = new BookingUserResponse();
         response.setId(bookingUser.getId());
         response.setEmail(bookingUser.getEmail());
+        response.setName(bookingUser.getName());
         response.setFoodsharingId(bookingUser.getFoodsharingId());
         response.setPhoneNumber(bookingUser.getPhoneNumber());
         response.setCreatedAt(bookingUser.getCreatedAt());
@@ -162,10 +163,10 @@ public class ApiModelMapper {
         return response;
     }
 
-    public SlotCommentResponse toSlotCommentResponse(SlotComment comment) {
-        SlotCommentResponse response = new SlotCommentResponse();
+    public BookingCommentResponse toBookingCommentResponse(BookingComment comment) {
+        BookingCommentResponse response = new BookingCommentResponse();
         response.setId(comment.getId());
-        response.setSlotId(comment.getSlot().getId());
+        response.setBookingUserId(comment.getBookingUser().getId());
         response.setTeacherId(comment.getTeacher().getId());
         response.setTeacherName(comment.getTeacher().getName());
         response.setComment(comment.getComment());
@@ -173,9 +174,9 @@ public class ApiModelMapper {
         return response;
     }
 
-    public SlotCommentListResponse toSlotCommentListResponse(List<SlotComment> comments) {
-        SlotCommentListResponse response = new SlotCommentListResponse();
-        response.setComments(comments.stream().map(this::toSlotCommentResponse).toList());
+    public BookingCommentListResponse toBookingCommentListResponse(List<BookingComment> comments) {
+        BookingCommentListResponse response = new BookingCommentListResponse();
+        response.setComments(comments.stream().map(this::toBookingCommentResponse).toList());
         return response;
     }
 

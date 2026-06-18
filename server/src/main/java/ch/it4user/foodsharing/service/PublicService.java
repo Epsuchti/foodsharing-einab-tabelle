@@ -35,7 +35,7 @@ public class PublicService {
     }
 
     @Transactional
-    public Slot bookSlot(UUID slotId, String email, String foodsharingId, String phoneNumber) {
+    public Slot bookSlot(UUID slotId, String email, String name, String foodsharingId, String phoneNumber) {
         String normalizedEmail = email.trim().toLowerCase();
         if (teacherRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new ApiException(HttpStatus.FORBIDDEN, "Teachers cannot book appointments");
@@ -46,7 +46,7 @@ public class PublicService {
             throw new ApiException(HttpStatus.CONFLICT, "Slot is no longer available");
         }
 
-        BookingUser bookingUser = bookingUserService.getOrCreate(normalizedEmail, foodsharingId.trim(), phoneNumber.trim());
+        BookingUser bookingUser = bookingUserService.getOrCreate(normalizedEmail, name, foodsharingId, phoneNumber);
         if (slotRepository.existsByBookingUserAndStatusInAndEinAbTeacher(
                 bookingUser, ACTIVE_BOOKING_STATUSES, slot.getEinAb().getTeacher())) {
             throw new ApiException(HttpStatus.CONFLICT, "You already have an appointment with this teacher");

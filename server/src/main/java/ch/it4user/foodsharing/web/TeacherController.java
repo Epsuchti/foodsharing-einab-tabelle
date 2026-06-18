@@ -4,10 +4,10 @@ import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.Teacher;
 import ch.it4user.foodsharing.openapi.api.TeacherApi;
 import ch.it4user.foodsharing.openapi.model.BookingListResponse;
-import ch.it4user.foodsharing.openapi.model.CreateSlotCommentRequest;
+import ch.it4user.foodsharing.openapi.model.BookingCommentListResponse;
+import ch.it4user.foodsharing.openapi.model.BookingCommentResponse;
+import ch.it4user.foodsharing.openapi.model.CreateBookingCommentRequest;
 import ch.it4user.foodsharing.openapi.model.IcalCandidateListResponse;
-import ch.it4user.foodsharing.openapi.model.SlotCommentListResponse;
-import ch.it4user.foodsharing.openapi.model.SlotCommentResponse;
 import ch.it4user.foodsharing.openapi.model.SlotResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbResponse;
@@ -98,20 +98,19 @@ public class TeacherController implements TeacherApi {
     }
 
     @Override
-    public ResponseEntity<SlotCommentResponse> addTeacherSlotComment(UUID slotId,
-                                                                     CreateSlotCommentRequest createSlotCommentRequest) {
-        return ResponseEntity.status(201).body(mapper.toSlotCommentResponse(
-                teacherService.addSlotComment(
+    public ResponseEntity<BookingCommentResponse> addTeacherBookingComment(UUID bookingUserId,
+                                                                           CreateBookingCommentRequest createBookingCommentRequest) {
+        return ResponseEntity.status(201).body(mapper.toBookingCommentResponse(
+                teacherService.addBookingComment(
                         currentActorService.requireTeacher(),
-                        slotId,
-                        createSlotCommentRequest.getComment(),
-                        currentActorService.isAdmin())));
+                        bookingUserId,
+                        createBookingCommentRequest.getComment())));
     }
 
     @Override
-    public ResponseEntity<SlotCommentListResponse> getTeacherSlotComments(UUID slotId) {
-        return ResponseEntity.ok(mapper.toSlotCommentListResponse(
-                teacherService.findSlotComments(currentActorService.requireTeacher(), slotId, currentActorService.isAdmin())));
+    public ResponseEntity<BookingCommentListResponse> getTeacherBookingComments(UUID bookingUserId) {
+        return ResponseEntity.ok(mapper.toBookingCommentListResponse(
+                teacherService.findBookingComments(bookingUserId)));
     }
 
     @Override

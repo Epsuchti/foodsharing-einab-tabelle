@@ -23,12 +23,17 @@ databaseChangeLog:
               - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
               - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
               - column: {name: email, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: name, type: VARCHAR(200), constraints: {nullable: false}}
               - column: {name: foodsharing_id, type: VARCHAR(100), constraints: {nullable: false}}
               - column: {name: phone_number, type: VARCHAR(50), constraints: {nullable: false}}
         - addUniqueConstraint:
             tableName: booking_users
-            columnNames: email, foodsharing_id
-            constraintName: uq_booking_users_email_foodsharing
+            columnNames: email
+            constraintName: uq_booking_users_email
+        - addUniqueConstraint:
+            tableName: booking_users
+            columnNames: foodsharing_id
+            constraintName: uq_booking_users_foodsharing_id
         - createTable:
             tableName: einabs
             columns:
@@ -94,6 +99,28 @@ databaseChangeLog:
             referencedTableName: teachers
             referencedColumnNames: id
             constraintName: fk_slot_comments_teacher
+        - createTable:
+            tableName: booking_comments
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: booking_user_id, type: UUID, constraints: {nullable: false}}
+              - column: {name: teacher_id, type: UUID, constraints: {nullable: false}}
+              - column: {name: comment, type: VARCHAR(4000), constraints: {nullable: false}}
+        - addForeignKeyConstraint:
+            baseTableName: booking_comments
+            baseColumnNames: booking_user_id
+            referencedTableName: booking_users
+            referencedColumnNames: id
+            constraintName: fk_booking_comments_booking_user
+        - addForeignKeyConstraint:
+            baseTableName: booking_comments
+            baseColumnNames: teacher_id
+            referencedTableName: teachers
+            referencedColumnNames: id
+            constraintName: fk_booking_comments_teacher
         - createTable:
             tableName: notification_subscriptions
             columns:

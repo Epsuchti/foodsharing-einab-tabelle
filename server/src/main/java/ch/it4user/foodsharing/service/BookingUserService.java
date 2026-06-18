@@ -3,6 +3,7 @@ package ch.it4user.foodsharing.service;
 import ch.it4user.foodsharing.domain.entity.BookingUser;
 import ch.it4user.foodsharing.repository.BookingUserRepository;
 import java.util.List;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,17 +17,27 @@ public class BookingUserService {
     }
 
     @Transactional
-    public BookingUser getOrCreate(String email, String foodsharingId, String phoneNumber) {
-        return bookingUserRepository.findByEmailIgnoreCaseAndFoodsharingIdIgnoreCase(email, foodsharingId)
+    public BookingUser getOrCreate(String email, String name, String foodsharingId, String phoneNumber) {
+        String normalizedEmail = email.trim().toLowerCase();
+        String normalizedName = name.trim();
+        String normalizedFoodsharingId = foodsharingId.trim();
+        String normalizedPhoneNumber = phoneNumber.trim();
+
+        return bookingUserRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId)
                 .map(existing -> {
-                    existing.setPhoneNumber(phoneNumber.trim());
+                    assertEmailIsAvailable(normalizedEmail, existing.getId());
+                    existing.setEmail(normalizedEmail);
+                    existing.setName(normalizedName);
+                    existing.setPhoneNumber(normalizedPhoneNumber);
                     return existing;
                 })
                 .orElseGet(() -> {
+                    assertEmailIsAvailable(normalizedEmail, null);
                     BookingUser bookingUser = new BookingUser();
-                    bookingUser.setEmail(email.trim().toLowerCase());
-                    bookingUser.setFoodsharingId(foodsharingId.trim());
-                    bookingUser.setPhoneNumber(phoneNumber.trim());
+                    bookingUser.setEmail(normalizedEmail);
+                    bookingUser.setName(normalizedName);
+                    bookingUser.setFoodsharingId(normalizedFoodsharingId);
+                    bookingUser.setPhoneNumber(normalizedPhoneNumber);
                     return bookingUserRepository.save(bookingUser);
                 });
     }
@@ -37,5 +48,13 @@ public class BookingUserService {
 
     public List<BookingUser> findAll() {
         return bookingUserRepository.findAll();
+    }
+
+    private void assertEmailIsAvailable(String email, java.util.UUID currentBookingUserId) {
+        boolean inUseByAnotherBookingUser = bookingUserRepository.findAllByEmailIgnoreCase(email).stream()
+                .anyMatch(user -> currentBookingUserId == null || !user.getId().equals(currentBookingUserId));
+        if (inUseByAnotherBookingUser) {
+            throw new ApiException(HttpStatus.CONFLICT, "Email already exists for another booking user");
+        }
     }
 }

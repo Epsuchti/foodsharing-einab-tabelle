@@ -17,6 +17,9 @@ public class BookingUser extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String email;
 
+    @Column(nullable = false, length = 200)
+    private String name;
+
     @Column(nullable = false, length = 100)
     private String foodsharingId;
 

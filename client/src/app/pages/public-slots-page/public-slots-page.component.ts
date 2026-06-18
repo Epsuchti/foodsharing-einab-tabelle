@@ -64,6 +64,7 @@ export class PublicSlotsPageComponent implements OnInit {
 
   protected readonly bookingForm = inject(FormBuilder).nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
+    name: ['', [Validators.required]],
     foodsharingId: ['', [Validators.required]],
     phoneNumber: ['', [Validators.required, Validators.minLength(3)]]
   });

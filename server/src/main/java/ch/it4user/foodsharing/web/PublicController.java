@@ -47,7 +47,12 @@ public class PublicController implements PublicApi {
     @Override
     public ResponseEntity<BookingDetailResponse> bookSlot(UUID slotId, BookSlotRequest bookSlotRequest) {
         return ResponseEntity.ok(mapper.toBookingDetailResponse(
-                publicService.bookSlot(slotId, bookSlotRequest.getEmail(), bookSlotRequest.getFoodsharingId(), bookSlotRequest.getPhoneNumber())));
+                publicService.bookSlot(
+                        slotId,
+                        bookSlotRequest.getEmail(),
+                        bookSlotRequest.getName(),
+                        bookSlotRequest.getFoodsharingId(),
+                        bookSlotRequest.getPhoneNumber())));
     }
 
     @Override

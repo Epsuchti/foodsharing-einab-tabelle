@@ -81,6 +81,7 @@
         <tr>
             <th>{{ i18n.t('common.id') }}</th>
           <th>{{ i18n.t('common.status') }}</th>
+          <th>{{ i18n.t('common.name') }}</th>
           <th>{{ i18n.t('common.foodsharingId') }}</th>
           <th>{{ i18n.t('common.actions') }}</th>
         </tr>
@@ -89,11 +90,11 @@
         <tr>
           <td>{{ slot.id }}</td>
           <td><p-tag [value]="i18n.statusLabel(slot.status)"></p-tag></td>
+          <td>{{ slot.bookingUser?.name ?? '-' }}</td>
           <td>{{ slot.bookingUser?.foodsharingId ?? '-' }}</td>
-          <td class="actions-cell">
+        <td class="actions-cell">
             <p-select [options]="slotStatusOptions()" [(ngModel)]="slotStatusDraft[slot.id]" optionLabel="label" optionValue="value"></p-select>
             <button pButton size="small" icon="pi pi-save" (click)="saveSlotStatus(slot)"></button>
-            <button pButton size="small" severity="secondary" icon="pi pi-comments" (click)="openComments(slot)"></button>
           </td>
         </tr>
       </ng-template>
@@ -101,61 +102,41 @@
   </p-card>
 }
 
-<p-card>
-  <ng-template pTemplate="title">{{ i18n.t('teacher.bookings') }}</ng-template>
-  <p-table [value]="bookings()">
-    <ng-template pTemplate="header">
-      <tr>
-        <th>{{ i18n.t('slots.category') }}</th>
-        <th>{{ i18n.t('slots.date') }}</th>
-        <th>{{ i18n.t('common.location') }}</th>
-        <th>{{ i18n.t('common.foodsharingId') }}</th>
-        <th>{{ i18n.t('common.phoneNumber') }}</th>
-        <th>{{ i18n.t('common.status') }}</th>
-      </tr>
-    </ng-template>
-    <ng-template pTemplate="body" let-booking>
-      <tr>
-        <td>{{ i18n.categoryLabel(booking.category) }}</td>
-        <td>{{ booking.startDateTime | date: 'medium' }}</td>
-        <td>{{ booking.location ?? '-' }}</td>
-        <td>{{ booking.bookingUser?.foodsharingId }}</td>
-        <td>{{ booking.bookingUser?.phoneNumber ?? '-' }}</td>
-        <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
-      </tr>
-    </ng-template>
-  </p-table>
-</p-card>
+<p-dialog
+  [(visible)]="einabDialogVisible"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: 'min(42rem, 96vw)' }"
+  [header]="editingEinAb() ? i18n.t('teacher.editEinab') : i18n.t('teacher.newEinab')">
+  <form class="stack-form" [formGroup]="einabForm">
+    <label>
+      <span>{{ i18n.t('slots.category') }}</span>
+      <p-select [options]="categoryOptions()" formControlName="category" optionLabel="label" optionValue="value"></p-select>
+    </label>
 
-<p-dialog [(visible)]="einabDialogVisible" [modal]="true" [header]="editingEinAb() ? i18n.t('teacher.editEinab') : i18n.t('teacher.newEinab')" [style]="{ width: '34rem', maxWidth: '95vw' }">
-  <form class="stack-form" [formGroup]="einabForm" (ngSubmit)="saveEinAb()">
-    <p-select [options]="categoryOptions()" formControlName="category" optionLabel="label" optionValue="value"></p-select>
-    <p-datepicker formControlName="startDateTime" [showTime]="true" hourFormat="24"></p-datepicker>
-    <input pInputText formControlName="location" [placeholder]="i18n.t('common.location')" />
-    <div class="checkbox-row">
+    <label>
+      <span>{{ i18n.t('slots.date') }}</span>
+      <p-datepicker formControlName="startDateTime" [showIcon]="true" [showTime]="true" hourFormat="24"></p-datepicker>
+    </label>
+
+    <label>
+      <span>{{ i18n.t('common.location') }}</span>
+      <input pInputText type="text" formControlName="location" />
+    </label>
+
+    <label>
+      <span>{{ i18n.t('common.slotCount') }}</span>
+      <p-select [options]="slotCountOptions" formControlName="slotCount" optionLabel="label" optionValue="value"></p-select>
+    </label>
+
+    <label class="checkbox-row">
       <p-checkbox formControlName="visitFairteiler" [binary]="true"></p-checkbox>
-      <label>{{ i18n.t('common.visitFairteiler') }}</label>
-    </div>
-    <p-select [options]="slotCountOptions" formControlName="slotCount" optionLabel="label" optionValue="value"></p-select>
+      <span>{{ i18n.t('common.visitFairteiler') }}</span>
+    </label>
+
     <div class="dialog-actions">
       <button pButton type="button" severity="secondary" [label]="i18n.t('common.cancel')" (click)="einabDialogVisible = false"></button>
-      <button pButton type="submit" [label]="i18n.t('common.save')" [disabled]="einabForm.invalid || saveLoading()"></button>
+      <button pButton type="button" icon="pi pi-save" [label]="i18n.t('common.save')" [loading]="saveLoading()" [disabled]="einabForm.invalid" (click)="saveEinAb()"></button>
     </div>
-  </form>
-</p-dialog>
-
-<p-dialog [(visible)]="commentsVisible" [modal]="true" [header]="i18n.t('teacher.slotComments')" [style]="{ width: '36rem', maxWidth: '95vw' }">
-  <div class="comment-list">
-    @for (comment of comments(); track comment.id) {
-      <div class="comment-item">
-        <strong>{{ comment.teacherName }}</strong>
-        <div>{{ comment.createdAt | date: 'short' }}</div>
-        <p>{{ comment.comment }}</p>
-      </div>
-    }
-  </div>
-  <form class="stack-form" [formGroup]="commentForm" (ngSubmit)="addComment()">
-    <textarea pTextarea formControlName="comment" rows="4" [placeholder]="i18n.t('common.comment')"></textarea>
-    <button pButton type="submit" icon="pi pi-comment" [label]="i18n.t('teacher.addComment')" [disabled]="commentForm.invalid"></button>
   </form>
 </p-dialog>
