@@ -5,3 +5,4 @@ client/.angular/
 client/dist/
 server/target/
 /client/node/
+/client/src/app/api/

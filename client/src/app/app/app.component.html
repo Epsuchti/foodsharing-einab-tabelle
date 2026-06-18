@@ -1,0 +1,37 @@
+<p-toast></p-toast>
+<p-confirmdialog></p-confirmdialog>
+
+<header class="app-header">
+  <div class="app-header__content">
+    <a routerLink="/" class="brand">{{ i18n.t('app.title') }}</a>
+    <nav class="nav-links">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.slots') }}</a>
+      @if (!sessionService.isAuthenticated()) {
+        <a routerLink="/login" routerLinkActive="active">{{ i18n.t('nav.login') }}</a>
+      }
+      @if (sessionService.hasRole(UserRole.User)) {
+        <a routerLink="/my-bookings" routerLinkActive="active">{{ i18n.t('nav.bookings') }}</a>
+      }
+      @if (sessionService.hasRole(UserRole.Teacher)) {
+        <a routerLink="/teacher" routerLinkActive="active">{{ i18n.t('nav.teacher') }}</a>
+      }
+      @if (sessionService.hasRole(UserRole.Admin)) {
+        <a routerLink="/admin" routerLinkActive="active">{{ i18n.t('nav.admin') }}</a>
+      }
+    </nav>
+    <div class="header-actions">
+      <div class="language-switch">
+        <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('lang.gws')" (click)="setLanguage('gws')"></button>
+        <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('lang.de')" (click)="setLanguage('de')"></button>
+        <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('lang.en')" (click)="setLanguage('en')"></button>
+      </div>
+      @if (sessionService.isAuthenticated()) {
+        <button pButton type="button" severity="contrast" icon="pi pi-sign-out" [label]="i18n.t('nav.logout')" (click)="sessionService.clearSession()"></button>
+      }
+    </div>
+  </div>
+</header>
+
+<main class="app-main">
+  <router-outlet></router-outlet>
+</main>

@@ -1,0 +1,128 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-core-tables
+      author: codex
+      changes:
+        - createTable:
+            tableName: teachers
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: email, type: VARCHAR(255), constraints: {nullable: false, unique: true}}
+              - column: {name: foodsharing_id, type: VARCHAR(100), constraints: {nullable: false, unique: true}}
+              - column: {name: name, type: VARCHAR(200), constraints: {nullable: false}}
+              - column: {name: ical_link, type: VARCHAR(2000)}
+              - column: {name: active, type: BOOLEAN, constraints: {nullable: false}}
+        - createTable:
+            tableName: booking_users
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: email, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: foodsharing_id, type: VARCHAR(100), constraints: {nullable: false}}
+              - column: {name: phone_number, type: VARCHAR(50), constraints: {nullable: false}}
+        - addUniqueConstraint:
+            tableName: booking_users
+            columnNames: email, foodsharing_id
+            constraintName: uq_booking_users_email_foodsharing
+        - createTable:
+            tableName: einabs
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: category, type: VARCHAR(64), constraints: {nullable: false}}
+              - column: {name: start_date_time, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: location, type: VARCHAR(500)}
+              - column: {name: teacher_id, type: UUID, constraints: {nullable: false}}
+              - column: {name: visit_fairteiler, type: BOOLEAN, constraints: {nullable: false}}
+              - column: {name: slot_count, type: INT, constraints: {nullable: false}}
+        - addForeignKeyConstraint:
+            baseTableName: einabs
+            baseColumnNames: teacher_id
+            referencedTableName: teachers
+            referencedColumnNames: id
+            constraintName: fk_einabs_teacher
+        - createTable:
+            tableName: slots
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: einab_id, type: UUID, constraints: {nullable: false}}
+              - column: {name: status, type: VARCHAR(32), constraints: {nullable: false}}
+              - column: {name: booking_user_id, type: UUID}
+              - column: {name: booked_at, type: TIMESTAMP WITH TIME ZONE}
+              - column: {name: done_at, type: TIMESTAMP WITH TIME ZONE}
+        - addForeignKeyConstraint:
+            baseTableName: slots
+            baseColumnNames: einab_id
+            referencedTableName: einabs
+            referencedColumnNames: id
+            constraintName: fk_slots_einab
+        - addForeignKeyConstraint:
+            baseTableName: slots
+            baseColumnNames: booking_user_id
+            referencedTableName: booking_users
+            referencedColumnNames: id
+            constraintName: fk_slots_booking_user
+        - createTable:
+            tableName: slot_comments
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: slot_id, type: UUID, constraints: {nullable: false}}
+              - column: {name: teacher_id, type: UUID, constraints: {nullable: false}}
+              - column: {name: comment, type: VARCHAR(4000), constraints: {nullable: false}}
+        - addForeignKeyConstraint:
+            baseTableName: slot_comments
+            baseColumnNames: slot_id
+            referencedTableName: slots
+            referencedColumnNames: id
+            constraintName: fk_slot_comments_slot
+        - addForeignKeyConstraint:
+            baseTableName: slot_comments
+            baseColumnNames: teacher_id
+            referencedTableName: teachers
+            referencedColumnNames: id
+            constraintName: fk_slot_comments_teacher
+        - createTable:
+            tableName: notification_subscriptions
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: email, type: VARCHAR(255), constraints: {nullable: false, unique: true}}
+              - column: {name: active, type: BOOLEAN, constraints: {nullable: false}}
+              - column: {name: unsubscribe_token, type: VARCHAR(128), constraints: {nullable: false, unique: true}}
+        - createTable:
+            tableName: login_tokens
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: email, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: token_hash, type: VARCHAR(64), constraints: {nullable: false, unique: true}}
+              - column: {name: expires_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: used_at, type: TIMESTAMP WITH TIME ZONE}
+        - createTable:
+            tableName: auth_sessions
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: email, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: token_hash, type: VARCHAR(64), constraints: {nullable: false, unique: true}}
+              - column: {name: roles, type: VARCHAR(128), constraints: {nullable: false}}
+              - column: {name: expires_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}

@@ -1,0 +1,17 @@
+package ch.it4user.foodsharing.repository;
+
+import ch.it4user.foodsharing.domain.entity.EinAb;
+import ch.it4user.foodsharing.domain.entity.Teacher;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface EinAbRepository extends JpaRepository<EinAb, UUID> {
+
+    @EntityGraph(attributePaths = {"teacher"})
+    List<EinAb> findAllByTeacherOrderByStartDateTimeAsc(Teacher teacher);
+
+    @EntityGraph(attributePaths = {"teacher"})
+    List<EinAb> findAllByOrderByStartDateTimeAsc();
+}

@@ -1,0 +1,12 @@
+<p-card>
+  <ng-template pTemplate="title">{{ i18n.t('login.title') }}</ng-template>
+  @if (loading()) {
+    <div class="loading-box">
+      <p-progressSpinner strokeWidth="4"></p-progressSpinner>
+      <p>{{ i18n.t('login.verifying') }}</p>
+    </div>
+  }
+  @if (error()) {
+    <p>{{ error() }}</p>
+  }
+</p-card>

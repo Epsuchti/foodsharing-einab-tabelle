@@ -1,6 +1,130 @@
+@import 'primeicons/primeicons.css';
+
 html,
 body {
   margin: 0;
+  min-height: 100%;
   font-family: Inter, Arial, sans-serif;
-  background: #f5f7fb;
+  background: #f3f6f8;
+  color: #1f2937;
+}
+
+body {
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.page-stack {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.teacher-top-stack {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stack-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+}
+
+.loading-box,
+.empty-state {
+  display: grid;
+  place-items: center;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.toolbar-row,
+.dialog-actions,
+.actions-cell {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.dialog-actions {
+  justify-content: flex-end;
+}
+
+.info-grid,
+.comment-list,
+.plain-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.comment-item {
+  padding: 0.75rem;
+  border: 1px solid #d9e0ea;
+  border-radius: 8px;
+}
+
+.p-toast .p-toast-message,
+.p-toast .p-toast-message-content {
+  opacity: 1 !important;
+}
+
+.p-toast .p-toast-message {
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+}
+
+.p-toast .p-toast-message-success,
+.p-toast .p-toast-message-info,
+.p-toast .p-toast-message-warn,
+.p-toast .p-toast-message-error {
+  border-left-width: 4px;
+}
+
+.p-toast .p-toast-message-success .p-toast-message-content {
+  background: #ecfdf5;
+  color: #14532d;
+}
+
+.p-toast .p-toast-message-info .p-toast-message-content {
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.p-toast .p-toast-message-warn .p-toast-message-content {
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.p-toast .p-toast-message-error .p-toast-message-content {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.p-toast .p-toast-message-content {
+  border-radius: 8px;
 }

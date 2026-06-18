@@ -1,31 +1,903 @@
 openapi: 3.0.3
 info:
-  title: Foodsharing API
+  title: Foodsharing EinAb API
   version: 1.0.0
+servers:
+  - url: /
+tags:
+  - name: public
+  - name: auth
+  - name: user
+  - name: teacher
+  - name: admin
 paths:
-  /api/hello:
+  /api/public/slots/available:
     get:
-      tags:
-        - hello
-      operationId: getHello
-      summary: Return a hello message
+      tags: [public]
+      operationId: getAvailableSlots
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            $ref: '#/components/schemas/EinAbCategory'
+        - name: visitFairteiler
+          in: query
+          schema:
+            type: boolean
       responses:
         '200':
-          description: Hello response
+          description: Available bookable slots
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HelloResponse'
+                $ref: '#/components/schemas/AvailableSlotListResponse'
+  /api/public/slots/{slotId}/book:
+    post:
+      tags: [public]
+      operationId: bookSlot
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookSlotRequest'
+      responses:
+        '200':
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/public/teachers/signup:
+    post:
+      tags: [public]
+      operationId: signupTeacher
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeacherSignupRequest'
+      responses:
+        '201':
+          description: Teacher created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/public/notifications/subscribe:
+    post:
+      tags: [public]
+      operationId: subscribeNotifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationSubscriptionRequest'
+      responses:
+        '200':
+          description: Subscription stored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSubscriptionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/public/notifications/unsubscribe:
+    post:
+      tags: [public]
+      operationId: unsubscribeNotifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationUnsubscribeRequest'
+      responses:
+        '200':
+          description: Subscription disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSubscriptionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/auth/request-login:
+    post:
+      tags: [auth]
+      operationId: requestLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login email requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/auth/verify-token:
+    post:
+      tags: [auth]
+      operationId: verifyLoginToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyTokenRequest'
+      responses:
+        '200':
+          description: Authenticated session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/user/bookings:
+    get:
+      tags: [user]
+      operationId: getMyBookings
+      responses:
+        '200':
+          description: User bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/user/bookings/{slotId}:
+    delete:
+      tags: [user]
+      operationId: cancelMyBooking
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      responses:
+        '204':
+          description: Booking cancelled
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/teacher/me:
+    get:
+      tags: [teacher]
+      operationId: getTeacherMe
+      responses:
+        '200':
+          description: Teacher profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherSelfResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/teacher/einabs:
+    get:
+      tags: [teacher]
+      operationId: getTeacherEinAbs
+      responses:
+        '200':
+          description: Teacher EinAbs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherEinAbListResponse'
+    post:
+      tags: [teacher]
+      operationId: createTeacherEinAb
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertEinAbRequest'
+      responses:
+        '201':
+          description: EinAb created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherEinAbResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/teacher/einabs/{einAbId}:
+    put:
+      tags: [teacher]
+      operationId: updateTeacherEinAb
+      parameters:
+        - $ref: '#/components/parameters/EinAbId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpsertEinAbRequest'
+      responses:
+        '200':
+          description: EinAb updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherEinAbResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      tags: [teacher]
+      operationId: deleteTeacherEinAb
+      parameters:
+        - $ref: '#/components/parameters/EinAbId'
+      responses:
+        '204':
+          description: EinAb deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/teacher/bookings:
+    get:
+      tags: [teacher]
+      operationId: getTeacherBookings
+      responses:
+        '200':
+          description: Bookings for teacher slots
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingListResponse'
+  /api/teacher/slots/{slotId}/comments:
+    get:
+      tags: [teacher]
+      operationId: getTeacherSlotComments
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      responses:
+        '200':
+          description: Slot comments
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotCommentListResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [teacher]
+      operationId: addTeacherSlotComment
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateSlotCommentRequest'
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotCommentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/teacher/slots/{slotId}/status:
+    put:
+      tags: [teacher]
+      operationId: updateTeacherSlotStatus
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSlotStatusRequest'
+      responses:
+        '200':
+          description: Slot updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/teacher/ical-candidates:
+    get:
+      tags: [teacher]
+      operationId: getTeacherIcalCandidates
+      responses:
+        '200':
+          description: Candidate iCal events for the teacher
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IcalCandidateListResponse'
+  /api/admin/teachers:
+    get:
+      tags: [admin]
+      operationId: getAdminTeachers
+      responses:
+        '200':
+          description: All teachers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherListResponse'
+  /api/admin/teachers/{teacherId}/enable:
+    put:
+      tags: [admin]
+      operationId: enableAdminTeacher
+      parameters:
+        - $ref: '#/components/parameters/TeacherId'
+      responses:
+        '200':
+          description: Teacher enabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/teachers/{teacherId}/disable:
+    put:
+      tags: [admin]
+      operationId: disableAdminTeacher
+      parameters:
+        - $ref: '#/components/parameters/TeacherId'
+      responses:
+        '200':
+          description: Teacher disabled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/einabs:
+    get:
+      tags: [admin]
+      operationId: getAdminEinAbs
+      responses:
+        '200':
+          description: All EinAbs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminEinAbListResponse'
+  /api/admin/bookings:
+    get:
+      tags: [admin]
+      operationId: getAdminBookings
+      responses:
+        '200':
+          description: All bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingListResponse'
+  /api/admin/users:
+    get:
+      tags: [admin]
+      operationId: getAdminUsers
+      responses:
+        '200':
+          description: All booking users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingUserListResponse'
 components:
+  parameters:
+    SlotId:
+      name: slotId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EinAbId:
+      name: einAbId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TeacherId:
+      name: teacherId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Access denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   schemas:
-    HelloResponse:
+    MessageResponse:
       type: object
-      required:
-        - message
-        - timestamp
+      required: [message]
       properties:
         message:
           type: string
-        timestamp:
+    ErrorResponse:
+      type: object
+      required: [message, status]
+      properties:
+        status:
+          type: integer
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+    EinAbCategory:
+      type: string
+      enum: [SUPERMARKET, TAKEOUT, MARKET, RESTAURANT, FAIRTEILER_CLEANING]
+    SlotStatus:
+      type: string
+      enum: [AVAILABLE, BOOKED, DONE, CANCELLED]
+    UserRole:
+      type: string
+      enum: [USER, TEACHER, ADMIN]
+    BookSlotRequest:
+      type: object
+      required: [email, foodsharingId, phoneNumber]
+      properties:
+        email:
+          type: string
+          format: email
+        foodsharingId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        phoneNumber:
+          type: string
+          minLength: 3
+          maxLength: 50
+    TeacherSignupRequest:
+      type: object
+      required: [email, foodsharingId, name]
+      properties:
+        email:
+          type: string
+          format: email
+        foodsharingId:
+          type: string
+          minLength: 1
+          maxLength: 100
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        icalLink:
+          type: string
+          format: uri
+    NotificationSubscriptionRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    NotificationUnsubscribeRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 1
+    NotificationSubscriptionResponse:
+      type: object
+      required: [email, active]
+      properties:
+        email:
+          type: string
+          format: email
+        active:
+          type: boolean
+    LoginRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+    VerifyTokenRequest:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 1
+    AuthResponse:
+      type: object
+      required: [authToken, expiresAt, roles, email]
+      properties:
+        authToken:
+          type: string
+        expiresAt:
           type: string
           format: date-time
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRole'
+    TeacherResponse:
+      type: object
+      required: [id, email, foodsharingId, name, active, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        foodsharingId:
+          type: string
+        name:
+          type: string
+        icalLink:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    TeacherListResponse:
+      type: object
+      required: [teachers]
+      properties:
+        teachers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeacherResponse'
+    TeacherSelfResponse:
+      allOf:
+        - $ref: '#/components/schemas/TeacherResponse'
+        - type: object
+          required: [icalCandidates]
+          properties:
+            icalCandidates:
+              type: array
+              items:
+                $ref: '#/components/schemas/IcalCandidate'
+    BookingUserResponse:
+      type: object
+      required: [id, email, foodsharingId, phoneNumber, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        foodsharingId:
+          type: string
+        phoneNumber:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    BookingUserListResponse:
+      type: object
+      required: [users]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingUserResponse'
+    EinAbResponse:
+      type: object
+      required: [id, category, startDateTime, teacher, visitFairteiler, slotCount, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          $ref: '#/components/schemas/EinAbCategory'
+        startDateTime:
+          type: string
+          format: date-time
+        location:
+          type: string
+        teacher:
+          $ref: '#/components/schemas/TeacherResponse'
+        visitFairteiler:
+          type: boolean
+        slotCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    SlotResponse:
+      type: object
+      required: [id, einAbId, status, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        einAbId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/SlotStatus'
+        bookedAt:
+          type: string
+          format: date-time
+        doneAt:
+          type: string
+          format: date-time
+        bookingUser:
+          $ref: '#/components/schemas/BookingUserResponse'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    AvailableSlotResponse:
+      type: object
+      required: [slotId, category, startDateTime, teacherName, visitFairteiler, status]
+      properties:
+        slotId:
+          type: string
+          format: uuid
+        category:
+          $ref: '#/components/schemas/EinAbCategory'
+        startDateTime:
+          type: string
+          format: date-time
+        location:
+          type: string
+        teacherName:
+          type: string
+        teacherId:
+          type: string
+          format: uuid
+        visitFairteiler:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/SlotStatus'
+    AvailableSlotListResponse:
+      type: object
+      required: [slots]
+      properties:
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/AvailableSlotResponse'
+    BookingDetailResponse:
+      type: object
+      required: [slotId, einAbId, category, startDateTime, teacherName, status, bookingUser]
+      properties:
+        slotId:
+          type: string
+          format: uuid
+        einAbId:
+          type: string
+          format: uuid
+        category:
+          $ref: '#/components/schemas/EinAbCategory'
+        startDateTime:
+          type: string
+          format: date-time
+        location:
+          type: string
+        teacherName:
+          type: string
+        visitFairteiler:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/SlotStatus'
+        bookingUser:
+          $ref: '#/components/schemas/BookingUserResponse'
+    BookingListResponse:
+      type: object
+      required: [bookings]
+      properties:
+        bookings:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingDetailResponse'
+    TeacherEinAbResponse:
+      allOf:
+        - $ref: '#/components/schemas/EinAbResponse'
+        - type: object
+          required: [slots]
+          properties:
+            slots:
+              type: array
+              items:
+                $ref: '#/components/schemas/SlotResponse'
+    TeacherEinAbListResponse:
+      type: object
+      required: [einAbs]
+      properties:
+        einAbs:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeacherEinAbResponse'
+    AdminEinAbListResponse:
+      type: object
+      required: [einAbs]
+      properties:
+        einAbs:
+          type: array
+          items:
+            $ref: '#/components/schemas/EinAbResponse'
+    UpsertEinAbRequest:
+      type: object
+      required: [category, startDateTime, visitFairteiler, slotCount]
+      properties:
+        category:
+          $ref: '#/components/schemas/EinAbCategory'
+        startDateTime:
+          type: string
+          format: date-time
+        location:
+          type: string
+          maxLength: 500
+        visitFairteiler:
+          type: boolean
+        slotCount:
+          type: integer
+          minimum: 1
+          maximum: 3
+    CreateSlotCommentRequest:
+      type: object
+      required: [comment]
+      properties:
+        comment:
+          type: string
+          minLength: 1
+          maxLength: 4000
+    SlotCommentResponse:
+      type: object
+      required: [id, slotId, teacherId, teacherName, comment, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        slotId:
+          type: string
+          format: uuid
+        teacherId:
+          type: string
+          format: uuid
+        teacherName:
+          type: string
+        comment:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    SlotCommentListResponse:
+      type: object
+      required: [comments]
+      properties:
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlotCommentResponse'
+    UpdateSlotStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/SlotStatus'
+    IcalCandidate:
+      type: object
+      required: [startDateTime, summary]
+      properties:
+        startDateTime:
+          type: string
+          format: date-time
+        summary:
+          type: string
+        location:
+          type: string
+    IcalCandidateListResponse:
+      type: object
+      required: [candidates]
+      properties:
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/IcalCandidate'

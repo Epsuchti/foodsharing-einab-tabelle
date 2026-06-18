@@ -1,0 +1,11 @@
+<p-card>
+  <ng-template pTemplate="title">{{ i18n.t('login.title') }}</ng-template>
+  <p>{{ i18n.t('login.hint') }}</p>
+  <form class="stack-form" [formGroup]="form" (ngSubmit)="submit()">
+    <input pInputText formControlName="email" [placeholder]="i18n.t('common.email')" />
+    <button pButton type="submit" icon="pi pi-envelope" [label]="i18n.t('login.submit')" [disabled]="form.invalid"></button>
+  </form>
+  <div class="dialog-actions login-actions">
+    <a pButton severity="secondary" icon="pi pi-user-plus" [label]="i18n.t('login.teacherSignup')" routerLink="/teacher-signup"></a>
+  </div>
+</p-card>

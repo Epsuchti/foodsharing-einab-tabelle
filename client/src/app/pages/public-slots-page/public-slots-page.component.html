@@ -1,0 +1,81 @@
+<section class="page-stack">
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('slots.title') }}</ng-template>
+    <form class="filters" (ngSubmit)="loadSlots()">
+      <input pInputText [(ngModel)]="search" name="search" [placeholder]="i18n.t('slots.search')" />
+      <p-select
+        [options]="categoryOptions()"
+        [(ngModel)]="selectedCategory"
+        name="category"
+        optionLabel="label"
+        optionValue="value"
+        [placeholder]="i18n.t('slots.category')"
+        [showClear]="true" />
+      <div class="checkbox-row">
+        <p-checkbox [(ngModel)]="fairteilerOnly" name="fairteilerOnly" [binary]="true" />
+        <label>{{ i18n.t('slots.fairteilerOnly') }}</label>
+      </div>
+      <button pButton type="submit" [label]="i18n.t('slots.search')" icon="pi pi-search"></button>
+    </form>
+
+    @if (loading()) {
+      <div class="loading-box">
+        <p-progressSpinner strokeWidth="4"></p-progressSpinner>
+      </div>
+    } @else if (!slots().length) {
+      <p class="empty-state">{{ i18n.t('slots.empty') }}</p>
+    } @else {
+      <p-table [value]="slots()" [tableStyle]="{ width: '100%' }">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>{{ i18n.t('slots.category') }}</th>
+            <th>{{ i18n.t('slots.date') }}</th>
+            <th>{{ i18n.t('common.location') }}</th>
+            <th>{{ i18n.t('slots.teacher') }}</th>
+            <th>{{ i18n.t('common.visitFairteiler') }}</th>
+            <th></th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-slot>
+          <tr>
+            <td>{{ i18n.categoryLabel(slot.category) }}</td>
+            <td>{{ slot.startDateTime | date: 'medium' }}</td>
+            <td>{{ slot.location ?? '-' }}</td>
+            <td>{{ slot.teacherName }}</td>
+            <td>
+              <p-tag [severity]="slot.visitFairteiler ? 'success' : 'secondary'"
+                [value]="slot.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag>
+            </td>
+            <td class="actions-cell">
+              <button pButton size="small" icon="pi pi-calendar-plus" [label]="i18n.t('slots.book')" (click)="openBooking(slot)"></button>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+  </p-card>
+
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('slots.subscribeTitle') }}</ng-template>
+    <p>{{ i18n.t('slots.subscribeHint') }}</p>
+    <form class="stack-form" [formGroup]="subscriptionForm" (ngSubmit)="subscribe()">
+      <input pInputText formControlName="email" [placeholder]="i18n.t('common.email')" />
+      <button pButton type="submit" icon="pi pi-bell" [label]="i18n.t('slots.subscribeTitle')" [disabled]="subscriptionForm.invalid || subscribeLoading()"></button>
+    </form>
+  </p-card>
+</section>
+
+<p-dialog [(visible)]="bookingVisible" [modal]="true" [header]="i18n.t('book.dialogTitle')" [style]="{ width: '32rem', maxWidth: '95vw' }">
+  <form class="stack-form" [formGroup]="bookingForm" (ngSubmit)="submitBooking()">
+    @if (selectedSlot) {
+      <p class="empty-state">{{ i18n.categoryLabel(selectedSlot.category) }} - {{ selectedSlot.startDateTime | date: 'medium' }} - {{ selectedSlot.location ?? '-' }}</p>
+    }
+    <input pInputText formControlName="email" [placeholder]="i18n.t('common.email')" />
+    <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" />
+    <input pInputText formControlName="phoneNumber" [placeholder]="i18n.t('common.phoneNumber')" />
+    <div class="dialog-actions">
+      <button pButton type="button" severity="secondary" [label]="i18n.t('common.cancel')" (click)="bookingVisible = false"></button>
+      <button pButton type="submit" [label]="i18n.t('book.submit')" [disabled]="bookingForm.invalid || bookingLoading()"></button>
+    </div>
+  </form>
+</p-dialog>

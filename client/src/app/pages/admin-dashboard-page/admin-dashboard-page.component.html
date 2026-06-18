@@ -1,0 +1,98 @@
+<section class="page-stack">
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('admin.title') }}</ng-template>
+    <h3>{{ i18n.t('admin.teachers') }}</h3>
+    <p-table [value]="teachers()">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>{{ i18n.t('common.name') }}</th>
+          <th>{{ i18n.t('common.email') }}</th>
+          <th>{{ i18n.t('common.status') }}</th>
+          <th>{{ i18n.t('common.actions') }}</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-teacher>
+        <tr>
+          <td>{{ teacher.name }}</td>
+          <td>{{ teacher.email }}</td>
+          <td><p-tag [severity]="teacher.active ? 'success' : 'warn'" [value]="teacher.active ? i18n.t('common.active') : i18n.t('common.inactive')"></p-tag></td>
+          <td class="actions-cell">
+            @if (teacher.active) {
+              <button pButton size="small" severity="danger" [label]="i18n.t('admin.disable')" (click)="toggleTeacher(teacher, false)"></button>
+            } @else {
+              <button pButton size="small" [label]="i18n.t('admin.enable')" (click)="toggleTeacher(teacher, true)"></button>
+            }
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('admin.einabs') }}</ng-template>
+    <p-table [value]="einAbs()">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>{{ i18n.t('slots.category') }}</th>
+          <th>{{ i18n.t('slots.date') }}</th>
+          <th>{{ i18n.t('common.location') }}</th>
+          <th>{{ i18n.t('slots.teacher') }}</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-einab>
+        <tr>
+          <td>{{ i18n.categoryLabel(einab.category) }}</td>
+          <td>{{ einab.startDateTime | date: 'medium' }}</td>
+          <td>{{ einab.location ?? '-' }}</td>
+          <td>{{ einab.teacher.name }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('admin.bookings') }}</ng-template>
+    <p-table [value]="bookings()">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>{{ i18n.t('slots.category') }}</th>
+          <th>{{ i18n.t('slots.teacher') }}</th>
+          <th>{{ i18n.t('common.location') }}</th>
+          <th>{{ i18n.t('common.foodsharingId') }}</th>
+          <th>{{ i18n.t('common.phoneNumber') }}</th>
+          <th>{{ i18n.t('common.status') }}</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-booking>
+        <tr>
+          <td>{{ i18n.categoryLabel(booking.category) }}</td>
+          <td>{{ booking.teacherName }}</td>
+          <td>{{ booking.location ?? '-' }}</td>
+          <td>{{ booking.bookingUser?.foodsharingId }}</td>
+          <td>{{ booking.bookingUser?.phoneNumber ?? '-' }}</td>
+          <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('admin.users') }}</ng-template>
+    <p-table [value]="users()">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>{{ i18n.t('common.email') }}</th>
+          <th>{{ i18n.t('common.foodsharingId') }}</th>
+          <th>{{ i18n.t('common.phoneNumber') }}</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-user>
+        <tr>
+          <td>{{ user.email }}</td>
+          <td>{{ user.foodsharingId }}</td>
+          <td>{{ user.phoneNumber }}</td>
+        </tr>
+      </ng-template>
+    </p-table>
+  </p-card>
+</section>
