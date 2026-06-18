@@ -26,13 +26,13 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
           and (:category is null or s.einAb.category = :category)
           and (:visitFairteiler is null or s.einAb.visitFairteiler = :visitFairteiler)
           and (
-            :search is null
-            or lower(s.einAb.teacher.name) like lower(concat('%', :search, '%'))
-            or lower(cast(s.einAb.category as string)) like lower(concat('%', :search, '%'))
+            :searchPattern is null
+            or lower(s.einAb.teacher.name) like :searchPattern
+            or lower(coalesce(s.einAb.location, '')) like :searchPattern
           )
         order by s.einAb.startDateTime asc
         """)
-    List<Slot> findAvailableSlots(@Param("search") String search,
+    List<Slot> findAvailableSlots(@Param("searchPattern") String searchPattern,
                                   @Param("category") EinAbCategory category,
                                   @Param("visitFairteiler") Boolean visitFairteiler);
 

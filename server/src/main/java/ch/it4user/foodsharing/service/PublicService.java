@@ -31,7 +31,7 @@ public class PublicService {
     }
 
     public List<Slot> findAvailableSlots(String search, EinAbCategory category, Boolean visitFairteiler) {
-        return slotRepository.findAvailableSlots(normalize(search), category, visitFairteiler);
+        return slotRepository.findAvailableSlots(normalizeSearch(search), category, visitFairteiler);
     }
 
     @Transactional
@@ -67,5 +67,10 @@ public class PublicService {
 
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private String normalizeSearch(String value) {
+        String normalized = normalize(value);
+        return normalized == null ? null : "%" + normalized.toLowerCase() + "%";
     }
 }
