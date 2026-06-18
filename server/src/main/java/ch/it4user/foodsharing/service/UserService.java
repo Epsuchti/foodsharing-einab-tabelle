@@ -30,6 +30,10 @@ public class UserService {
         return slotRepository.findAllByBookingUsersAndStatuses(users, Set.of(SlotStatus.BOOKED, SlotStatus.DONE));
     }
 
+    public BookingUser getProfileByEmail(String email) {
+        return bookingUserService.getByEmail(email);
+    }
+
     @Transactional
     public Slot cancelBooking(String email, UUID slotId) {
         Slot slot = slotRepository.findForUpdateById(slotId)

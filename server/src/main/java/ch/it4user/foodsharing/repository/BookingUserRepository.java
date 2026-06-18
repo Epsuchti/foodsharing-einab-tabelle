@@ -10,6 +10,8 @@ public interface BookingUserRepository extends JpaRepository<BookingUser, UUID> 
 
     Optional<BookingUser> findByFoodsharingIdIgnoreCase(String foodsharingId);
 
+    Optional<BookingUser> findByEmailIgnoreCase(String email);
+
     List<BookingUser> findAllByEmailIgnoreCase(String email);
 
     boolean existsByEmailIgnoreCase(String email);

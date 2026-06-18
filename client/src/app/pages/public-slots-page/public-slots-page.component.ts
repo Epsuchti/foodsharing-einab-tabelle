@@ -1,17 +1,23 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { finalize } from 'rxjs';
+import { catchError, of } from 'rxjs';
 
 import {
   AvailableSlotResponse,
   BookSlotRequest,
+  BookingUserResponse,
   EinAbCategory,
   NotificationSubscriptionRequest,
-  PublicService
+  PublicService,
+  UserRole,
+  UserService
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
 import { I18nService } from '../../core/i18n.service';
+import { SessionService } from '../../core/session.service';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -56,6 +62,8 @@ export class PublicSlotsPageComponent implements OnInit {
   protected readonly loading = signal(false);
   protected readonly bookingLoading = signal(false);
   protected readonly subscribeLoading = signal(false);
+  protected readonly bookingIdentityLocked = signal(false);
+  protected readonly bookingProfile = signal<BookingUserResponse | null>(null);
   protected bookingVisible = false;
   protected selectedSlot: AvailableSlotResponse | null = null;
   protected search = '';
@@ -74,10 +82,13 @@ export class PublicSlotsPageComponent implements OnInit {
   });
 
   private readonly publicApi = inject(PublicService);
+  private readonly userApi = inject(UserService);
+  private readonly sessionService = inject(SessionService);
   private readonly messageService = inject(MessageService);
 
   ngOnInit(): void {
     this.loadSlots();
+    this.loadBookingProfile();
   }
 
   loadSlots(): void {
@@ -95,6 +106,9 @@ export class PublicSlotsPageComponent implements OnInit {
 
   openBooking(slot: AvailableSlotResponse): void {
     this.selectedSlot = slot;
+    if (!this.bookingIdentityLocked()) {
+      this.applyLoggedOutBookingDefaults();
+    }
     this.bookingVisible = true;
   }
 
@@ -137,6 +151,54 @@ export class PublicSlotsPageComponent implements OnInit {
   }
 
   private toastError(detail: string): void {
-    this.messageService.add({ severity: 'error', summary: detail });
+    this.messageService.add({ severity: 'error', summary: this.i18n.t('common.error'), detail });
+  }
+
+  private loadBookingProfile(): void {
+    if (!this.sessionService.isAuthenticated() || !this.sessionService.hasRole(UserRole.User)) {
+      return;
+    }
+
+    this.userApi.getMyProfile().pipe(
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse && error.status === 404) {
+          this.applyLoggedOutBookingDefaults();
+          return of(null);
+        }
+        this.toastError(resolveApiError(error));
+        return of(null);
+      })
+    ).subscribe({
+      next: (profile) => {
+        if (!profile) {
+          return;
+        }
+        this.bookingProfile.set(profile);
+        this.bookingIdentityLocked.set(true);
+        this.bookingForm.patchValue({
+          name: profile.name,
+          email: profile.email,
+          foodsharingId: profile.foodsharingId,
+          phoneNumber: profile.phoneNumber
+        });
+        this.bookingForm.controls.name.disable({ emitEvent: false });
+        this.bookingForm.controls.email.disable({ emitEvent: false });
+        this.bookingForm.controls.foodsharingId.disable({ emitEvent: false });
+        this.bookingForm.controls.phoneNumber.disable({ emitEvent: false });
+      }
+    });
+  }
+
+  private applyLoggedOutBookingDefaults(): void {
+    this.bookingProfile.set(null);
+    this.bookingIdentityLocked.set(false);
+    this.bookingForm.controls.name.enable({ emitEvent: false });
+    this.bookingForm.controls.email.enable({ emitEvent: false });
+    this.bookingForm.controls.foodsharingId.enable({ emitEvent: false });
+    this.bookingForm.controls.phoneNumber.enable({ emitEvent: false });
+    this.bookingForm.patchValue({
+      name: this.sessionService.session()?.displayName ?? '',
+      email: this.sessionService.session()?.email ?? ''
+    });
   }
 }

@@ -46,6 +46,11 @@ public class BookingUserService {
         return bookingUserRepository.findAllByEmailIgnoreCase(email);
     }
 
+    public BookingUser getByEmail(String email) {
+        return bookingUserRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Booking user not found"));
+    }
+
     public List<BookingUser> findAll() {
         return bookingUserRepository.findAll();
     }

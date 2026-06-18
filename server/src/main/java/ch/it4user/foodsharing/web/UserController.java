@@ -1,7 +1,9 @@
 package ch.it4user.foodsharing.web;
 
+import ch.it4user.foodsharing.domain.entity.BookingUser;
 import ch.it4user.foodsharing.openapi.api.UserApi;
 import ch.it4user.foodsharing.openapi.model.BookingListResponse;
+import ch.it4user.foodsharing.openapi.model.BookingUserResponse;
 import java.util.UUID;
 import ch.it4user.foodsharing.service.CurrentActorService;
 import ch.it4user.foodsharing.service.UserService;
@@ -25,6 +27,12 @@ public class UserController implements UserApi {
     public ResponseEntity<BookingListResponse> getMyBookings() {
         return ResponseEntity.ok(mapper.toBookingListResponse(
                 userService.getBookingsByEmail(currentActorService.requireEmail())));
+    }
+
+    @Override
+    public ResponseEntity<BookingUserResponse> getMyProfile() {
+        BookingUser bookingUser = userService.getProfileByEmail(currentActorService.requireEmail());
+        return ResponseEntity.ok(mapper.toBookingUserResponse(bookingUser));
     }
 
     @Override

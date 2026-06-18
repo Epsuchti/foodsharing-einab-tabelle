@@ -70,10 +70,19 @@
     @if (selectedSlot) {
       <p class="empty-state">{{ i18n.categoryLabel(selectedSlot.category) }} - {{ selectedSlot.startDateTime | date: 'medium' }} - {{ selectedSlot.location ?? '-' }}</p>
     }
-    <input pInputText formControlName="name" [placeholder]="i18n.t('common.name')" />
-    <input pInputText formControlName="email" [placeholder]="i18n.t('common.email')" />
-    <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" />
-    <input pInputText formControlName="phoneNumber" [placeholder]="i18n.t('common.phoneNumber')" />
+    @if (bookingIdentityLocked() && bookingProfile()) {
+      <div class="info-grid">
+        <div><strong>{{ bookingProfile()?.name }}</strong></div>
+        <div>{{ bookingProfile()?.email }}</div>
+        <div>{{ bookingProfile()?.foodsharingId }}</div>
+        <div>{{ bookingProfile()?.phoneNumber }}</div>
+      </div>
+    } @else {
+      <input pInputText formControlName="name" [placeholder]="i18n.t('common.name')" />
+      <input pInputText formControlName="email" [placeholder]="i18n.t('common.email')" />
+      <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" />
+      <input pInputText formControlName="phoneNumber" [placeholder]="i18n.t('common.phoneNumber')" />
+    }
     <div class="dialog-actions">
       <button pButton type="button" severity="secondary" [label]="i18n.t('common.cancel')" (click)="bookingVisible = false"></button>
       <button pButton type="submit" [label]="i18n.t('book.submit')" [disabled]="bookingForm.invalid || bookingLoading()"></button>
