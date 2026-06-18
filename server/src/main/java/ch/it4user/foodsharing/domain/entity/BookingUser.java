@@ -26,4 +26,7 @@ public class BookingUser extends BaseEntity {
     @Column(nullable = false, length = 50)
     private String phoneNumber;
 
+    @Column(nullable = false)
+    private boolean active = true;
+
 }

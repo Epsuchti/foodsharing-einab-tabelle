@@ -73,17 +73,26 @@ public class TeacherService {
     }
 
     public List<Slot> findTeacherBookings(Teacher teacher) {
-        return slotRepository.findAllByTeacherAndStatuses(teacher, Set.of(SlotStatus.BOOKED, SlotStatus.DONE));
+        return slotRepository.findAllByTeacherAndStatuses(teacher, Set.of(SlotStatus.BOOKED, SlotStatus.DONE))
+                .stream()
+                .filter(slot -> slot.getBookingUser() == null || slot.getBookingUser().isActive())
+                .toList();
     }
 
     public List<BookingComment> findBookingComments(UUID bookingUserId) {
         BookingUser bookingUser = requireBookingUser(bookingUserId);
+        if (!bookingUser.isActive()) {
+            return List.of();
+        }
         return bookingCommentRepository.findAllByBookingUserOrderByCreatedAtAsc(bookingUser);
     }
 
     @Transactional
     public BookingComment addBookingComment(Teacher teacher, UUID bookingUserId, String comment) {
         BookingUser bookingUser = requireBookingUser(bookingUserId);
+        if (!bookingUser.isActive()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, "Booking user is disabled");
+        }
         BookingComment bookingComment = new BookingComment();
         bookingComment.setBookingUser(bookingUser);
         bookingComment.setTeacher(teacher);

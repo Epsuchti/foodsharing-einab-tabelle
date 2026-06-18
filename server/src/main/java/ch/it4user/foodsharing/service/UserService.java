@@ -27,7 +27,7 @@ public class UserService {
         if (users.isEmpty()) {
             return List.of();
         }
-        return slotRepository.findAllByBookingUsersAndStatuses(users, Set.of(SlotStatus.BOOKED, SlotStatus.DONE));
+        return slotRepository.findAllByActiveBookingUsersAndStatuses(users, Set.of(SlotStatus.BOOKED, SlotStatus.DONE));
     }
 
     public BookingUser getProfileByEmail(String email) {

@@ -56,14 +56,19 @@ public class NotificationService {
             String unsubscribeUrl = appProperties.getFrontend().getBaseUrl()
                     + "/unsubscribe?token=" + recipient.getUnsubscribeToken();
             String body = """
-                    A new EinAb slot is available.
-
-                    Teacher: %s
-                    Category: %s
-                    Start: %s
-                    Fairteiler visit: %s
-
-                    Unsubscribe: %s
+                    <html>
+                      <body style="font-family: Arial, sans-serif; color: #1f2937;">
+                        <p>Hello,</p>
+                        <p>A new EinAb slot is available.</p>
+                        <ul>
+                          <li><strong>Teacher:</strong> %s</li>
+                          <li><strong>Category:</strong> %s</li>
+                          <li><strong>Start:</strong> %s</li>
+                          <li><strong>Fairteiler visit:</strong> %s</li>
+                        </ul>
+                        <p><a href="%s">Unsubscribe</a></p>
+                      </body>
+                    </html>
                     """.formatted(
                     einAb.getTeacher().getName(),
                     einAb.getCategory().name(),

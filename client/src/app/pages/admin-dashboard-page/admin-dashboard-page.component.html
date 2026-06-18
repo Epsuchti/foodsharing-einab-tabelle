@@ -80,23 +80,100 @@
 
   <p-card>
     <ng-template pTemplate="title">{{ i18n.t('admin.users') }}</ng-template>
-    <p-table [value]="users()">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>{{ i18n.t('common.email') }}</th>
-          <th>{{ i18n.t('common.name') }}</th>
-          <th>{{ i18n.t('common.foodsharingId') }}</th>
-          <th>{{ i18n.t('common.phoneNumber') }}</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-user>
-        <tr>
-          <td>{{ user.email }}</td>
-          <td>{{ user.name }}</td>
-          <td>{{ user.foodsharingId }}</td>
-          <td>{{ user.phoneNumber }}</td>
-        </tr>
-      </ng-template>
-    </p-table>
+    <div class="admin-users-toolbar">
+      <label class="filter-toggle">
+        <p-checkbox [binary]="true" [ngModel]="onlyThreePickups()" (onChange)="setOnlyThreePickups($event.checked)"></p-checkbox>
+        <span>{{ i18n.t('admin.onlyThreePickups') }}</span>
+      </label>
+      <span class="admin-users-count">{{ usersPage()?.totalElements ?? 0 }} {{ i18n.t('admin.users') }}</span>
+    </div>
+
+    @if (usersLoading()) {
+      <p class="loading-box">{{ i18n.t('common.loading') }}</p>
+    } @else if (usersPage()?.users?.length) {
+      <p-accordion [multiple]="false">
+        @for (user of userPanels(); track trackByUserId($index, user)) {
+          <p-accordion-panel [value]="user.user.id">
+            <p-accordion-header>
+              <div class="accordion-header">
+                <div class="accordion-header-main">
+                  <strong>{{ user.user.name }}</strong>
+                  <span>{{ user.user.email }}</span>
+                  <span>{{ user.user.foodsharingId }}</span>
+                  <span>{{ user.user.phoneNumber }}</span>
+                </div>
+                <p-tag [value]="user.pickupCount + ' ' + i18n.t('admin.pickups')"></p-tag>
+              </div>
+            </p-accordion-header>
+            <p-accordion-content>
+              <div class="accordion-actions">
+                <button pButton type="button" icon="pi pi-ban" severity="danger" [label]="i18n.t('admin.disableBookingUser')" (click)="disableBookingUser(user)"></button>
+              </div>
+
+              <h4>{{ i18n.t('admin.userPickups') }}</h4>
+              @if (user.bookings.length) {
+                <p-table [value]="user.bookings">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>{{ i18n.t('slots.category') }}</th>
+                      <th>{{ i18n.t('slots.date') }}</th>
+                      <th>{{ i18n.t('common.location') }}</th>
+                      <th>{{ i18n.t('slots.teacher') }}</th>
+                      <th>{{ i18n.t('common.status') }}</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-booking>
+                    <tr>
+                      <td>{{ i18n.categoryLabel(booking.category) }}</td>
+                      <td>{{ booking.startDateTime | date: 'medium' }}</td>
+                      <td>{{ booking.location ?? '-' }}</td>
+                      <td>{{ booking.teacherName }}</td>
+                      <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              } @else {
+                <p class="empty-state">{{ i18n.t('admin.noPickups') }}</p>
+              }
+
+              <h4>{{ i18n.t('admin.userComments') }}</h4>
+              @if (user.comments.length) {
+                <p-table [value]="user.comments">
+                  <ng-template pTemplate="header">
+                    <tr>
+                      <th>{{ i18n.t('slots.teacher') }}</th>
+                      <th>{{ i18n.t('common.comment') }}</th>
+                      <th>{{ i18n.t('common.createdAt') }}</th>
+                    </tr>
+                  </ng-template>
+                  <ng-template pTemplate="body" let-comment>
+                    <tr>
+                      <td>{{ comment.teacherName }}</td>
+                      <td>{{ comment.comment }}</td>
+                      <td>{{ comment.createdAt | date: 'medium' }}</td>
+                    </tr>
+                  </ng-template>
+                </p-table>
+              } @else {
+                <p class="empty-state">{{ i18n.t('admin.noComments') }}</p>
+              }
+            </p-accordion-content>
+          </p-accordion-panel>
+        }
+      </p-accordion>
+
+      <p-paginator
+        [rows]="pageSize"
+        [totalRecords]="usersPage()?.totalElements ?? 0"
+        [first]="(usersPage()?.page ?? 0) * pageSize"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="{first} - {last} / {totalRecords}"
+        (onPageChange)="onUsersPageChange($event)">
+      </p-paginator>
+    } @else {
+      <p class="empty-state">{{ i18n.t('admin.noUsers') }}</p>
+    }
   </p-card>
 </section>
+
+<p-confirmDialog></p-confirmDialog>

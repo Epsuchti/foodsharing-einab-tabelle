@@ -458,13 +458,49 @@ paths:
     get:
       tags: [admin]
       operationId: getAdminUsers
+      parameters:
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 0
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            default: 50
+        - name: threePickupsOnly
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: All booking users
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BookingUserListResponse'
+                $ref: '#/components/schemas/AdminBookingUserPageResponse'
+  /api/admin/users/{bookingUserId}/disable:
+    put:
+      tags: [admin]
+      operationId: disableAdminBookingUser
+      parameters:
+        - $ref: '#/components/parameters/BookingUserId'
+      responses:
+        '200':
+          description: Disabled booking user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingUserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   parameters:
     SlotId:
@@ -483,6 +519,13 @@ components:
         format: uuid
     TeacherId:
       name: teacherId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    BookingUserId:
+      name: bookingUserId
       in: path
       required: true
       schema:
@@ -711,6 +754,43 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BookingUserResponse'
+    AdminBookingUserResponse:
+      type: object
+      required: [user, bookings, comments, pickupCount]
+      properties:
+        user:
+          $ref: '#/components/schemas/BookingUserResponse'
+        bookings:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingDetailResponse'
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookingCommentResponse'
+        pickupCount:
+          type: integer
+    AdminBookingUserPageResponse:
+      type: object
+      required: [users, page, size, totalElements, totalPages]
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminBookingUserResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
     EinAbResponse:
       type: object
       required: [id, category, startDateTime, teacher, visitFairteiler, slotCount, createdAt, updatedAt]

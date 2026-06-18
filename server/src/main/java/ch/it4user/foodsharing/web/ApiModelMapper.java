@@ -6,7 +6,10 @@ import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.NotificationSubscription;
 import ch.it4user.foodsharing.domain.entity.Slot;
 import ch.it4user.foodsharing.domain.entity.Teacher;
+import ch.it4user.foodsharing.service.AdminService;
 import ch.it4user.foodsharing.openapi.model.AdminEinAbListResponse;
+import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
+import ch.it4user.foodsharing.openapi.model.AdminBookingUserResponse;
 import ch.it4user.foodsharing.openapi.model.AvailableSlotListResponse;
 import ch.it4user.foodsharing.openapi.model.AvailableSlotResponse;
 import ch.it4user.foodsharing.openapi.model.BookingDetailResponse;
@@ -24,6 +27,8 @@ import ch.it4user.foodsharing.openapi.model.TeacherListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSelfResponse;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -71,6 +76,38 @@ public class ApiModelMapper {
     public BookingUserListResponse toBookingUserListResponse(List<BookingUser> users) {
         BookingUserListResponse response = new BookingUserListResponse();
         response.setUsers(users.stream().map(this::toBookingUserResponse).toList());
+        return response;
+    }
+
+    public AdminBookingUserPageResponse toAdminBookingUserPageResponse(AdminService.AdminUsersView view) {
+        AdminBookingUserPageResponse response = new AdminBookingUserPageResponse();
+        response.setUsers(view.users().getContent().stream()
+                .map(user -> toAdminBookingUserResponse(
+                        user,
+                        view.bookingsByUser(),
+                        view.commentsByUser()))
+                .toList());
+        response.setPage(view.users().getNumber());
+        response.setSize(view.users().getSize());
+        response.setTotalElements(view.users().getTotalElements());
+        response.setTotalPages(view.users().getTotalPages());
+        response.setHasNext(view.users().hasNext());
+        response.setHasPrevious(view.users().hasPrevious());
+        return response;
+    }
+
+    public AdminBookingUserResponse toAdminBookingUserResponse(BookingUser bookingUser,
+                                                               Map<UUID, List<Slot>> bookingsByUser,
+                                                               Map<UUID, List<BookingComment>> commentsByUser) {
+        AdminBookingUserResponse response = new AdminBookingUserResponse();
+        response.setUser(toBookingUserResponse(bookingUser));
+        List<Slot> bookings = bookingsByUser.getOrDefault(bookingUser.getId(), List.of());
+        response.setBookings(bookings.stream().map(this::toBookingDetailResponse).toList());
+        response.setComments(commentsByUser.getOrDefault(bookingUser.getId(), List.of())
+                .stream()
+                .map(this::toBookingCommentResponse)
+                .toList());
+        response.setPickupCount(bookings.size());
         return response;
     }
 

@@ -25,7 +25,7 @@ public class RoleResolutionService {
     public Set<UserRole> resolveRoles(String email) {
         EnumSet<UserRole> roles = EnumSet.noneOf(UserRole.class);
         String normalizedEmail = email.trim().toLowerCase();
-        if (bookingUserRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+        if (bookingUserRepository.existsByEmailIgnoreCaseAndActiveTrue(normalizedEmail)) {
             roles.add(UserRole.USER);
         }
         if (teacherRepository.findByEmailIgnoreCase(normalizedEmail).isPresent()) {

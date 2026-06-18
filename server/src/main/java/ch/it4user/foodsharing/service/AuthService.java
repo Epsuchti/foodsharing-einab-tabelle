@@ -57,7 +57,16 @@ public class AuthService {
 
         String loginLink = appProperties.getFrontend().getBaseUrl() + "/verify-login?token=" + rawToken;
         emailService.send(normalizedEmail, "Your foodsharing login link",
-                "Open this link to sign in:\n" + loginLink);
+                """
+                <html>
+                  <body style="font-family: Arial, sans-serif; color: #1f2937;">
+                    <p>Hello,</p>
+                    <p>Open this link to sign in:</p>
+                    <p><a href="%s">%s</a></p>
+                    <p>If you did not request this email, you can ignore it.</p>
+                  </body>
+                </html>
+                """.formatted(loginLink, loginLink));
     }
 
     @Transactional

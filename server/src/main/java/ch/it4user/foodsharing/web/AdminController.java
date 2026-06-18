@@ -1,9 +1,10 @@
 package ch.it4user.foodsharing.web;
 
 import ch.it4user.foodsharing.openapi.api.AdminApi;
+import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
 import ch.it4user.foodsharing.openapi.model.AdminEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.BookingListResponse;
-import ch.it4user.foodsharing.openapi.model.BookingUserListResponse;
+import ch.it4user.foodsharing.openapi.model.BookingUserResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.service.AdminService;
@@ -48,7 +49,15 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<BookingUserListResponse> getAdminUsers() {
-        return ResponseEntity.ok(mapper.toBookingUserListResponse(adminService.getUsers()));
+    public ResponseEntity<AdminBookingUserPageResponse> getAdminUsers(Integer page, Integer size, Boolean threePickupsOnly) {
+        int resolvedPage = page == null ? 0 : page;
+        int resolvedSize = size == null ? 50 : size;
+        boolean resolvedThreePickupsOnly = threePickupsOnly != null && threePickupsOnly;
+        return ResponseEntity.ok(mapper.toAdminBookingUserPageResponse(adminService.getUsers(resolvedPage, resolvedSize, resolvedThreePickupsOnly)));
+    }
+
+    @Override
+    public ResponseEntity<BookingUserResponse> disableAdminBookingUser(UUID bookingUserId) {
+        return ResponseEntity.ok(mapper.toBookingUserResponse(adminService.disableBookingUser(bookingUserId)));
     }
 }

@@ -26,6 +26,7 @@ databaseChangeLog:
               - column: {name: name, type: VARCHAR(200), constraints: {nullable: false}}
               - column: {name: foodsharing_id, type: VARCHAR(100), constraints: {nullable: false}}
               - column: {name: phone_number, type: VARCHAR(50), constraints: {nullable: false}}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
         - addUniqueConstraint:
             tableName: booking_users
             columnNames: email
