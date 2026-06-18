@@ -1,0 +1,31 @@
+openapi: 3.0.3
+info:
+  title: Foodsharing API
+  version: 1.0.0
+paths:
+  /api/hello:
+    get:
+      tags:
+        - hello
+      operationId: getHello
+      summary: Return a hello message
+      responses:
+        '200':
+          description: Hello response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HelloResponse'
+components:
+  schemas:
+    HelloResponse:
+      type: object
+      required:
+        - message
+        - timestamp
+      properties:
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time

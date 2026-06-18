@@ -1,0 +1,7 @@
+/.idea/
+.idea/
+client/node_modules/
+client/.angular/
+client/dist/
+server/target/
+/client/node/
