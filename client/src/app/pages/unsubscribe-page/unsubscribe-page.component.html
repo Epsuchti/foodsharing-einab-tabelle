@@ -1,4 +1,6 @@
-<p-card>
-  <ng-template pTemplate="title">{{ i18n.t('slots.subscribeTitle') }}</ng-template>
-  <p>{{ message }}</p>
-</p-card>
+<ng-container *ngIf="viewModel | async as vm">
+  <p-card>
+    <ng-template pTemplate="title">{{ vm.title }}</ng-template>
+    <p>{{ vm.message }}</p>
+  </p-card>
+</ng-container>

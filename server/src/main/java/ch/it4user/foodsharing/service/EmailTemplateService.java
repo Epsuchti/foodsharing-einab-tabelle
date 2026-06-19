@@ -2,11 +2,17 @@ package ch.it4user.foodsharing.service;
 
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
 @Service
 public class EmailTemplateService {
+
+    private static final ZoneId SWISS_ZONE = ZoneId.of("Europe/Zurich");
+    private static final DateTimeFormatter SWISS_DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     public String render(String title, String bodyHtml) {
         return """
@@ -28,6 +34,10 @@ public class EmailTemplateService {
         return "<p style=\"margin:0 0 16px;line-height:1.6;\">" + escape(text) + "</p>";
     }
 
+    public String paragraphHtml(String html) {
+        return "<p style=\"margin:0 0 16px;line-height:1.6;\">" + html + "</p>";
+    }
+
     public String button(String label, String url) {
         return """
                 <table role="presentation" cellspacing="0" cellpadding="0" style="margin:24px 0;">
@@ -37,6 +47,12 @@ public class EmailTemplateService {
                     </td>
                   </tr>
                 </table>
+                """.formatted(escape(url), escape(label));
+    }
+
+    public String link(String label, String url) {
+        return """
+                <a href="%s" style="color:#166534;text-decoration:underline;">%s</a>
                 """.formatted(escape(url), escape(label));
     }
 
@@ -62,6 +78,13 @@ public class EmailTemplateService {
                   <p style="margin:0;line-height:1.6;">%s</p>
                 </div>
                 """.formatted(escape(text));
+    }
+
+    public String swissDateTime(OffsetDateTime value) {
+        if (value == null) {
+            return "";
+        }
+        return SWISS_DATE_TIME.format(value.atZoneSameInstant(SWISS_ZONE));
     }
 
     private String escape(String value) {

@@ -93,7 +93,7 @@ public class PublicService {
         Map<String, String> details = new LinkedHashMap<>();
         details.put("Teacher", slot.getEinAb().getTeacher().getName());
         details.put("Category", slot.getEinAb().getCategory().name());
-        details.put("Start", String.valueOf(slot.getEinAb().getStartDateTime()));
+        details.put("Start", emailTemplateService.swissDateTime(slot.getEinAb().getStartDateTime()));
         details.put("Location", valueOrDash(slot.getEinAb().getLocation()));
         details.put("What to bring", valueOrDash(slot.getEinAb().getWhatToBring()));
         details.put("Fairteiler visit", slot.getEinAb().isVisitFairteiler() ? "yes" : "no");

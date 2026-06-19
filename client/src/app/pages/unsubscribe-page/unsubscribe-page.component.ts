@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
+import { catchError, map, of, startWith, tap } from 'rxjs';
 
 import { NotificationUnsubscribeRequest, PublicService } from '../../api';
 import { resolveApiError } from '../../core/api-error';
@@ -14,28 +15,43 @@ import { MessageService } from 'primeng/api';
   imports: [CommonModule, CardModule],
   templateUrl: './unsubscribe-page.component.html'
 })
-export class UnsubscribePageComponent implements OnInit {
+export class UnsubscribePageComponent {
   readonly i18n = inject(I18nService);
-  protected message = '';
 
   private readonly route = inject(ActivatedRoute);
   private readonly publicApi = inject(PublicService);
   private readonly messageService = inject(MessageService);
 
-  ngOnInit(): void {
+  protected readonly viewModel = this.createViewModel();
+
+  private createViewModel() {
     const token = this.route.snapshot.queryParamMap.get('token');
     if (!token) {
-      this.message = this.i18n.t('unsubscribe.missingToken');
-      return;
+      return of({
+        title: this.i18n.t('unsubscribe.title'),
+        message: this.i18n.t('unsubscribe.missingToken')
+      });
     }
+
     const notificationUnsubscribeRequest: NotificationUnsubscribeRequest = { token };
-    this.publicApi.unsubscribeNotifications({ notificationUnsubscribeRequest }).subscribe({
-      next: () => this.message = this.i18n.t('unsubscribe.success'),
-      error: (error) => {
+    return this.publicApi.unsubscribeNotifications({ notificationUnsubscribeRequest }).pipe(
+      map(() => ({
+        title: this.i18n.t('unsubscribe.successTitle'),
+        message: this.i18n.t('unsubscribe.success')
+      })),
+      catchError((error) => {
         const detail = resolveApiError(error);
-        this.message = detail;
-        this.messageService.add({ severity: 'error', summary: detail });
-      }
-    });
+        return of({
+          title: this.i18n.t('unsubscribe.title'),
+          message: detail
+        }).pipe(tap(() => {
+          this.messageService.add({ severity: 'error', summary: detail });
+        }));
+      }),
+      startWith({
+        title: this.i18n.t('unsubscribe.title'),
+        message: ''
+      })
+    );
   }
 }

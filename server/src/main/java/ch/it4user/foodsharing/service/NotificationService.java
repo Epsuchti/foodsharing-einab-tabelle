@@ -63,13 +63,17 @@ public class NotificationService {
             Map<String, String> details = new LinkedHashMap<>();
             details.put("Teacher", einAb.getTeacher().getName());
             details.put("Category", einAb.getCategory().name());
-            details.put("Start", String.valueOf(einAb.getStartDateTime()));
+            details.put("Start", emailTemplateService.swissDateTime(einAb.getStartDateTime()));
             details.put("Fairteiler visit", einAb.isVisitFairteiler() ? "yes" : "no");
             String body = emailTemplateService.render(
                     "New EinAb slot",
                     emailTemplateService.paragraph("Hello,")
                             + emailTemplateService.paragraph("A new EinAb slot is available.")
                             + emailTemplateService.detailsTable(details)
+                            + emailTemplateService.paragraphHtml(
+                                    "Want to stop these emails? "
+                                            + emailTemplateService.link("Opt out here", unsubscribeUrl)
+                                            + ".")
                             + emailTemplateService.button("Unsubscribe", unsubscribeUrl)
             );
             emailService.send(recipient.getEmail(), "New foodsharing EinAb slot", body);
