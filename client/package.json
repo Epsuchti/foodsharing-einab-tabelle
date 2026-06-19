@@ -6,7 +6,7 @@
     "start": "npm run openapi:generate && ng serve --proxy-config src/proxy.conf.json",
     "build": "npm run openapi:generate && ng build",
     "watch": "ng build --watch --configuration development",
-    "openapi:generate": "rm -rf src/app/api && openapi-generator-cli generate -i ../server/src/main/resources/openapi.yaml -g typescript-angular -o src/app/api -c openapi-generator.json --skip-validate-spec"
+    "openapi:generate": "openapi-generator-cli generate -i ../server/src/main/resources/openapi.yaml -g typescript-angular -o src/app/api -c openapi-generator.json --skip-validate-spec"
   },
   "private": true,
   "packageManager": "npm@11.6.2",

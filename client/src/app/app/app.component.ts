@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { UserRole } from '../api';
@@ -21,8 +21,17 @@ export class App {
   readonly sessionService = inject(SessionService);
   readonly roles = computed(() => this.sessionService.roles());
   readonly UserRole = UserRole;
+  readonly mobileMenuOpen = signal(false);
 
   setLanguage(language: 'de' | 'en' | 'gws'): void {
     void this.i18n.setLanguage(language);
+  }
+
+  toggleMobileMenu(): void {
+    this.mobileMenuOpen.update((current) => !current);
+  }
+
+  closeMobileMenu(): void {
+    this.mobileMenuOpen.set(false);
   }
 }

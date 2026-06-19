@@ -49,7 +49,8 @@ import { MessageService } from 'primeng/api';
     ProgressSpinnerModule,
     ToastModule
   ],
-  templateUrl: './public-slots-page.component.html'
+  templateUrl: './public-slots-page.component.html',
+  styleUrl: './public-slots-page.component.scss'
 })
 export class PublicSlotsPageComponent implements OnInit {
   readonly i18n = inject(I18nService);

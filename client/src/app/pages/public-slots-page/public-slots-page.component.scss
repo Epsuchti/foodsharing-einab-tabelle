@@ -1,0 +1,58 @@
+.slots-cards {
+  display: none;
+  gap: 0.75rem;
+}
+
+.slot-card {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border: 1px solid #d9e0ea;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.slot-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.slot-card__title {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.slot-card__meta {
+  display: grid;
+  gap: 0.625rem;
+}
+
+.slot-card__meta > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.slot-card__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+
+.slot-card__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 768px) {
+  .slots-table--desktop {
+    display: none;
+  }
+
+  .slots-cards--mobile {
+    display: grid;
+  }
+}

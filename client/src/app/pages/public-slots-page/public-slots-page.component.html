@@ -25,7 +25,7 @@
     } @else if (!slots().length) {
       <p class="empty-state">{{ i18n.t('slots.empty') }}</p>
     } @else {
-      <p-table [value]="slots()" [tableStyle]="{ width: '100%' }">
+      <p-table class="slots-table slots-table--desktop" [value]="slots()" [tableStyle]="{ width: '100%' }">
         <ng-template pTemplate="header">
           <tr>
             <th>{{ i18n.t('slots.category') }}</th>
@@ -52,6 +52,38 @@
           </tr>
         </ng-template>
       </p-table>
+
+      <div class="slots-cards slots-cards--mobile">
+        @for (slot of slots(); track slot.slotId) {
+          <article class="slot-card">
+            <div class="slot-card__header">
+              <div class="slot-card__title">{{ i18n.categoryLabel(slot.category) }}</div>
+              <p-tag
+                [severity]="slot.visitFairteiler ? 'success' : 'secondary'"
+                [value]="slot.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag>
+            </div>
+
+            <div class="slot-card__meta">
+              <div>
+                <span class="slot-card__label">{{ i18n.t('slots.date') }}</span>
+                <div>{{ slot.startDateTime | date: 'medium' }}</div>
+              </div>
+              <div>
+                <span class="slot-card__label">{{ i18n.t('common.location') }}</span>
+                <div>{{ slot.location ?? '-' }}</div>
+              </div>
+              <div>
+                <span class="slot-card__label">{{ i18n.t('slots.teacher') }}</span>
+                <div>{{ slot.teacherName }}</div>
+              </div>
+            </div>
+
+            <div class="slot-card__actions">
+              <button pButton size="small" icon="pi pi-calendar-plus" [label]="i18n.t('slots.book')" (click)="openBooking(slot)"></button>
+            </div>
+          </article>
+        }
+      </div>
     }
   </p-card>
 

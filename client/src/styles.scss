@@ -3,6 +3,7 @@
 html,
 body {
   margin: 0;
+  width: 100%;
   min-height: 100%;
   font-family: Inter, Arial, sans-serif;
   background: #f3f6f8;
@@ -11,10 +12,40 @@ body {
 
 body {
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 * {
   box-sizing: border-box;
+}
+
+img,
+svg,
+canvas,
+video {
+  max-width: 100%;
+}
+
+p {
+  margin-block: 0.75rem;
+}
+
+.p-card {
+  min-width: 0;
+  background: #ffffff;
+  color: #1f2937;
+}
+
+.p-card .p-card-body {
+  padding: 1rem;
+  background: #ffffff;
+  color: #1f2937;
+}
+
+.p-card .p-card-title,
+.p-card .p-card-subtitle,
+.p-card .p-card-content {
+  color: inherit;
 }
 
 .page-grid {
@@ -65,7 +96,8 @@ body {
 
 .toolbar-row,
 .dialog-actions,
-.actions-cell {
+.actions-cell,
+.accordion-actions {
   display: flex;
   gap: 0.5rem;
   align-items: center;
@@ -122,10 +154,38 @@ body {
   align-items: flex-start;
 }
 
+.stack-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.stack-form input,
+.stack-form textarea,
+.stack-form .p-select,
+.stack-form .p-datepicker {
+  width: 100%;
+}
+
+.stack-form textarea {
+  resize: vertical;
+}
+
 .booking-comments {
   margin-top: 1rem;
   display: grid;
   gap: 0.75rem;
+}
+
+.login-actions {
+  margin-top: 1rem;
+}
+
+.p-datatable {
+  width: 100%;
+}
+
+.p-datatable .p-datatable-wrapper {
+  width: 100%;
 }
 
 .p-toast .p-toast-message,
@@ -176,4 +236,84 @@ body {
 
 .p-toast .p-toast-icon-close:hover {
   color: #000 !important;
+}
+
+@media (max-width: 768px) {
+  .page-grid,
+  .filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .page-grid,
+  .page-stack,
+  .teacher-top-stack {
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .p-card .p-card-body {
+    padding: 0.875rem;
+  }
+
+  .app-header__content {
+    align-items: stretch;
+  }
+
+  .nav-links,
+  .header-actions,
+  .language-switch,
+  .toolbar-row,
+  .dialog-actions,
+  .actions-cell,
+  .accordion-actions,
+  .admin-users-toolbar,
+  .filter-toggle,
+  .accordion-header-main {
+    width: 100%;
+  }
+
+  .nav-links,
+  .header-actions,
+  .language-switch,
+  .toolbar-row,
+  .dialog-actions,
+  .actions-cell,
+  .accordion-actions,
+  .admin-users-toolbar,
+  .filter-toggle {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nav-links a,
+  .header-actions .p-button,
+  .toolbar-row > *,
+  .dialog-actions > *,
+  .actions-cell > *,
+  .accordion-actions > *,
+  .admin-users-toolbar > * {
+    width: 100%;
+  }
+
+  .p-datatable .p-datatable-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-inline: -0.875rem;
+    padding-inline: 0.875rem;
+  }
+
+  .p-datatable .p-datatable-table {
+    min-width: max-content;
+  }
+
+  .p-paginator {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .p-paginator .p-paginator-current,
+  .p-paginator .p-paginator-pages,
+  .p-paginator .p-paginator-rpp-options {
+    margin-inline-start: 0;
+  }
 }
