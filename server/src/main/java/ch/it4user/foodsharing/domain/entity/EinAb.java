@@ -40,4 +40,10 @@ public class EinAb extends BaseEntity {
 
     @Column(length = 500)
     private String location;
+
+    @Column(length = 500)
+    private String publicLocation;
+
+    @Column(length = 4000)
+    private String whatToBring;
 }

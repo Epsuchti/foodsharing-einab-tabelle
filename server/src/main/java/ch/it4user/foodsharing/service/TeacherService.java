@@ -68,6 +68,12 @@ public class TeacherService {
         return teacherRepository.save(teacher);
     }
 
+    @Transactional
+    public Teacher updateIcalLink(Teacher teacher, String icalLink) {
+        teacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
+        return teacher;
+    }
+
     public List<EinAb> findTeacherEinAbs(Teacher teacher) {
         return einAbRepository.findAllByTeacherOrderByStartDateTimeAsc(teacher);
     }
@@ -100,23 +106,6 @@ public class TeacherService {
         return bookingCommentRepository.save(bookingComment);
     }
 
-    @Transactional
-    public Slot updateSlotStatus(Teacher teacher, UUID slotId, SlotStatus status, boolean admin) {
-        Slot slot = requireTeacherSlot(teacher, slotId, admin);
-        if (status == SlotStatus.AVAILABLE) {
-            slot.setBookingUser(null);
-            slot.setBookedAt(null);
-            slot.setDoneAt(null);
-        }
-        if (status == SlotStatus.DONE) {
-            slot.setDoneAt(OffsetDateTime.now(ZoneOffset.UTC));
-        } else {
-            slot.setDoneAt(null);
-        }
-        slot.setStatus(status);
-        return slot;
-    }
-
     public List<ch.it4user.foodsharing.openapi.model.IcalCandidate> getIcalCandidates(Teacher teacher) {
         return icalImportService.loadCandidates(teacher.getIcalLink());
     }
@@ -126,6 +115,8 @@ public class TeacherService {
                              EinAbCategory category,
                              OffsetDateTime startDateTime,
                              String location,
+                             String publicLocation,
+                             String whatToBring,
                              boolean visitFairteiler,
                              int slotCount) {
         ensureTeacherActive(teacher);
@@ -135,6 +126,8 @@ public class TeacherService {
         einAb.setCategory(category);
         einAb.setStartDateTime(startDateTime);
         einAb.setLocation(normalizeLocation(location));
+        einAb.setPublicLocation(normalizeLocation(publicLocation));
+        einAb.setWhatToBring(normalizeWhatToBring(whatToBring));
         einAb.setVisitFairteiler(visitFairteiler);
         einAb.setSlotCount(slotCount);
         EinAb savedEinAb = einAbRepository.save(einAb);
@@ -149,6 +142,8 @@ public class TeacherService {
                              EinAbCategory category,
                              OffsetDateTime startDateTime,
                              String location,
+                             String publicLocation,
+                             String whatToBring,
                              boolean visitFairteiler,
                              int slotCount,
                              boolean admin) {
@@ -165,6 +160,8 @@ public class TeacherService {
         einAb.setCategory(category);
         einAb.setStartDateTime(startDateTime);
         einAb.setLocation(normalizeLocation(location));
+        einAb.setPublicLocation(normalizeLocation(publicLocation));
+        einAb.setWhatToBring(normalizeWhatToBring(whatToBring));
         einAb.setVisitFairteiler(visitFairteiler);
         einAb.setSlotCount(slotCount);
         if (slotCount > existingSlots) {
@@ -229,6 +226,10 @@ public class TeacherService {
         return location == null || location.isBlank() ? null : location.trim();
     }
 
+    private String normalizeWhatToBring(String whatToBring) {
+        return whatToBring == null || whatToBring.isBlank() ? null : whatToBring.trim();
+    }
+
     private EinAb requireTeacherEinAb(Teacher teacher, UUID einAbId, boolean admin) {
         EinAb einAb = einAbRepository.findById(einAbId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EinAb not found"));
@@ -243,12 +244,4 @@ public class TeacherService {
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Booking user not found"));
     }
 
-    private Slot requireTeacherSlot(Teacher teacher, UUID slotId, boolean admin) {
-        Slot slot = slotRepository.findDetailedById(slotId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Slot not found"));
-        if (!admin && !slot.getEinAb().getTeacher().getId().equals(teacher.getId())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "You can only manage your own slots");
-        }
-        return slot;
-    }
 }

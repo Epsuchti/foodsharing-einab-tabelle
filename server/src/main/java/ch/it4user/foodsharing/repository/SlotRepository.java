@@ -28,6 +28,7 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
           and (
             :searchPattern is null
             or lower(s.einAb.teacher.name) like :searchPattern
+            or lower(coalesce(s.einAb.publicLocation, '')) like :searchPattern
             or lower(coalesce(s.einAb.location, '')) like :searchPattern
           )
         order by s.einAb.startDateTime asc
@@ -51,10 +52,6 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
         order by s.einAb.startDateTime asc
         """)
     List<Slot> findAllByStatusInOrderByEinAbStartDateTimeAsc(@Param("statuses") Collection<SlotStatus> statuses);
-
-    @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
-    @Query("select s from Slot s where s.id = :id")
-    Optional<Slot> findDetailedById(@Param("id") UUID id);
 
     @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
     @Query("""

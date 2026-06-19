@@ -40,7 +40,7 @@
           <tr>
             <td>{{ i18n.categoryLabel(slot.category) }}</td>
             <td>{{ slot.startDateTime | date: 'medium' }}</td>
-            <td>{{ slot.location ?? '-' }}</td>
+            <td>{{ displayPublicLocation(slot) }}</td>
             <td>{{ slot.teacherName }}</td>
             <td>
               <p-tag [severity]="slot.visitFairteiler ? 'success' : 'secondary'"
@@ -70,7 +70,7 @@
               </div>
               <div>
                 <span class="slot-card__label">{{ i18n.t('common.location') }}</span>
-                <div>{{ slot.location ?? '-' }}</div>
+                <div>{{ displayPublicLocation(slot) }}</div>
               </div>
               <div>
                 <span class="slot-card__label">{{ i18n.t('slots.teacher') }}</span>
@@ -98,9 +98,9 @@
 </section>
 
 <p-dialog [(visible)]="bookingVisible" [modal]="true" [header]="i18n.t('book.dialogTitle')" [style]="{ width: '32rem', maxWidth: '95vw' }">
-  <form class="stack-form" [formGroup]="bookingForm" (ngSubmit)="submitBooking()">
+  <form class="stack-form" [formGroup]="bookingForm" (ngSubmit)="confirmBooking()">
     @if (selectedSlot) {
-      <p class="empty-state">{{ i18n.categoryLabel(selectedSlot.category) }} - {{ selectedSlot.startDateTime | date: 'medium' }} - {{ selectedSlot.location ?? '-' }}</p>
+      <p class="empty-state">{{ i18n.categoryLabel(selectedSlot.category) }} - {{ selectedSlot.startDateTime | date: 'medium' }} - {{ displayPublicLocation(selectedSlot) }}</p>
     }
     @if (bookingIdentityLocked() && bookingProfile()) {
       <div class="info-grid">
@@ -121,3 +121,39 @@
     </div>
   </form>
 </p-dialog>
+
+<p-dialog [(visible)]="bookingSuccessVisible" [modal]="true" [header]="i18n.t('book.confirmedTitle')" [style]="{ width: '36rem', maxWidth: '95vw' }">
+  @if (bookingDetails()) {
+    <div class="info-grid">
+      <div><strong>{{ bookingDetails()?.bookingUser?.name }}</strong></div>
+      <div>{{ bookingDetails()?.bookingUser?.email }}</div>
+      <div>{{ bookingDetails()?.bookingUser?.foodsharingId }}</div>
+      <div>{{ bookingDetails()?.bookingUser?.phoneNumber }}</div>
+    </div>
+
+    <div class="empty-state">
+      {{ i18n.categoryLabel(bookingDetails()!.category) }} - {{ bookingDetails()!.startDateTime | date: 'medium' }}
+    </div>
+
+    <div class="stack-form">
+      <div>
+        <span class="slot-card__label">{{ i18n.t('common.location') }}</span>
+        <div>{{ displayBookingLocation(bookingDetails()) }}</div>
+      </div>
+      @if (bookingDetails()?.whatToBring) {
+        <div>
+          <span class="slot-card__label">{{ i18n.t('common.whatToBring') }}</span>
+          <div style="white-space: pre-wrap;">{{ bookingDetails()?.whatToBring }}</div>
+        </div>
+      }
+    </div>
+
+    <p class="empty-state">{{ i18n.t('book.loginLater') }}</p>
+
+    <div class="dialog-actions">
+      <button pButton type="button" [label]="i18n.t('common.close')" (click)="closeBookingSuccess()"></button>
+    </div>
+  }
+</p-dialog>
+
+<p-confirmDialog></p-confirmDialog>

@@ -36,6 +36,7 @@
           <th>{{ i18n.t('slots.category') }}</th>
           <th>{{ i18n.t('slots.date') }}</th>
           <th>{{ i18n.t('common.location') }}</th>
+          <th>{{ i18n.t('common.publicLocation') }}</th>
           <th>{{ i18n.t('slots.teacher') }}</th>
         </tr>
       </ng-template>
@@ -44,6 +45,7 @@
           <td>{{ i18n.categoryLabel(einab.category) }}</td>
           <td>{{ einab.startDateTime | date: 'medium' }}</td>
           <td>{{ einab.location ?? '-' }}</td>
+          <td>{{ einab.publicLocation ?? '-' }}</td>
           <td>{{ einab.teacher.name }}</td>
         </tr>
       </ng-template>

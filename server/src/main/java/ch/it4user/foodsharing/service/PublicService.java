@@ -8,7 +8,9 @@ import ch.it4user.foodsharing.repository.SlotRepository;
 import ch.it4user.foodsharing.repository.TeacherRepository;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -23,11 +25,22 @@ public class PublicService {
     private final SlotRepository slotRepository;
     private final BookingUserService bookingUserService;
     private final TeacherRepository teacherRepository;
+    private final EmailService emailService;
+    private final EmailTemplateService emailTemplateService;
+    private final AppProperties appProperties;
 
-    public PublicService(SlotRepository slotRepository, BookingUserService bookingUserService, TeacherRepository teacherRepository) {
+    public PublicService(SlotRepository slotRepository,
+                         BookingUserService bookingUserService,
+                         TeacherRepository teacherRepository,
+                         EmailService emailService,
+                         EmailTemplateService emailTemplateService,
+                         AppProperties appProperties) {
         this.slotRepository = slotRepository;
         this.bookingUserService = bookingUserService;
         this.teacherRepository = teacherRepository;
+        this.emailService = emailService;
+        this.emailTemplateService = emailTemplateService;
+        this.appProperties = appProperties;
     }
 
     public List<Slot> findAvailableSlots(String search, EinAbCategory category, Boolean visitFairteiler) {
@@ -62,6 +75,7 @@ public class PublicService {
         slot.setBookingUser(bookingUser);
         slot.setStatus(SlotStatus.BOOKED);
         slot.setBookedAt(OffsetDateTime.now(ZoneOffset.UTC));
+        sendBookingConfirmationEmail(slot);
         return slot;
     }
 
@@ -72,5 +86,30 @@ public class PublicService {
     private String normalizeSearch(String value) {
         String normalized = normalize(value);
         return normalized == null ? null : "%" + normalized.toLowerCase() + "%";
+    }
+
+    private void sendBookingConfirmationEmail(Slot slot) {
+        String manageUrl = appProperties.getFrontend().getBaseUrl() + "/my-bookings";
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put("Teacher", slot.getEinAb().getTeacher().getName());
+        details.put("Category", slot.getEinAb().getCategory().name());
+        details.put("Start", String.valueOf(slot.getEinAb().getStartDateTime()));
+        details.put("Location", valueOrDash(slot.getEinAb().getLocation()));
+        details.put("What to bring", valueOrDash(slot.getEinAb().getWhatToBring()));
+        details.put("Fairteiler visit", slot.getEinAb().isVisitFairteiler() ? "yes" : "no");
+        String body = emailTemplateService.render(
+                "Your pickup is booked",
+                emailTemplateService.paragraph("Hello " + slot.getBookingUser().getName() + ",")
+                        + emailTemplateService.paragraph("Your pickup has been booked successfully.")
+                        + emailTemplateService.detailsTable(details)
+                        + emailTemplateService.note("You can log in later with the email address you used here: "
+                        + slot.getBookingUser().getEmail())
+                        + emailTemplateService.button("View your bookings", manageUrl)
+        );
+        emailService.send(slot.getBookingUser().getEmail(), "Your foodsharing pickup details", body);
+    }
+
+    private String valueOrDash(String value) {
+        return value == null || value.isBlank() ? "-" : value;
     }
 }

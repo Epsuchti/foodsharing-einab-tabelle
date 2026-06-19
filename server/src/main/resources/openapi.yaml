@@ -219,6 +219,24 @@ paths:
                 $ref: '#/components/schemas/TeacherSelfResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [teacher]
+      operationId: updateTeacherMe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTeacherMeRequest'
+      responses:
+        '200':
+          description: Updated teacher profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherSelfResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
   /api/teacher/einabs:
@@ -349,31 +367,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BookingCommentResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-  /api/teacher/slots/{slotId}/status:
-    put:
-      tags: [teacher]
-      operationId: updateTeacherSlotStatus
-      parameters:
-        - $ref: '#/components/parameters/SlotId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UpdateSlotStatusRequest'
-      responses:
-        '200':
-          description: Slot updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SlotResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':
@@ -724,6 +717,12 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/IcalCandidate'
+    UpdateTeacherMeRequest:
+      type: object
+      properties:
+        icalLink:
+          type: string
+          maxLength: 2000
     BookingUserResponse:
       type: object
       required: [id, email, name, foodsharingId, phoneNumber, createdAt, updatedAt]
@@ -805,6 +804,10 @@ components:
           format: date-time
         location:
           type: string
+        publicLocation:
+          type: string
+        whatToBring:
+          type: string
         teacher:
           $ref: '#/components/schemas/TeacherResponse'
         visitFairteiler:
@@ -857,6 +860,8 @@ components:
           format: date-time
         location:
           type: string
+        publicLocation:
+          type: string
         teacherName:
           type: string
         teacherId:
@@ -890,6 +895,8 @@ components:
           type: string
           format: date-time
         location:
+          type: string
+        whatToBring:
           type: string
         teacherName:
           type: string
@@ -945,6 +952,12 @@ components:
         location:
           type: string
           maxLength: 500
+        publicLocation:
+          type: string
+          maxLength: 500
+        whatToBring:
+          type: string
+          maxLength: 4000
         visitFairteiler:
           type: boolean
         slotCount:
@@ -987,12 +1000,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/BookingCommentResponse'
-    UpdateSlotStatusRequest:
-      type: object
-      required: [status]
-      properties:
-        status:
-          $ref: '#/components/schemas/SlotStatus'
     IcalCandidate:
       type: object
       required: [startDateTime, summary]

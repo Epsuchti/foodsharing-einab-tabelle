@@ -25,6 +25,7 @@ public class AuthService {
     private final RoleResolutionService roleResolutionService;
     private final TokenService tokenService;
     private final EmailService emailService;
+    private final EmailTemplateService emailTemplateService;
     private final AppProperties appProperties;
     private final TeacherRepository teacherRepository;
 
@@ -33,6 +34,7 @@ public class AuthService {
                        RoleResolutionService roleResolutionService,
                        TokenService tokenService,
                        EmailService emailService,
+                       EmailTemplateService emailTemplateService,
                        AppProperties appProperties,
                        TeacherRepository teacherRepository) {
         this.loginTokenRepository = loginTokenRepository;
@@ -40,6 +42,7 @@ public class AuthService {
         this.roleResolutionService = roleResolutionService;
         this.tokenService = tokenService;
         this.emailService = emailService;
+        this.emailTemplateService = emailTemplateService;
         this.appProperties = appProperties;
         this.teacherRepository = teacherRepository;
     }
@@ -56,17 +59,14 @@ public class AuthService {
         loginTokenRepository.save(loginToken);
 
         String loginLink = appProperties.getFrontend().getBaseUrl() + "/verify-login?token=" + rawToken;
-        emailService.send(normalizedEmail, "Your foodsharing login link",
-                """
-                <html>
-                  <body style="font-family: Arial, sans-serif; color: #1f2937;">
-                    <p>Hello,</p>
-                    <p>Open this link to sign in:</p>
-                    <p><a href="%s">%s</a></p>
-                    <p>If you did not request this email, you can ignore it.</p>
-                  </body>
-                </html>
-                """.formatted(loginLink, loginLink));
+        String body = emailTemplateService.render(
+                "Login link",
+                emailTemplateService.paragraph("Hello,")
+                        + emailTemplateService.paragraph("Open this link to sign in:")
+                        + emailTemplateService.button("Sign in", loginLink)
+                        + emailTemplateService.paragraph("If you did not request this email, you can ignore it.")
+        );
+        emailService.send(normalizedEmail, "Your foodsharing login link", body);
     }
 
     @Transactional

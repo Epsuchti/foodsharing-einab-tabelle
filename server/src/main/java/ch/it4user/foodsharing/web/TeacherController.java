@@ -8,11 +8,10 @@ import ch.it4user.foodsharing.openapi.model.BookingCommentListResponse;
 import ch.it4user.foodsharing.openapi.model.BookingCommentResponse;
 import ch.it4user.foodsharing.openapi.model.CreateBookingCommentRequest;
 import ch.it4user.foodsharing.openapi.model.IcalCandidateListResponse;
-import ch.it4user.foodsharing.openapi.model.SlotResponse;
+import ch.it4user.foodsharing.openapi.model.UpdateTeacherMeRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSelfResponse;
-import ch.it4user.foodsharing.openapi.model.UpdateSlotStatusRequest;
 import ch.it4user.foodsharing.openapi.model.UpsertEinAbRequest;
 import ch.it4user.foodsharing.repository.SlotRepository;
 import ch.it4user.foodsharing.service.CurrentActorService;
@@ -49,6 +48,14 @@ public class TeacherController implements TeacherApi {
     }
 
     @Override
+    public ResponseEntity<TeacherSelfResponse> updateTeacherMe(UpdateTeacherMeRequest updateTeacherMeRequest) {
+        Teacher teacher = currentActorService.requireTeacher();
+        return ResponseEntity.ok(mapper.toTeacherSelfResponse(
+                teacherService.updateIcalLink(teacher, updateTeacherMeRequest.getIcalLink()),
+                teacherService.getIcalCandidates(teacher)));
+    }
+
+    @Override
     public ResponseEntity<TeacherEinAbListResponse> getTeacherEinAbs() {
         Teacher teacher = currentActorService.requireTeacher();
         List<EinAb> einAbs = teacherService.findTeacherEinAbs(teacher);
@@ -63,6 +70,8 @@ public class TeacherController implements TeacherApi {
                 ch.it4user.foodsharing.domain.enumtype.EinAbCategory.valueOf(upsertEinAbRequest.getCategory().getValue()),
                 upsertEinAbRequest.getStartDateTime(),
                 upsertEinAbRequest.getLocation(),
+                upsertEinAbRequest.getPublicLocation(),
+                upsertEinAbRequest.getWhatToBring(),
                 upsertEinAbRequest.getVisitFairteiler(),
                 upsertEinAbRequest.getSlotCount()
         );
@@ -78,6 +87,8 @@ public class TeacherController implements TeacherApi {
                 ch.it4user.foodsharing.domain.enumtype.EinAbCategory.valueOf(upsertEinAbRequest.getCategory().getValue()),
                 upsertEinAbRequest.getStartDateTime(),
                 upsertEinAbRequest.getLocation(),
+                upsertEinAbRequest.getPublicLocation(),
+                upsertEinAbRequest.getWhatToBring(),
                 upsertEinAbRequest.getVisitFairteiler(),
                 upsertEinAbRequest.getSlotCount(),
                 currentActorService.isAdmin()
@@ -111,16 +122,6 @@ public class TeacherController implements TeacherApi {
     public ResponseEntity<BookingCommentListResponse> getTeacherBookingComments(UUID bookingUserId) {
         return ResponseEntity.ok(mapper.toBookingCommentListResponse(
                 teacherService.findBookingComments(bookingUserId)));
-    }
-
-    @Override
-    public ResponseEntity<SlotResponse> updateTeacherSlotStatus(UUID slotId, UpdateSlotStatusRequest updateSlotStatusRequest) {
-        return ResponseEntity.ok(mapper.toSlotResponse(
-                teacherService.updateSlotStatus(
-                        currentActorService.requireTeacher(),
-                        slotId,
-                        ch.it4user.foodsharing.domain.enumtype.SlotStatus.valueOf(updateSlotStatusRequest.getStatus().getValue()),
-                        currentActorService.isAdmin())));
     }
 
     @Override

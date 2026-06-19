@@ -122,7 +122,8 @@ public class ApiModelMapper {
         response.setSlotId(slot.getId());
         response.setCategory(ch.it4user.foodsharing.openapi.model.EinAbCategory.fromValue(slot.getEinAb().getCategory().name()));
         response.setStartDateTime(slot.getEinAb().getStartDateTime());
-        response.setLocation(slot.getEinAb().getLocation());
+        response.setLocation(slot.getEinAb().getPublicLocation());
+        response.setPublicLocation(slot.getEinAb().getPublicLocation());
         response.setTeacherName(slot.getEinAb().getTeacher().getName());
         response.setTeacherId(slot.getEinAb().getTeacher().getId());
         response.setVisitFairteiler(slot.getEinAb().isVisitFairteiler());
@@ -137,6 +138,7 @@ public class ApiModelMapper {
         response.setCategory(ch.it4user.foodsharing.openapi.model.EinAbCategory.fromValue(slot.getEinAb().getCategory().name()));
         response.setStartDateTime(slot.getEinAb().getStartDateTime());
         response.setLocation(slot.getEinAb().getLocation());
+        response.setWhatToBring(slot.getEinAb().getWhatToBring());
         response.setTeacherName(slot.getEinAb().getTeacher().getName());
         response.setVisitFairteiler(slot.getEinAb().isVisitFairteiler());
         response.setStatus(ch.it4user.foodsharing.openapi.model.SlotStatus.fromValue(slot.getStatus().name()));
@@ -173,6 +175,8 @@ public class ApiModelMapper {
         response.setCategory(ch.it4user.foodsharing.openapi.model.EinAbCategory.fromValue(einAb.getCategory().name()));
         response.setStartDateTime(einAb.getStartDateTime());
         response.setLocation(einAb.getLocation());
+        response.setPublicLocation(einAb.getPublicLocation());
+        response.setWhatToBring(einAb.getWhatToBring());
         response.setTeacher(toTeacherResponse(einAb.getTeacher()));
         response.setVisitFairteiler(einAb.isVisitFairteiler());
         response.setSlotCount(einAb.getSlotCount());
@@ -240,6 +244,8 @@ public class ApiModelMapper {
         target.setCategory(source.getCategory());
         target.setStartDateTime(source.getStartDateTime());
         target.setLocation(source.getLocation());
+        target.setPublicLocation(source.getPublicLocation());
+        target.setWhatToBring(source.getWhatToBring());
         target.setTeacher(source.getTeacher());
         target.setVisitFairteiler(source.getVisitFairteiler());
         target.setSlotCount(source.getSlotCount());

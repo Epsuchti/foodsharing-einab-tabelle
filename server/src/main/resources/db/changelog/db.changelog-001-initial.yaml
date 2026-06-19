@@ -45,6 +45,8 @@ databaseChangeLog:
               - column: {name: category, type: VARCHAR(64), constraints: {nullable: false}}
               - column: {name: start_date_time, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
               - column: {name: location, type: VARCHAR(500)}
+              - column: {name: public_location, type: VARCHAR(500)}
+              - column: {name: what_to_bring, type: VARCHAR(4000)}
               - column: {name: teacher_id, type: UUID, constraints: {nullable: false}}
               - column: {name: visit_fairteiler, type: BOOLEAN, constraints: {nullable: false}}
               - column: {name: slot_count, type: INT, constraints: {nullable: false}}

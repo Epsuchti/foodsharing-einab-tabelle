@@ -8,6 +8,7 @@
         <th>{{ i18n.t('slots.date') }}</th>
         <th>{{ i18n.t('slots.teacher') }}</th>
         <th>{{ i18n.t('common.location') }}</th>
+        <th>{{ i18n.t('common.whatToBring') }}</th>
         <th>{{ i18n.t('common.phoneNumber') }}</th>
         <th>{{ i18n.t('common.status') }}</th>
         <th>{{ i18n.t('common.actions') }}</th>
@@ -20,6 +21,7 @@
         <td>{{ booking.startDateTime | date: 'medium' }}</td>
         <td>{{ booking.teacherName }}</td>
         <td>{{ booking.location ?? '-' }}</td>
+        <td style="white-space: pre-wrap;">{{ booking.whatToBring ?? '-' }}</td>
         <td>{{ booking.bookingUser?.phoneNumber ?? '-' }}</td>
         <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
         <td class="actions-cell">

@@ -1,16 +1,16 @@
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 
 import {
   EinAbCategory,
   IcalCandidate,
-  SlotStatus,
-  SlotResponse,
   TeacherEinAbResponse,
   TeacherResponse,
   TeacherService,
+  TeacherSelfResponse,
+  UpdateTeacherMeRequest,
   UpsertEinAbRequest
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
@@ -22,6 +22,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DatePickerModule } from 'primeng/datepicker';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
+import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -32,7 +33,6 @@ import { ConfirmationService, MessageService } from 'primeng/api';
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
     ReactiveFormsModule,
     DatePipe,
     CardModule,
@@ -42,6 +42,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     DatePickerModule,
     DialogModule,
     InputTextModule,
+    TextareaModule,
     SelectModule,
     TableModule,
     TagModule
@@ -55,11 +56,10 @@ export class TeacherDashboardPageComponent implements OnInit {
   protected readonly einAbs = signal<TeacherEinAbResponse[]>([]);
   protected readonly selectedEinAb = signal<TeacherEinAbResponse | null>(null);
   protected readonly icalCandidates = signal<IcalCandidate[]>([]);
+  protected readonly profileSaveLoading = signal(false);
   protected readonly saveLoading = signal(false);
   protected readonly categoryOptions = computed(() => Object.values(EinAbCategory).map((value) => ({ value, label: this.i18n.categoryLabel(value) })));
-  protected readonly slotStatusOptions = computed(() => Object.values(SlotStatus).map((value) => ({ value, label: this.i18n.statusLabel(value) })));
   protected readonly slotCountOptions = [1, 2, 3].map((value) => ({ value, label: String(value) }));
-  protected readonly slotStatusDraft: Record<string, SlotStatus> = {};
 
   protected einabDialogVisible = false;
   protected readonly editingEinAb = signal<TeacherEinAbResponse | null>(null);
@@ -68,8 +68,14 @@ export class TeacherDashboardPageComponent implements OnInit {
     category: [EinAbCategory.Supermarket, Validators.required],
     startDateTime: [new Date(), Validators.required],
     location: [''],
+    publicLocation: [''],
+    whatToBring: [''],
     visitFairteiler: [false],
     slotCount: [1, Validators.required]
+  });
+
+  protected readonly teacherProfileForm = inject(FormBuilder).nonNullable.group({
+    icalLink: ['']
   });
 
   private readonly teacherApi = inject(TeacherService);
@@ -82,7 +88,12 @@ export class TeacherDashboardPageComponent implements OnInit {
 
   reload(): void {
     this.teacherApi.getTeacherMe().subscribe({
-      next: (response) => this.teacher.set(response),
+      next: (response) => {
+        this.teacher.set(response);
+        this.teacherProfileForm.reset({
+          icalLink: response.icalLink ?? ''
+        });
+      },
       error: (error) => this.toastError(resolveApiError(error))
     });
     this.teacherApi.getTeacherEinAbs().subscribe({
@@ -92,13 +103,34 @@ export class TeacherDashboardPageComponent implements OnInit {
           const refreshed = response.einAbs.find((item) => item.id === this.selectedEinAb()?.id) ?? null;
           this.selectedEinAb.set(refreshed);
         }
-        response.einAbs.flatMap((einab) => einab.slots).forEach((slot) => this.slotStatusDraft[slot.id] = slot.status);
       },
       error: (error) => this.toastError(resolveApiError(error))
     });
     this.teacherApi.getTeacherIcalCandidates().subscribe({
       next: (response) => this.icalCandidates.set(response.candidates),
       error: () => this.icalCandidates.set([])
+    });
+  }
+
+  saveTeacherProfile(): void {
+    if (this.teacherProfileForm.invalid) {
+      return;
+    }
+    this.profileSaveLoading.set(true);
+    const formValue = this.teacherProfileForm.getRawValue();
+    const updateTeacherMeRequest: UpdateTeacherMeRequest = {
+      icalLink: formValue.icalLink?.trim() || undefined
+    };
+    this.teacherApi.updateTeacherMe({ updateTeacherMeRequest }).subscribe({
+      next: (response: TeacherSelfResponse) => {
+        this.teacher.set(response);
+        this.teacherProfileForm.reset({ icalLink: response.icalLink ?? '' });
+        this.profileSaveLoading.set(false);
+      },
+      error: (error) => {
+        this.profileSaveLoading.set(false);
+        this.toastError(resolveApiError(error));
+      }
     });
   }
 
@@ -115,6 +147,8 @@ export class TeacherDashboardPageComponent implements OnInit {
       category: EinAbCategory.Supermarket,
       startDateTime: new Date(),
       location: '',
+      publicLocation: '',
+      whatToBring: '',
       visitFairteiler: false,
       slotCount: 1
     });
@@ -130,6 +164,8 @@ export class TeacherDashboardPageComponent implements OnInit {
       category: EinAbCategory.Supermarket,
       startDateTime: new Date(candidate.startDateTime),
       location: candidate.location ?? '',
+      publicLocation: candidate.location ?? '',
+      whatToBring: '',
       visitFairteiler: false,
       slotCount: 1
     });
@@ -145,6 +181,8 @@ export class TeacherDashboardPageComponent implements OnInit {
       category: einab.category,
       startDateTime: new Date(einab.startDateTime),
       location: einab.location ?? '',
+      publicLocation: einab.publicLocation ?? '',
+      whatToBring: einab.whatToBring ?? '',
       visitFairteiler: einab.visitFairteiler,
       slotCount: einab.slotCount
     });
@@ -164,6 +202,8 @@ export class TeacherDashboardPageComponent implements OnInit {
       category: formValue.category,
       startDateTime: formValue.startDateTime.toISOString(),
       location: formValue.location?.trim() || undefined,
+      publicLocation: formValue.publicLocation?.trim() || undefined,
+      whatToBring: formValue.whatToBring?.trim() || undefined,
       visitFairteiler: formValue.visitFairteiler,
       slotCount: formValue.slotCount
     };
@@ -190,17 +230,6 @@ export class TeacherDashboardPageComponent implements OnInit {
           error: (error) => this.toastError(resolveApiError(error))
         });
       }
-    });
-  }
-
-  saveSlotStatus(slot: SlotResponse): void {
-    const status = this.slotStatusDraft[slot.id] ?? slot.status;
-    this.teacherApi.updateTeacherSlotStatus({
-      slotId: slot.id,
-      updateSlotStatusRequest: { status }
-    }).subscribe({
-      next: () => this.reload(),
-      error: (error) => this.toastError(resolveApiError(error))
     });
   }
 

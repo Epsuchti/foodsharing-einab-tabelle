@@ -4,10 +4,26 @@
     <div class="info-grid">
       <div><strong>{{ teacher()?.name }}</strong></div>
       <div>{{ teacher()?.email }}</div>
+      <div>{{ teacher()?.icalLink ?? '-' }}</div>
       <div>
         <p-tag [severity]="teacher()?.active ? 'success' : 'warn'" [value]="teacher()?.active ? i18n.t('common.active') : i18n.t('common.inactive')"></p-tag>
       </div>
     </div>
+    <form class="stack-form" [formGroup]="teacherProfileForm">
+      <label>
+        <span>{{ i18n.t('common.icalLink') }}</span>
+        <input pInputText type="url" formControlName="icalLink" />
+      </label>
+      <div class="dialog-actions">
+        <button
+          pButton
+          type="button"
+          icon="pi pi-save"
+          [label]="i18n.t('common.save')"
+          [loading]="profileSaveLoading()"
+          (click)="saveTeacherProfile()"></button>
+      </div>
+    </form>
     @if (!teacher()?.active) {
       <p class="empty-state">{{ i18n.t('teacher.inactiveHint') }}</p>
     }
@@ -53,6 +69,7 @@
           <th>{{ i18n.t('slots.category') }}</th>
           <th>{{ i18n.t('slots.date') }}</th>
           <th>{{ i18n.t('common.location') }}</th>
+          <th>{{ i18n.t('common.publicLocation') }}</th>
           <th>{{ i18n.t('common.slotCount') }}</th>
         <th>{{ i18n.t('common.actions') }}</th>
       </tr>
@@ -62,6 +79,7 @@
         <td>{{ i18n.categoryLabel(einab.category) }}</td>
         <td>{{ einab.startDateTime | date: 'medium' }}</td>
         <td>{{ einab.location ?? '-' }}</td>
+        <td>{{ einab.publicLocation ?? '-' }}</td>
         <td>{{ einab.slotCount }}</td>
         <td class="actions-cell">
           <button pButton size="small" icon="pi pi-eye" (click)="selectEinAb(einab)"></button>
@@ -76,14 +94,19 @@
 @if (selectedEinAb()) {
   <p-card>
     <ng-template pTemplate="title">{{ i18n.t('teacher.slotManagement') }}</ng-template>
+    @if (selectedEinAb()?.whatToBring) {
+      <div style="margin: 0 0 0.75rem;">
+        <span class="slot-card__label">{{ i18n.t('common.whatToBring') }}</span>
+        <p style="white-space: pre-wrap; margin: 0;">{{ selectedEinAb()?.whatToBring }}</p>
+      </div>
+    }
     <p-table [value]="selectedEinAb()?.slots ?? []">
       <ng-template pTemplate="header">
         <tr>
-            <th>{{ i18n.t('common.id') }}</th>
+          <th>{{ i18n.t('common.id') }}</th>
           <th>{{ i18n.t('common.status') }}</th>
           <th>{{ i18n.t('common.name') }}</th>
           <th>{{ i18n.t('common.foodsharingId') }}</th>
-          <th>{{ i18n.t('common.actions') }}</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-slot>
@@ -92,10 +115,6 @@
           <td><p-tag [value]="i18n.statusLabel(slot.status)"></p-tag></td>
           <td>{{ slot.bookingUser?.name ?? '-' }}</td>
           <td>{{ slot.bookingUser?.foodsharingId ?? '-' }}</td>
-        <td class="actions-cell">
-            <p-select [options]="slotStatusOptions()" [(ngModel)]="slotStatusDraft[slot.id]" optionLabel="label" optionValue="value"></p-select>
-            <button pButton size="small" icon="pi pi-save" (click)="saveSlotStatus(slot)"></button>
-          </td>
         </tr>
       </ng-template>
     </p-table>
@@ -122,6 +141,16 @@
     <label>
       <span>{{ i18n.t('common.location') }}</span>
       <input pInputText type="text" formControlName="location" />
+    </label>
+
+    <label>
+      <span>{{ i18n.t('common.publicLocation') }}</span>
+      <input pInputText type="text" formControlName="publicLocation" />
+    </label>
+
+    <label>
+      <span>{{ i18n.t('common.whatToBring') }}</span>
+      <textarea pInputTextarea rows="5" formControlName="whatToBring"></textarea>
     </label>
 
     <label>
