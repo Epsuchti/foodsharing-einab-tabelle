@@ -1,7 +1,5 @@
 package ch.it4user.foodsharing.service;
 
-import java.util.HashSet;
-import java.util.Set;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties(prefix = "app")
@@ -26,7 +24,6 @@ public class AppProperties {
     public static class Auth {
         private long tokenValidityDays = 365;
         private long loginTokenValidityMinutes = 30;
-        private Set<String> adminEmails = new HashSet<>();
 
         public long getTokenValidityDays() {
             return tokenValidityDays;
@@ -44,13 +41,6 @@ public class AppProperties {
             this.loginTokenValidityMinutes = loginTokenValidityMinutes;
         }
 
-        public Set<String> getAdminEmails() {
-            return adminEmails;
-        }
-
-        public void setAdminEmails(Set<String> adminEmails) {
-            this.adminEmails = adminEmails;
-        }
     }
 
     public static class Frontend {

@@ -2,10 +2,10 @@ package ch.it4user.foodsharing.service;
 
 import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.NotificationSubscription;
+import ch.it4user.foodsharing.domain.entity.Slot;
+import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.repository.NotificationSubscriptionRepository;
 import java.util.List;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,10 +32,11 @@ public class NotificationService {
     }
 
     @Transactional
-    public NotificationSubscription subscribe(String email) {
+    public NotificationSubscription subscribe(String email, LanguageCode language) {
         return notificationSubscriptionRepository.findByEmailIgnoreCase(email.trim().toLowerCase())
                 .map(existing -> {
                     existing.setActive(true);
+                    existing.setPreferredLanguage(language);
                     return existing;
                 })
                 .orElseGet(() -> {
@@ -43,6 +44,7 @@ public class NotificationService {
                     subscription.setEmail(email.trim().toLowerCase());
                     subscription.setActive(true);
                     subscription.setUnsubscribeToken(tokenService.generateToken());
+                    subscription.setPreferredLanguage(language);
                     return notificationSubscriptionRepository.save(subscription);
                 });
     }
@@ -50,7 +52,7 @@ public class NotificationService {
     @Transactional
     public NotificationSubscription unsubscribe(String token) {
         NotificationSubscription subscription = notificationSubscriptionRepository.findByUnsubscribeToken(token)
-                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, "Invalid unsubscribe token"));
+                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.INVALID_UNSUBSCRIBE_TOKEN));
         subscription.setActive(false);
         return subscription;
     }
@@ -60,23 +62,21 @@ public class NotificationService {
         for (NotificationSubscription recipient : recipients) {
             String unsubscribeUrl = appProperties.getFrontend().getBaseUrl()
                     + "/unsubscribe?token=" + recipient.getUnsubscribeToken();
-            Map<String, String> details = new LinkedHashMap<>();
-            details.put("Teacher", einAb.getTeacher().getName());
-            details.put("Category", einAb.getCategory().name());
-            details.put("Start", emailTemplateService.swissDateTime(einAb.getStartDateTime()));
-            details.put("Fairteiler visit", einAb.isVisitFairteiler() ? "yes" : "no");
-            String body = emailTemplateService.render(
-                    "New EinAb slot",
-                    emailTemplateService.paragraph("Hello,")
-                            + emailTemplateService.paragraph("A new EinAb slot is available.")
-                            + emailTemplateService.detailsTable(details)
-                            + emailTemplateService.paragraphHtml(
-                                    "Want to stop these emails? "
-                                            + emailTemplateService.link("Opt out here", unsubscribeUrl)
-                                            + ".")
-                            + emailTemplateService.button("Unsubscribe", unsubscribeUrl)
-            );
-            emailService.send(recipient.getEmail(), "New foodsharing EinAb slot", body);
+            emailService.send(
+                    recipient.getEmail(),
+                    emailTemplateService.notificationSubject(recipient.getPreferredLanguage()),
+                    emailTemplateService.notificationBody(recipient.getPreferredLanguage(), einAb, unsubscribeUrl));
         }
+    }
+
+    public void notifyTeacherCancelledBooking(Slot slot) {
+        if (slot.getBookingUser() == null) {
+            return;
+        }
+        String manageUrl = appProperties.getFrontend().getBaseUrl() + "/my-bookings";
+        emailService.send(
+                slot.getBookingUser().getEmail(),
+                emailTemplateService.teacherCancellationSubject(slot.getBookingUser().getPreferredLanguage()),
+                emailTemplateService.teacherCancellationBody(slot.getBookingUser().getPreferredLanguage(), slot, manageUrl));
     }
 }

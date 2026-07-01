@@ -13,4 +13,8 @@ public interface AuthSessionRepository extends JpaRepository<AuthSession, UUID> 
     List<AuthSession> findAllByEmailIgnoreCase(String email);
 
     long deleteAllByEmailIgnoreCase(String email);
+
+    List<AuthSession> findAllByFoodsharingIdIgnoreCase(String foodsharingId);
+
+    long deleteAllByFoodsharingIdIgnoreCase(String foodsharingId);
 }

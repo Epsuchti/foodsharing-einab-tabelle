@@ -2,17 +2,15 @@ package ch.it4user.foodsharing.service;
 
 import ch.it4user.foodsharing.domain.entity.BookingUser;
 import ch.it4user.foodsharing.domain.entity.Slot;
+import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.domain.enumtype.EinAbCategory;
 import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
 import ch.it4user.foodsharing.repository.SlotRepository;
 import ch.it4user.foodsharing.repository.TeacherRepository;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,38 +41,47 @@ public class PublicService {
         this.appProperties = appProperties;
     }
 
-    public List<Slot> findAvailableSlots(String search, EinAbCategory category, Boolean visitFairteiler) {
-        return slotRepository.findAvailableSlots(normalizeSearch(search), category, visitFairteiler);
+    public Page<Slot> findAvailableSlots(String search, EinAbCategory category, Boolean visitFairteiler, int page, int size) {
+        return slotRepository.findAvailableSlots(
+                normalizeSearch(search),
+                category,
+                visitFairteiler,
+                PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
     @Transactional
-    public Slot bookSlot(UUID slotId, String email, String name, String foodsharingId, String phoneNumber) {
+    public Slot bookSlot(UUID slotId, String email, String name, String foodsharingId, String phoneNumber, LanguageCode language) {
         String normalizedEmail = email.trim().toLowerCase();
-        if (teacherRepository.existsByEmailIgnoreCase(normalizedEmail)) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Teachers cannot book appointments");
+        if (teacherRepository.existsByFoodsharingIdIgnoreCase(foodsharingId.trim())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.TEACHERS_CANNOT_BOOK);
         }
         Slot slot = slotRepository.findForUpdateById(slotId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Slot not found"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.SLOT_NOT_FOUND));
         if (slot.getStatus() != SlotStatus.AVAILABLE) {
-            throw new ApiException(HttpStatus.CONFLICT, "Slot is no longer available");
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.SLOT_NOT_AVAILABLE);
         }
 
-        BookingUser bookingUser = bookingUserService.getOrCreate(normalizedEmail, name, foodsharingId, phoneNumber);
+        BookingUser bookingUser = bookingUserService.getOrCreate(normalizedEmail, name, foodsharingId, phoneNumber, language);
         if (slotRepository.existsByBookingUserAndStatusInAndEinAbTeacher(
                 bookingUser, ACTIVE_BOOKING_STATUSES, slot.getEinAb().getTeacher())) {
-            throw new ApiException(HttpStatus.CONFLICT, "You already have an appointment with this teacher");
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_ALREADY_BOOKED_WITH_TEACHER);
         }
         if (slotRepository.existsByBookingUserAndStatusInAndEinAbCategory(
                 bookingUser, ACTIVE_BOOKING_STATUSES, slot.getEinAb().getCategory())) {
-            throw new ApiException(HttpStatus.CONFLICT, "You already have an appointment in this category");
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_ALREADY_BOOKED_IN_CATEGORY);
         }
         if (slotRepository.countByBookingUserAndStatusIn(bookingUser, ACTIVE_BOOKING_STATUSES) >= 3) {
-            throw new ApiException(HttpStatus.CONFLICT, "You can only book up to 3 appointments");
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_BOOKING_LIMIT_REACHED);
+        }
+        Integer minimumPickupCount = slot.getEinAb().getMinimumPickupCount();
+        if (minimumPickupCount != null
+                && slotRepository.countByBookingUserAndStatus(bookingUser, SlotStatus.DONE) < minimumPickupCount) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.MINIMUM_PICKUP_COUNT_NOT_REACHED);
         }
 
         slot.setBookingUser(bookingUser);
         slot.setStatus(SlotStatus.BOOKED);
-        slot.setBookedAt(OffsetDateTime.now(ZoneOffset.UTC));
+        slot.setBookedAt(java.time.Instant.now());
         sendBookingConfirmationEmail(slot);
         return slot;
     }
@@ -90,26 +97,14 @@ public class PublicService {
 
     private void sendBookingConfirmationEmail(Slot slot) {
         String manageUrl = appProperties.getFrontend().getBaseUrl() + "/my-bookings";
-        Map<String, String> details = new LinkedHashMap<>();
-        details.put("Teacher", slot.getEinAb().getTeacher().getName());
-        details.put("Category", slot.getEinAb().getCategory().name());
-        details.put("Start", emailTemplateService.swissDateTime(slot.getEinAb().getStartDateTime()));
-        details.put("Location", valueOrDash(slot.getEinAb().getLocation()));
-        details.put("What to bring", valueOrDash(slot.getEinAb().getWhatToBring()));
-        details.put("Fairteiler visit", slot.getEinAb().isVisitFairteiler() ? "yes" : "no");
-        String body = emailTemplateService.render(
-                "Your pickup is booked",
-                emailTemplateService.paragraph("Hello " + slot.getBookingUser().getName() + ",")
-                        + emailTemplateService.paragraph("Your pickup has been booked successfully.")
-                        + emailTemplateService.detailsTable(details)
-                        + emailTemplateService.note("You can log in later with the email address you used here: "
-                        + slot.getBookingUser().getEmail())
-                        + emailTemplateService.button("View your bookings", manageUrl)
-        );
-        emailService.send(slot.getBookingUser().getEmail(), "Your foodsharing pickup details", body);
+        LanguageCode language = slot.getBookingUser().getPreferredLanguage();
+        emailService.send(
+                slot.getBookingUser().getEmail(),
+                emailTemplateService.bookingConfirmationSubject(language),
+                emailTemplateService.bookingConfirmationBody(language, slot, manageUrl));
     }
 
-    private String valueOrDash(String value) {
-        return value == null || value.isBlank() ? "-" : value;
+    private int normalizeSize(int size) {
+        return Math.min(Math.max(size, 1), 100);
     }
 }

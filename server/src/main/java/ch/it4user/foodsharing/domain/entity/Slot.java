@@ -12,7 +12,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "slots")
@@ -34,9 +34,9 @@ public class Slot extends BaseEntity {
     private BookingUser bookingUser;
 
     @Column
-    private OffsetDateTime bookedAt;
+    private Instant bookedAt;
 
     @Column
-    private OffsetDateTime doneAt;
+    private Instant doneAt;
 
 }

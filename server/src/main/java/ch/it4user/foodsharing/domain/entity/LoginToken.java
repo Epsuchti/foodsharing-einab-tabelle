@@ -6,7 +6,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "login_tokens")
@@ -18,13 +18,16 @@ public class LoginToken extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String email;
 
+    @Column(nullable = false, length = 100)
+    private String foodsharingId;
+
     @Column(nullable = false, unique = true, length = 64)
     private String tokenHash;
 
     @Column(nullable = false)
-    private OffsetDateTime expiresAt;
+    private Instant expiresAt;
 
     @Column
-    private OffsetDateTime usedAt;
+    private Instant usedAt;
 
 }

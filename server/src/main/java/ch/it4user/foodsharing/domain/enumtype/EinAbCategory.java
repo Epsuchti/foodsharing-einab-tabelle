@@ -4,6 +4,7 @@ public enum EinAbCategory {
     SUPERMARKET,
     TAKEOUT,
     MARKET,
+    BAKERY,
     RESTAURANT,
     FAIRTEILER_CLEANING
 }

@@ -21,7 +21,7 @@ export class LoginPageComponent {
   readonly i18n = inject(I18nService);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
-    email: ['', [Validators.required, Validators.email]]
+    foodsharingId: ['', [Validators.required]]
   });
 
   private readonly authFacade = inject(AuthFacadeService);
@@ -31,9 +31,13 @@ export class LoginPageComponent {
     if (this.form.invalid) {
       return;
     }
-    this.authFacade.requestLogin(this.form.getRawValue().email).subscribe({
-      next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('login.success') }),
-      error: (error) => this.messageService.add({ severity: 'error', summary: resolveApiError(error) })
+    this.authFacade.requestLogin(this.form.getRawValue().foodsharingId).subscribe({
+      next: (response) => this.messageService.add({
+        severity: 'success',
+        summary: this.i18n.t('login.success'),
+        detail: response.deliveryTarget ? `${this.i18n.t('login.sentTo')}: ${response.deliveryTarget}` : undefined
+      }),
+      error: (error) => this.messageService.add({ severity: 'error', summary: resolveApiError(error, this.i18n) })
     });
   }
 }

@@ -20,10 +20,18 @@ public class CurrentActorService {
     }
 
     public String requireEmail() {
+        return requirePrincipal();
+    }
+
+    public String requireFoodsharingId() {
+        return requirePrincipal();
+    }
+
+    private String requirePrincipal() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {
-            throw new ApiException(HttpStatus.UNAUTHORIZED, "Authentication required");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, ApiErrorCode.AUTHENTICATION_REQUIRED);
         }
         return authentication.getName();
     }
@@ -39,8 +47,8 @@ public class CurrentActorService {
     }
 
     public Teacher requireTeacher() {
-        return teacherRepository.findByEmailIgnoreCase(requireEmail())
-                .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, "Teacher account required"));
+        return teacherRepository.findByFoodsharingIdIgnoreCase(requireFoodsharingId())
+                .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.TEACHER_ACCOUNT_REQUIRED));
     }
 
     public boolean isAdmin() {

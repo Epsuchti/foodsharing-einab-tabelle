@@ -11,8 +11,8 @@ export class AuthFacadeService {
     private readonly sessionService: SessionService
   ) {}
 
-  requestLogin(email: string): Observable<MessageResponse> {
-    const loginRequest: LoginRequest = { email };
+  requestLogin(foodsharingId: string): Observable<MessageResponse> {
+    const loginRequest: LoginRequest = { foodsharingId };
     return this.authApi.requestLogin({ loginRequest });
   }
 

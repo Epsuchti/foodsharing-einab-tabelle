@@ -12,7 +12,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "einabs")
@@ -26,7 +26,7 @@ public class EinAb extends BaseEntity {
     private EinAbCategory category;
 
     @Column(nullable = false)
-    private OffsetDateTime startDateTime;
+    private Instant startDateTime;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "teacher_id", nullable = false)
@@ -38,12 +38,18 @@ public class EinAb extends BaseEntity {
     @Column(nullable = false)
     private int slotCount;
 
+    @Column
+    private Integer minimumPickupCount;
+
     @Column(length = 500)
     private String location;
 
-    @Column(length = 500)
+    @Column(nullable = false, length = 500)
     private String publicLocation;
 
     @Column(length = 4000)
     private String whatToBring;
+
+    @Column(length = 4000)
+    private String hint;
 }

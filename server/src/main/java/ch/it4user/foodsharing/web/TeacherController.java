@@ -8,14 +8,17 @@ import ch.it4user.foodsharing.openapi.model.BookingCommentListResponse;
 import ch.it4user.foodsharing.openapi.model.BookingCommentResponse;
 import ch.it4user.foodsharing.openapi.model.CreateBookingCommentRequest;
 import ch.it4user.foodsharing.openapi.model.IcalCandidateListResponse;
+import ch.it4user.foodsharing.openapi.model.SlotResponse;
 import ch.it4user.foodsharing.openapi.model.UpdateTeacherMeRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSelfResponse;
 import ch.it4user.foodsharing.openapi.model.UpsertEinAbRequest;
+import ch.it4user.foodsharing.openapi.model.Language;
 import ch.it4user.foodsharing.repository.SlotRepository;
 import ch.it4user.foodsharing.service.CurrentActorService;
 import ch.it4user.foodsharing.service.TeacherService;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -50,15 +53,18 @@ public class TeacherController implements TeacherApi {
     @Override
     public ResponseEntity<TeacherSelfResponse> updateTeacherMe(UpdateTeacherMeRequest updateTeacherMeRequest) {
         Teacher teacher = currentActorService.requireTeacher();
-        return ResponseEntity.ok(mapper.toTeacherSelfResponse(
-                teacherService.updateIcalLink(teacher, updateTeacherMeRequest.getIcalLink()),
-                teacherService.getIcalCandidates(teacher)));
+        Teacher updated = teacherService.updateProfile(
+                teacher,
+                updateTeacherMeRequest.getPhoneNumber(),
+                updateTeacherMeRequest.getIcalLink(),
+                mapLanguage(updateTeacherMeRequest.getLanguage()));
+        return ResponseEntity.ok(mapper.toTeacherSelfResponse(updated, teacherService.getIcalCandidates(updated)));
     }
 
     @Override
-    public ResponseEntity<TeacherEinAbListResponse> getTeacherEinAbs() {
+    public ResponseEntity<TeacherEinAbListResponse> getTeacherEinAbs(Integer page, Integer size) {
         Teacher teacher = currentActorService.requireTeacher();
-        List<EinAb> einAbs = teacherService.findTeacherEinAbs(teacher);
+        org.springframework.data.domain.Page<EinAb> einAbs = teacherService.findTeacherEinAbs(teacher, page == null ? 0 : page, size == null ? 20 : size);
         return ResponseEntity.ok(mapTeacherEinAbs(einAbs));
     }
 
@@ -68,12 +74,14 @@ public class TeacherController implements TeacherApi {
         EinAb einAb = teacherService.createEinAb(
                 teacher,
                 ch.it4user.foodsharing.domain.enumtype.EinAbCategory.valueOf(upsertEinAbRequest.getCategory().getValue()),
-                upsertEinAbRequest.getStartDateTime(),
+                toInstant(upsertEinAbRequest.getStartDateTime()),
                 upsertEinAbRequest.getLocation(),
                 upsertEinAbRequest.getPublicLocation(),
                 upsertEinAbRequest.getWhatToBring(),
+                upsertEinAbRequest.getHint(),
                 upsertEinAbRequest.getVisitFairteiler(),
-                upsertEinAbRequest.getSlotCount()
+                upsertEinAbRequest.getSlotCount(),
+                upsertEinAbRequest.getMinimumPickupCount()
         );
         return ResponseEntity.status(201).body(mapTeacherEinAb(einAb));
     }
@@ -85,12 +93,14 @@ public class TeacherController implements TeacherApi {
                 teacher,
                 einAbId,
                 ch.it4user.foodsharing.domain.enumtype.EinAbCategory.valueOf(upsertEinAbRequest.getCategory().getValue()),
-                upsertEinAbRequest.getStartDateTime(),
+                toInstant(upsertEinAbRequest.getStartDateTime()),
                 upsertEinAbRequest.getLocation(),
                 upsertEinAbRequest.getPublicLocation(),
                 upsertEinAbRequest.getWhatToBring(),
+                upsertEinAbRequest.getHint(),
                 upsertEinAbRequest.getVisitFairteiler(),
                 upsertEinAbRequest.getSlotCount(),
+                upsertEinAbRequest.getMinimumPickupCount(),
                 currentActorService.isAdmin()
         );
         return ResponseEntity.ok(mapTeacherEinAb(einAb));
@@ -103,14 +113,15 @@ public class TeacherController implements TeacherApi {
     }
 
     @Override
-    public ResponseEntity<BookingListResponse> getTeacherBookings() {
+    public ResponseEntity<BookingListResponse> getTeacherBookings(Integer page, Integer size) {
         return ResponseEntity.ok(mapper.toBookingListResponse(
-                teacherService.findTeacherBookings(currentActorService.requireTeacher())));
+                teacherService.findTeacherBookings(currentActorService.requireTeacher(), page == null ? 0 : page, size == null ? 20 : size)));
     }
 
     @Override
-    public ResponseEntity<BookingCommentResponse> addTeacherBookingComment(UUID bookingUserId,
-                                                                           CreateBookingCommentRequest createBookingCommentRequest) {
+    public ResponseEntity<BookingCommentResponse> addTeacherBookingComment(
+            UUID bookingUserId,
+            CreateBookingCommentRequest createBookingCommentRequest) {
         return ResponseEntity.status(201).body(mapper.toBookingCommentResponse(
                 teacherService.addBookingComment(
                         currentActorService.requireTeacher(),
@@ -125,20 +136,39 @@ public class TeacherController implements TeacherApi {
     }
 
     @Override
-    public ResponseEntity<IcalCandidateListResponse> getTeacherIcalCandidates() {
-        IcalCandidateListResponse response = new IcalCandidateListResponse();
-        response.setCandidates(teacherService.getIcalCandidates(currentActorService.requireTeacher()));
-        return ResponseEntity.ok(response);
+    public ResponseEntity<IcalCandidateListResponse> getTeacherIcalCandidates(
+            Integer page,
+            Integer size) {
+        List<ch.it4user.foodsharing.openapi.model.IcalCandidate> candidates = teacherService.getIcalCandidates(currentActorService.requireTeacher());
+        int safePage = page == null ? 0 : Math.max(page, 0);
+        int safeSize = size == null ? 20 : Math.min(Math.max(size, 1), 100);
+        int fromIndex = Math.min(safePage * safeSize, candidates.size());
+        int toIndex = Math.min(fromIndex + safeSize, candidates.size());
+        org.springframework.data.domain.Page<ch.it4user.foodsharing.openapi.model.IcalCandidate> candidatePage =
+                new org.springframework.data.domain.PageImpl<>(
+                        candidates.subList(fromIndex, toIndex),
+                        org.springframework.data.domain.PageRequest.of(safePage, safeSize),
+                        candidates.size());
+        return ResponseEntity.ok(mapper.toIcalCandidateListResponse(candidatePage));
     }
 
-    private TeacherEinAbListResponse mapTeacherEinAbs(List<EinAb> einAbs) {
+    @Override
+    public ResponseEntity<SlotResponse> cancelTeacherSlotBooking(UUID slotId) {
+        return ResponseEntity.ok(mapper.toSlotResponse(
+                teacherService.cancelBookedSlot(currentActorService.requireTeacher(), slotId, currentActorService.isAdmin())));
+    }
+
+    private TeacherEinAbListResponse mapTeacherEinAbs(org.springframework.data.domain.Page<EinAb> einAbs) {
         Map<UUID, List<ch.it4user.foodsharing.domain.entity.Slot>> slotsByEinAb = slotRepository
-                .findAllByEinAbInOrderByEinAbStartDateTimeAsc(einAbs)
+                .findAllByEinAbInOrderByEinAbStartDateTimeAsc(einAbs.getContent())
                 .stream()
                 .collect(Collectors.groupingBy(slot -> slot.getEinAb().getId()));
-        return mapper.toTeacherEinAbListResponse(einAbs.stream()
+        return mapper.toTeacherEinAbListResponse(new org.springframework.data.domain.PageImpl<>(
+                einAbs.getContent().stream()
                 .map(einAb -> mapper.toTeacherEinAbResponse(einAb, slotsByEinAb.getOrDefault(einAb.getId(), List.of())))
-                .toList());
+                .toList(),
+                einAbs.getPageable(),
+                einAbs.getTotalElements()));
     }
 
     private TeacherEinAbResponse mapTeacherEinAb(EinAb einAb) {
@@ -147,5 +177,13 @@ public class TeacherController implements TeacherApi {
                 .stream()
                 .collect(Collectors.groupingBy(slot -> slot.getEinAb().getId()));
         return mapper.toTeacherEinAbResponse(einAb, slotsByEinAb.getOrDefault(einAb.getId(), List.of()));
+    }
+
+    private ch.it4user.foodsharing.domain.enumtype.LanguageCode mapLanguage(Language language) {
+        return ch.it4user.foodsharing.domain.enumtype.LanguageCode.fromCode(language == null ? "de" : language.getValue());
+    }
+
+    private java.time.Instant toInstant(OffsetDateTime value) {
+        return value == null ? null : value.toInstant();
     }
 }

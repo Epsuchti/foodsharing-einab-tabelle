@@ -11,6 +11,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -33,9 +35,10 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
           )
         order by s.einAb.startDateTime asc
         """)
-    List<Slot> findAvailableSlots(@Param("searchPattern") String searchPattern,
+    Page<Slot> findAvailableSlots(@Param("searchPattern") String searchPattern,
                                   @Param("category") EinAbCategory category,
-                                  @Param("visitFairteiler") Boolean visitFairteiler);
+                                  @Param("visitFairteiler") Boolean visitFairteiler,
+                                  Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
@@ -51,7 +54,8 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
         where s.status in :statuses
         order by s.einAb.startDateTime asc
         """)
-    List<Slot> findAllByStatusInOrderByEinAbStartDateTimeAsc(@Param("statuses") Collection<SlotStatus> statuses);
+    Page<Slot> findAllByStatusInOrderByEinAbStartDateTimeAsc(@Param("statuses") Collection<SlotStatus> statuses,
+                                                             Pageable pageable);
 
     @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
     @Query("""
@@ -77,12 +81,24 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
     @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
     @Query("""
         select s from Slot s
+        where s.bookingUser = :bookingUser
+          and s.status in :statuses
+        order by s.einAb.startDateTime desc
+        """)
+    Page<Slot> findAllByBookingUserAndStatuses(@Param("bookingUser") BookingUser bookingUser,
+                                               @Param("statuses") Collection<SlotStatus> statuses,
+                                               Pageable pageable);
+
+    @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
+    @Query("""
+        select s from Slot s
         where s.einAb.teacher = :teacher
           and s.status in :statuses
         order by s.einAb.startDateTime desc
         """)
-    List<Slot> findAllByTeacherAndStatuses(@Param("teacher") Teacher teacher,
-                                           @Param("statuses") Collection<SlotStatus> statuses);
+    Page<Slot> findAllByTeacherAndStatuses(@Param("teacher") Teacher teacher,
+                                           @Param("statuses") Collection<SlotStatus> statuses,
+                                           Pageable pageable);
 
     long countByBookingUserAndStatusIn(BookingUser bookingUser, Collection<SlotStatus> statuses);
 
@@ -93,6 +109,8 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
     boolean existsByBookingUserAndStatusInAndEinAbCategory(BookingUser bookingUser,
                                                            Collection<SlotStatus> statuses,
                                                            EinAbCategory category);
+
+    long countByBookingUserAndStatus(BookingUser bookingUser, SlotStatus status);
 
     boolean existsByEinAbAndStatusIn(EinAb einAb, Collection<SlotStatus> statuses);
 

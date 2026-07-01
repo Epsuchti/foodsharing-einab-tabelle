@@ -11,8 +11,7 @@ import jakarta.persistence.Version;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.UUID;
 
 @MappedSuperclass
@@ -29,21 +28,21 @@ public abstract class BaseEntity {
     private long version;
 
     @Column(nullable = false, updatable = false)
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
 
     @Column(nullable = false)
-    private OffsetDateTime updatedAt;
+    private Instant updatedAt;
 
     @PrePersist
     void onCreate() {
-        OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
+        Instant now = Instant.now();
         createdAt = now;
         updatedAt = now;
     }
 
     @PreUpdate
     void onUpdate() {
-        updatedAt = OffsetDateTime.now(ZoneOffset.UTC);
+        updatedAt = Instant.now();
     }
 
 }

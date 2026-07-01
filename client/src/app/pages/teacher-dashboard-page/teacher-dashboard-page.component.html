@@ -4,6 +4,7 @@
     <div class="info-grid">
       <div><strong>{{ teacher()?.name }}</strong></div>
       <div>{{ teacher()?.email }}</div>
+      <div>{{ teacher()?.phoneNumber }}</div>
       <div>{{ teacher()?.icalLink ?? '-' }}</div>
       <div>
         <p-tag [severity]="teacher()?.active ? 'success' : 'warn'" [value]="teacher()?.active ? i18n.t('common.active') : i18n.t('common.inactive')"></p-tag>
@@ -11,9 +12,14 @@
     </div>
     <form class="stack-form" [formGroup]="teacherProfileForm">
       <label>
+        <span>{{ i18n.t('common.phoneNumber') }}</span>
+        <input pInputText type="text" formControlName="phoneNumber" />
+      </label>
+      <label>
         <span>{{ i18n.t('common.icalLink') }}</span>
         <input pInputText type="url" formControlName="icalLink" />
       </label>
+      <p class="empty-state">{{ i18n.t('teacher.icalTutorial') }}</p>
       <div class="dialog-actions">
         <button
           pButton
@@ -30,7 +36,7 @@
   </p-card>
 
   <p-card>
-    <ng-template pTemplate="title">{{ i18n.t('teacher.icalCandidates') }}</ng-template>
+    <ng-template pTemplate="title">{{ i18n.t('teacher.futurePickups') }}</ng-template>
     @if (!icalCandidates().length) {
       <p>{{ i18n.t('teacher.noIcal') }}</p>
     } @else {
@@ -45,7 +51,7 @@
         </ng-template>
         <ng-template pTemplate="body" let-candidate>
           <tr>
-            <td>{{ candidate.startDateTime | date: 'medium' }}</td>
+            <td>{{ candidate.startDateTime | zurichDateTime }}</td>
             <td>{{ candidate.summary }}</td>
             <td>{{ candidate.location ?? '-' }}</td>
             <td>
@@ -54,6 +60,14 @@
           </tr>
         </ng-template>
       </p-table>
+      <p-paginator
+        [rows]="pageSize"
+        [totalRecords]="icalCandidatesPage()?.totalElements ?? 0"
+        [first]="(icalCandidatesPage()?.page ?? 0) * pageSize"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="{first} - {last} / {totalRecords}"
+        (onPageChange)="onIcalPageChange($event)">
+      </p-paginator>
     }
   </p-card>
 </section>
@@ -77,7 +91,7 @@
     <ng-template pTemplate="body" let-einab>
       <tr>
         <td>{{ i18n.categoryLabel(einab.category) }}</td>
-        <td>{{ einab.startDateTime | date: 'medium' }}</td>
+        <td>{{ einab.startDateTime | zurichDateTime }}</td>
         <td>{{ einab.location ?? '-' }}</td>
         <td>{{ einab.publicLocation ?? '-' }}</td>
         <td>{{ einab.slotCount }}</td>
@@ -89,6 +103,14 @@
       </tr>
     </ng-template>
   </p-table>
+  <p-paginator
+    [rows]="pageSize"
+    [totalRecords]="einAbsPage()?.totalElements ?? 0"
+    [first]="(einAbsPage()?.page ?? 0) * pageSize"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="{first} - {last} / {totalRecords}"
+    (onPageChange)="onEinAbsPageChange($event)">
+  </p-paginator>
 </p-card>
 
 @if (selectedEinAb()) {
@@ -100,13 +122,15 @@
         <p style="white-space: pre-wrap; margin: 0;">{{ selectedEinAb()?.whatToBring }}</p>
       </div>
     }
-    <p-table [value]="selectedEinAb()?.slots ?? []">
+    <p-table [value]="selectedEinAb()?.slots ?? []" [paginator]="true" [rows]="10">
       <ng-template pTemplate="header">
         <tr>
           <th>{{ i18n.t('common.id') }}</th>
           <th>{{ i18n.t('common.status') }}</th>
           <th>{{ i18n.t('common.name') }}</th>
           <th>{{ i18n.t('common.foodsharingId') }}</th>
+          <th>{{ i18n.t('common.phoneNumber') }}</th>
+          <th>{{ i18n.t('common.actions') }}</th>
         </tr>
       </ng-template>
       <ng-template pTemplate="body" let-slot>
@@ -115,6 +139,12 @@
           <td><p-tag [value]="i18n.statusLabel(slot.status)"></p-tag></td>
           <td>{{ slot.bookingUser?.name ?? '-' }}</td>
           <td>{{ slot.bookingUser?.foodsharingId ?? '-' }}</td>
+          <td>{{ slot.bookingUser?.phoneNumber ?? '-' }}</td>
+          <td class="actions-cell">
+            @if (slot.bookingUser && slot.status === SlotStatus.Booked) {
+              <button pButton size="small" severity="danger" icon="pi pi-times" [label]="i18n.t('teacher.cancelBookedSlot')" (click)="cancelSlotBooking(slot)"></button>
+            }
+          </td>
         </tr>
       </ng-template>
     </p-table>
@@ -149,8 +179,18 @@
     </label>
 
     <label>
+      <span>{{ i18n.t('common.hint') }}</span>
+      <textarea pInputTextarea rows="3" formControlName="hint"></textarea>
+    </label>
+
+    <label>
       <span>{{ i18n.t('common.whatToBring') }}</span>
       <textarea pInputTextarea rows="5" formControlName="whatToBring"></textarea>
+    </label>
+
+    <label>
+      <span>{{ i18n.t('common.minimumPickupCount') }}</span>
+      <input pInputText type="number" formControlName="minimumPickupCount" />
     </label>
 
     <label>

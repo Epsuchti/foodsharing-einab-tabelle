@@ -3,7 +3,7 @@ package ch.it4user.foodsharing.domain.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import java.time.OffsetDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "auth_sessions")
@@ -12,6 +12,9 @@ public class AuthSession extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String email;
 
+    @Column(nullable = false, length = 100)
+    private String foodsharingId;
+
     @Column(nullable = false, unique = true, length = 64)
     private String tokenHash;
 
@@ -19,7 +22,7 @@ public class AuthSession extends BaseEntity {
     private String roles;
 
     @Column(nullable = false)
-    private OffsetDateTime expiresAt;
+    private Instant expiresAt;
 
     public String getEmail() {
         return email;
@@ -27,6 +30,14 @@ public class AuthSession extends BaseEntity {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getFoodsharingId() {
+        return foodsharingId;
+    }
+
+    public void setFoodsharingId(String foodsharingId) {
+        this.foodsharingId = foodsharingId;
     }
 
     public String getTokenHash() {
@@ -45,11 +56,11 @@ public class AuthSession extends BaseEntity {
         this.roles = roles;
     }
 
-    public OffsetDateTime getExpiresAt() {
+    public Instant getExpiresAt() {
         return expiresAt;
     }
 
-    public void setExpiresAt(OffsetDateTime expiresAt) {
+    public void setExpiresAt(Instant expiresAt) {
         this.expiresAt = expiresAt;
     }
 }

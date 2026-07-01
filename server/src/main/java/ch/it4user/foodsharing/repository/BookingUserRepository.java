@@ -18,10 +18,6 @@ public interface BookingUserRepository extends JpaRepository<BookingUser, UUID> 
 
     Optional<BookingUser> findByFoodsharingIdIgnoreCase(String foodsharingId);
 
-    Optional<BookingUser> findByEmailIgnoreCaseAndActiveTrue(String email);
-
-    List<BookingUser> findAllByEmailIgnoreCaseAndActiveTrue(String email);
-
     List<BookingUser> findAllByActiveTrueOrderByCreatedAtDesc();
 
     @Query("""
@@ -50,8 +46,6 @@ public interface BookingUserRepository extends JpaRepository<BookingUser, UUID> 
         """)
     Page<BookingUser> findActiveUsersWithAtLeastThreePickups(@Param("statuses") Collection<SlotStatus> statuses,
                                                              Pageable pageable);
-
-    boolean existsByEmailIgnoreCaseAndActiveTrue(String email);
 
     boolean existsByFoodsharingIdIgnoreCaseAndActiveTrue(String foodsharingId);
 }

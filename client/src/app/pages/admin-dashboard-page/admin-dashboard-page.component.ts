@@ -1,17 +1,21 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import {
+  AdminEinAbListResponse,
   AdminBookingUserPageResponse,
   AdminBookingUserResponse,
+  BookingListResponse,
   BookingDetailResponse,
   EinAbResponse,
+  TeacherListResponse,
   TeacherResponse,
   AdminService
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
 import { I18nService } from '../../core/i18n.service';
+import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -27,7 +31,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
   standalone: true,
   imports: [
     CommonModule,
-    DatePipe,
+    ZurichDateTimePipe,
     FormsModule,
     AccordionModule,
     CardModule,
@@ -44,13 +48,16 @@ export class AdminDashboardPageComponent implements OnInit {
   readonly i18n = inject(I18nService);
 
   protected readonly teachers = signal<TeacherResponse[]>([]);
+  protected readonly teachersPage = signal<TeacherListResponse | null>(null);
   protected readonly einAbs = signal<EinAbResponse[]>([]);
+  protected readonly einAbsPage = signal<AdminEinAbListResponse | null>(null);
   protected readonly bookings = signal<BookingDetailResponse[]>([]);
+  protected readonly bookingsPage = signal<BookingListResponse | null>(null);
   protected readonly usersPage = signal<AdminBookingUserPageResponse | null>(null);
   protected readonly onlyThreePickups = signal(false);
   protected readonly usersLoading = signal(true);
 
-  protected readonly pageSize = 50;
+  protected readonly pageSize = 20;
 
   private readonly adminApi = inject(AdminService);
   private readonly confirmationService = inject(ConfirmationService);
@@ -61,17 +68,26 @@ export class AdminDashboardPageComponent implements OnInit {
   }
 
   reload(): void {
-    this.adminApi.getAdminTeachers().subscribe({
-      next: (response) => this.teachers.set(response.teachers),
-      error: (error) => this.toastError(resolveApiError(error))
+    this.adminApi.getAdminTeachers({ page: this.teachersPage()?.page ?? 0, size: this.pageSize }).subscribe({
+      next: (response) => {
+        this.teachers.set(response.teachers);
+        this.teachersPage.set(response);
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
-    this.adminApi.getAdminEinAbs().subscribe({
-      next: (response) => this.einAbs.set(response.einAbs),
-      error: (error) => this.toastError(resolveApiError(error))
+    this.adminApi.getAdminEinAbs({ page: this.einAbsPage()?.page ?? 0, size: this.pageSize }).subscribe({
+      next: (response) => {
+        this.einAbs.set(response.einAbs);
+        this.einAbsPage.set(response);
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
-    this.adminApi.getAdminBookings().subscribe({
-      next: (response) => this.bookings.set(response.bookings),
-      error: (error) => this.toastError(resolveApiError(error))
+    this.adminApi.getAdminBookings({ page: this.bookingsPage()?.page ?? 0, size: this.pageSize }).subscribe({
+      next: (response) => {
+        this.bookings.set(response.bookings);
+        this.bookingsPage.set(response);
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
     this.loadUsersPage(this.usersPage()?.page ?? 0);
   }
@@ -86,7 +102,23 @@ export class AdminDashboardPageComponent implements OnInit {
           : this.adminApi.disableAdminTeacher({ teacherId: teacher.id });
         request$.subscribe({
           next: () => this.reload(),
-          error: (error) => this.toastError(resolveApiError(error))
+          error: (error) => this.toastError(resolveApiError(error, this.i18n))
+        });
+      }
+    });
+  }
+
+  toggleAdmin(teacher: TeacherResponse, admin: boolean): void {
+    this.confirmationService.confirm({
+      message: this.i18n.t(admin ? 'confirm.grantAdmin' : 'confirm.revokeAdmin'),
+      accept: () => {
+        this.confirmationService.close();
+        const request$ = admin
+          ? this.adminApi.grantAdminTeacher({ teacherId: teacher.id })
+          : this.adminApi.revokeAdminTeacher({ teacherId: teacher.id });
+        request$.subscribe({
+          next: () => this.reload(),
+          error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });
       }
     });
@@ -105,9 +137,24 @@ export class AdminDashboardPageComponent implements OnInit {
       },
       error: (error) => {
         this.usersLoading.set(false);
-        this.toastError(resolveApiError(error));
+        this.toastError(resolveApiError(error, this.i18n));
       }
     });
+  }
+
+  onTeachersPageChange(event: { page?: number }): void {
+    this.teachersPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
+    this.reload();
+  }
+
+  onEinAbsPageChange(event: { page?: number }): void {
+    this.einAbsPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
+    this.reload();
+  }
+
+  onBookingsPageChange(event: { page?: number }): void {
+    this.bookingsPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
+    this.reload();
   }
 
   onUsersPageChange(event: { page?: number }): void {
@@ -126,7 +173,7 @@ export class AdminDashboardPageComponent implements OnInit {
         this.confirmationService.close();
         this.adminApi.disableAdminBookingUser({ bookingUserId: user.user.id }).subscribe({
           next: () => this.reload(),
-          error: (error) => this.toastError(resolveApiError(error))
+          error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });
       }
     });

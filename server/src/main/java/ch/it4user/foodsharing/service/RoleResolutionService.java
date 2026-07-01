@@ -10,32 +10,29 @@ import org.springframework.stereotype.Service;
 @Service
 public class RoleResolutionService {
 
-    private final AppProperties appProperties;
+    private static final String IMMUTABLE_ADMIN_EMAIL = "ez@it4user.ch";
+
     private final TeacherRepository teacherRepository;
     private final BookingUserRepository bookingUserRepository;
 
-    public RoleResolutionService(AppProperties appProperties,
-                                 TeacherRepository teacherRepository,
+    public RoleResolutionService(TeacherRepository teacherRepository,
                                  BookingUserRepository bookingUserRepository) {
-        this.appProperties = appProperties;
         this.teacherRepository = teacherRepository;
         this.bookingUserRepository = bookingUserRepository;
     }
 
-    public Set<UserRole> resolveRoles(String email) {
+    public Set<UserRole> resolveRoles(String foodsharingId) {
         EnumSet<UserRole> roles = EnumSet.noneOf(UserRole.class);
-        String normalizedEmail = email.trim().toLowerCase();
-        if (bookingUserRepository.existsByEmailIgnoreCaseAndActiveTrue(normalizedEmail)) {
+        String normalizedFoodsharingId = foodsharingId.trim();
+        if (bookingUserRepository.existsByFoodsharingIdIgnoreCaseAndActiveTrue(normalizedFoodsharingId)) {
             roles.add(UserRole.USER);
         }
-        if (teacherRepository.findByEmailIgnoreCase(normalizedEmail).isPresent()) {
+        teacherRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId).ifPresent(teacher -> {
             roles.add(UserRole.TEACHER);
-        }
-        if (appProperties.getAuth().getAdminEmails().stream()
-                .map(String::toLowerCase)
-                .anyMatch(normalizedEmail::equals)) {
-            roles.add(UserRole.ADMIN);
-        }
+            if (teacher.isAdmin() || IMMUTABLE_ADMIN_EMAIL.equalsIgnoreCase(teacher.getEmail())) {
+                roles.add(UserRole.ADMIN);
+            }
+        });
         return roles;
     }
 }

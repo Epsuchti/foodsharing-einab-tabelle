@@ -2,22 +2,22 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { EinAbCategory, SlotStatus, UserRole } from '../api';
+import { EinAbCategory, ErrorCode, Language, SlotStatus, UserRole } from '../api';
 
-type Language = 'de' | 'en' | 'gws';
+type UiLanguage = 'de' | 'en' | 'gws';
 
 @Injectable({ providedIn: 'root' })
 export class I18nService {
   private readonly storageKey = 'foodsharing.language';
   private readonly http = inject(HttpClient);
   private readonly translations = signal<Record<string, string>>({});
-  readonly language = signal<Language>(this.loadInitialLanguage());
+  readonly language = signal<UiLanguage>(this.loadInitialLanguage());
 
   async initialize(): Promise<void> {
     await this.loadLanguage(this.language());
   }
 
-  async setLanguage(language: Language): Promise<void> {
+  async setLanguage(language: UiLanguage): Promise<void> {
     this.language.set(language);
     localStorage.setItem(this.storageKey, language);
     await this.loadLanguage(language);
@@ -27,12 +27,21 @@ export class I18nService {
     return this.translations()[key] ?? key;
   }
 
+  apiLanguage(): Language {
+    return this.language() === 'en' ? Language.En : this.language() === 'gws' ? Language.Gws : Language.De;
+  }
+
+  errorLabel(code: ErrorCode | string | undefined): string {
+    return this.t(`error.${code ?? ''}`);
+  }
+
   categoryLabel(category: EinAbCategory | string | undefined): string {
     const key = category ?? '';
     const labels: Record<string, string> = {
       [EinAbCategory.Supermarket]: this.t('category.supermarket'),
       [EinAbCategory.Takeout]: this.t('category.takeout'),
       [EinAbCategory.Market]: this.t('category.market'),
+      [EinAbCategory.Bakery]: this.t('category.bakery'),
       [EinAbCategory.Restaurant]: this.t('category.restaurant'),
       [EinAbCategory.FairteilerCleaning]: this.t('category.fairteilerCleaning')
     };
@@ -60,13 +69,13 @@ export class I18nService {
     return labels[key] ?? key;
   }
 
-  private async loadLanguage(language: Language): Promise<void> {
+  private async loadLanguage(language: UiLanguage): Promise<void> {
     const translations = await firstValueFrom(this.http.get<Record<string, string>>(`/i18n/${language}.json`));
     this.translations.set(translations);
   }
 
-  private loadInitialLanguage(): Language {
+  private loadInitialLanguage(): UiLanguage {
     const stored = localStorage.getItem(this.storageKey);
-    return stored === 'de' || stored === 'en' || stored === 'gws' ? stored : 'gws';
+    return stored === 'de' || stored === 'en' || stored === 'gws' ? stored : 'de';
   }
 }

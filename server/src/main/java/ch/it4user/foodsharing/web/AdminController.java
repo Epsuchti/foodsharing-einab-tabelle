@@ -24,8 +24,8 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<TeacherListResponse> getAdminTeachers() {
-        return ResponseEntity.ok(mapper.toTeacherListResponse(adminService.getTeachers()));
+    public ResponseEntity<TeacherListResponse> getAdminTeachers(Integer page, Integer size) {
+        return ResponseEntity.ok(mapper.toTeacherListResponse(adminService.getTeachers(page == null ? 0 : page, size == null ? 20 : size)));
     }
 
     @Override
@@ -39,13 +39,23 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<AdminEinAbListResponse> getAdminEinAbs() {
-        return ResponseEntity.ok(mapper.toAdminEinAbListResponse(adminService.getEinAbs()));
+    public ResponseEntity<TeacherResponse> grantAdminTeacher(UUID teacherId) {
+        return ResponseEntity.ok(mapper.toTeacherResponse(adminService.setTeacherAdmin(teacherId, true)));
     }
 
     @Override
-    public ResponseEntity<BookingListResponse> getAdminBookings() {
-        return ResponseEntity.ok(mapper.toBookingListResponse(adminService.getBookings()));
+    public ResponseEntity<TeacherResponse> revokeAdminTeacher(UUID teacherId) {
+        return ResponseEntity.ok(mapper.toTeacherResponse(adminService.setTeacherAdmin(teacherId, false)));
+    }
+
+    @Override
+    public ResponseEntity<AdminEinAbListResponse> getAdminEinAbs(Integer page, Integer size) {
+        return ResponseEntity.ok(mapper.toAdminEinAbListResponse(adminService.getEinAbs(page == null ? 0 : page, size == null ? 20 : size)));
+    }
+
+    @Override
+    public ResponseEntity<BookingListResponse> getAdminBookings(Integer page, Integer size) {
+        return ResponseEntity.ok(mapper.toBookingListResponse(adminService.getBookings(page == null ? 0 : page, size == null ? 20 : size)));
     }
 
     @Override

@@ -24,20 +24,20 @@ public class UserController implements UserApi {
     }
 
     @Override
-    public ResponseEntity<BookingListResponse> getMyBookings() {
+    public ResponseEntity<BookingListResponse> getMyBookings(Integer page, Integer size) {
         return ResponseEntity.ok(mapper.toBookingListResponse(
-                userService.getBookingsByEmail(currentActorService.requireEmail())));
+                userService.getBookingsByFoodsharingId(currentActorService.requireFoodsharingId(), page == null ? 0 : page, size == null ? 20 : size)));
     }
 
     @Override
     public ResponseEntity<BookingUserResponse> getMyProfile() {
-        BookingUser bookingUser = userService.getProfileByEmail(currentActorService.requireEmail());
+        BookingUser bookingUser = userService.getProfileByFoodsharingId(currentActorService.requireFoodsharingId());
         return ResponseEntity.ok(mapper.toBookingUserResponse(bookingUser));
     }
 
     @Override
     public ResponseEntity<Void> cancelMyBooking(UUID slotId) {
-        userService.cancelBooking(currentActorService.requireEmail(), slotId);
+        userService.cancelBooking(currentActorService.requireFoodsharingId(), slotId);
         return ResponseEntity.noContent().build();
     }
 }

@@ -40,7 +40,7 @@ export class UnsubscribePageComponent {
         message: this.i18n.t('unsubscribe.success')
       })),
       catchError((error) => {
-        const detail = resolveApiError(error);
+        const detail = resolveApiError(error, this.i18n);
         return of({
           title: this.i18n.t('unsubscribe.title'),
           message: detail

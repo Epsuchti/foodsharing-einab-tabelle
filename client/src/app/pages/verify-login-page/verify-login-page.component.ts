@@ -41,7 +41,7 @@ export class VerifyLoginPageComponent implements OnInit {
         this.router.navigateByUrl(this.sessionService.primaryRoute());
       },
       error: (error) => {
-        this.error.set(resolveApiError(error));
+        this.error.set(resolveApiError(error, this.i18n));
         this.loading.set(false);
       }
     });

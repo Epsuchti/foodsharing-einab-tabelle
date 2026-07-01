@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
@@ -6,6 +6,10 @@ import { finalize } from 'rxjs';
 import {
   EinAbCategory,
   IcalCandidate,
+  IcalCandidateListResponse,
+  SlotStatus,
+  SlotResponse,
+  TeacherEinAbListResponse,
   TeacherEinAbResponse,
   TeacherResponse,
   TeacherService,
@@ -15,6 +19,7 @@ import {
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
 import { I18nService } from '../../core/i18n.service';
+import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -24,6 +29,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { PaginatorModule } from 'primeng/paginator';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -34,7 +40,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    DatePipe,
+    ZurichDateTimePipe,
     CardModule,
     ButtonModule,
     CheckboxModule,
@@ -44,6 +50,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     InputTextModule,
     TextareaModule,
     SelectModule,
+    PaginatorModule,
     TableModule,
     TagModule
   ],
@@ -51,15 +58,19 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 })
 export class TeacherDashboardPageComponent implements OnInit {
   readonly i18n = inject(I18nService);
+  readonly SlotStatus = SlotStatus;
 
   protected readonly teacher = signal<TeacherResponse | null>(null);
   protected readonly einAbs = signal<TeacherEinAbResponse[]>([]);
+  protected readonly einAbsPage = signal<TeacherEinAbListResponse | null>(null);
   protected readonly selectedEinAb = signal<TeacherEinAbResponse | null>(null);
   protected readonly icalCandidates = signal<IcalCandidate[]>([]);
+  protected readonly icalCandidatesPage = signal<IcalCandidateListResponse | null>(null);
   protected readonly profileSaveLoading = signal(false);
   protected readonly saveLoading = signal(false);
   protected readonly categoryOptions = computed(() => Object.values(EinAbCategory).map((value) => ({ value, label: this.i18n.categoryLabel(value) })));
   protected readonly slotCountOptions = [1, 2, 3].map((value) => ({ value, label: String(value) }));
+  protected readonly pageSize = 20;
 
   protected einabDialogVisible = false;
   protected readonly editingEinAb = signal<TeacherEinAbResponse | null>(null);
@@ -68,13 +79,16 @@ export class TeacherDashboardPageComponent implements OnInit {
     category: [EinAbCategory.Supermarket, Validators.required],
     startDateTime: [new Date(), Validators.required],
     location: [''],
-    publicLocation: [''],
+    publicLocation: ['', Validators.required],
     whatToBring: [''],
+    hint: [''],
     visitFairteiler: [false],
-    slotCount: [1, Validators.required]
+    slotCount: [1, Validators.required],
+    minimumPickupCount: [null as number | null]
   });
 
   protected readonly teacherProfileForm = inject(FormBuilder).nonNullable.group({
+    phoneNumber: ['', [Validators.required, Validators.minLength(3)]],
     icalLink: ['']
   });
 
@@ -91,25 +105,40 @@ export class TeacherDashboardPageComponent implements OnInit {
       next: (response) => {
         this.teacher.set(response);
         this.teacherProfileForm.reset({
+          phoneNumber: response.phoneNumber,
           icalLink: response.icalLink ?? ''
         });
       },
-      error: (error) => this.toastError(resolveApiError(error))
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
-    this.teacherApi.getTeacherEinAbs().subscribe({
+    this.teacherApi.getTeacherEinAbs({ page: this.einAbsPage()?.page ?? 0, size: this.pageSize }).subscribe({
       next: (response) => {
         this.einAbs.set(response.einAbs);
+        this.einAbsPage.set(response);
         if (this.selectedEinAb()) {
           const refreshed = response.einAbs.find((item) => item.id === this.selectedEinAb()?.id) ?? null;
           this.selectedEinAb.set(refreshed);
         }
       },
-      error: (error) => this.toastError(resolveApiError(error))
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
-    this.teacherApi.getTeacherIcalCandidates().subscribe({
-      next: (response) => this.icalCandidates.set(response.candidates),
+    this.teacherApi.getTeacherIcalCandidates({ page: this.icalCandidatesPage()?.page ?? 0, size: this.pageSize }).subscribe({
+      next: (response) => {
+        this.icalCandidates.set(response.candidates);
+        this.icalCandidatesPage.set(response);
+      },
       error: () => this.icalCandidates.set([])
     });
+  }
+
+  onEinAbsPageChange(event: { page?: number }): void {
+    this.einAbsPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
+    this.reload();
+  }
+
+  onIcalPageChange(event: { page?: number }): void {
+    this.icalCandidatesPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
+    this.reload();
   }
 
   saveTeacherProfile(): void {
@@ -119,17 +148,21 @@ export class TeacherDashboardPageComponent implements OnInit {
     this.profileSaveLoading.set(true);
     const formValue = this.teacherProfileForm.getRawValue();
     const updateTeacherMeRequest: UpdateTeacherMeRequest = {
+      phoneNumber: formValue.phoneNumber.trim(),
+      language: this.i18n.apiLanguage(),
       icalLink: formValue.icalLink?.trim() || undefined
     };
     this.teacherApi.updateTeacherMe({ updateTeacherMeRequest }).subscribe({
       next: (response: TeacherSelfResponse) => {
         this.teacher.set(response);
-        this.teacherProfileForm.reset({ icalLink: response.icalLink ?? '' });
+        this.icalCandidates.set(response.icalCandidates ?? []);
+        this.icalCandidatesPage.update((current) => current ? { ...current, candidates: response.icalCandidates ?? [] } : current);
+        this.teacherProfileForm.reset({ phoneNumber: response.phoneNumber, icalLink: response.icalLink ?? '' });
         this.profileSaveLoading.set(false);
       },
       error: (error) => {
         this.profileSaveLoading.set(false);
-        this.toastError(resolveApiError(error));
+        this.toastError(resolveApiError(error, this.i18n));
       }
     });
   }
@@ -149,8 +182,10 @@ export class TeacherDashboardPageComponent implements OnInit {
       location: '',
       publicLocation: '',
       whatToBring: '',
+      hint: '',
       visitFairteiler: false,
-      slotCount: 1
+      slotCount: 1,
+      minimumPickupCount: null
     });
     this.einabDialogVisible = true;
   }
@@ -164,10 +199,12 @@ export class TeacherDashboardPageComponent implements OnInit {
       category: EinAbCategory.Supermarket,
       startDateTime: new Date(candidate.startDateTime),
       location: candidate.location ?? '',
-      publicLocation: candidate.location ?? '',
+      publicLocation: '',
       whatToBring: '',
+      hint: '',
       visitFairteiler: false,
-      slotCount: 1
+      slotCount: 1,
+      minimumPickupCount: null
     });
     this.einabDialogVisible = true;
   }
@@ -183,8 +220,10 @@ export class TeacherDashboardPageComponent implements OnInit {
       location: einab.location ?? '',
       publicLocation: einab.publicLocation ?? '',
       whatToBring: einab.whatToBring ?? '',
+      hint: einab.hint ?? '',
       visitFairteiler: einab.visitFairteiler,
-      slotCount: einab.slotCount
+      slotCount: einab.slotCount,
+      minimumPickupCount: einab.minimumPickupCount ?? null
     });
     this.einabDialogVisible = true;
   }
@@ -202,10 +241,12 @@ export class TeacherDashboardPageComponent implements OnInit {
       category: formValue.category,
       startDateTime: formValue.startDateTime.toISOString(),
       location: formValue.location?.trim() || undefined,
-      publicLocation: formValue.publicLocation?.trim() || undefined,
+      publicLocation: formValue.publicLocation.trim(),
       whatToBring: formValue.whatToBring?.trim() || undefined,
+      hint: formValue.hint?.trim() || undefined,
       visitFairteiler: formValue.visitFairteiler,
-      slotCount: formValue.slotCount
+      slotCount: formValue.slotCount,
+      minimumPickupCount: formValue.minimumPickupCount ?? undefined
     };
 
     const request$ = this.editingEinAb()
@@ -217,7 +258,7 @@ export class TeacherDashboardPageComponent implements OnInit {
         this.einabDialogVisible = false;
         this.reload();
       },
-      error: (error) => this.toastError(resolveApiError(error))
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
   }
 
@@ -227,7 +268,19 @@ export class TeacherDashboardPageComponent implements OnInit {
       accept: () => {
         this.teacherApi.deleteTeacherEinAb({ einAbId: einab.id }).subscribe({
           next: () => this.reload(),
-          error: (error) => this.toastError(resolveApiError(error))
+          error: (error) => this.toastError(resolveApiError(error, this.i18n))
+        });
+      }
+    });
+  }
+
+  cancelSlotBooking(slot: SlotResponse): void {
+    this.confirmationService.confirm({
+      message: this.i18n.t('confirm.cancelTeacherBooking'),
+      accept: () => {
+        this.teacherApi.cancelTeacherSlotBooking({ slotId: slot.id }).subscribe({
+          next: () => this.reload(),
+          error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });
       }
     });

@@ -1,7 +1,10 @@
 package ch.it4user.foodsharing.domain.entity;
 
+import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,5 +31,9 @@ public class BookingUser extends BaseEntity {
 
     @Column(nullable = false)
     private boolean active = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private LanguageCode preferredLanguage = LanguageCode.DE;
 
 }

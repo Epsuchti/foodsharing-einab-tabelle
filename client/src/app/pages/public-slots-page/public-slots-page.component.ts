@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -7,6 +7,7 @@ import { catchError, of } from 'rxjs';
 
 import {
   AvailableSlotResponse,
+  AvailableSlotListResponse,
   BookSlotRequest,
   BookingDetailResponse,
   BookingUserResponse,
@@ -19,6 +20,7 @@ import {
 import { resolveApiError } from '../../core/api-error';
 import { I18nService } from '../../core/i18n.service';
 import { SessionService } from '../../core/session.service';
+import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -27,6 +29,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { SelectModule } from 'primeng/select';
+import { PaginatorModule } from 'primeng/paginator';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
@@ -39,7 +42,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
-    DatePipe,
+    ZurichDateTimePipe,
     TableModule,
     CardModule,
     ButtonModule,
@@ -48,6 +51,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     CheckboxModule,
     ConfirmDialogModule,
     SelectModule,
+    PaginatorModule,
     TagModule,
     ProgressSpinnerModule,
     ToastModule
@@ -63,6 +67,7 @@ export class PublicSlotsPageComponent implements OnInit {
     label: this.i18n.categoryLabel(value)
   })));
   protected readonly slots = signal<AvailableSlotResponse[]>([]);
+  protected readonly slotsPage = signal<AvailableSlotListResponse | null>(null);
   protected readonly loading = signal(false);
   protected readonly bookingLoading = signal(false);
   protected readonly subscribeLoading = signal(false);
@@ -75,6 +80,7 @@ export class PublicSlotsPageComponent implements OnInit {
   protected search = '';
   protected fairteilerOnly = false;
   protected selectedCategory?: EinAbCategory;
+  protected readonly pageSize = 20;
 
   protected readonly bookingForm = inject(FormBuilder).nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -103,12 +109,22 @@ export class PublicSlotsPageComponent implements OnInit {
     this.publicApi.getAvailableSlots({
       search: this.search || undefined,
       category: this.selectedCategory,
-      visitFairteiler: this.fairteilerOnly ? true : undefined
+      visitFairteiler: this.fairteilerOnly ? true : undefined,
+      page: this.slotsPage()?.page ?? 0,
+      size: this.pageSize
     }).pipe(finalize(() => this.loading.set(false)))
       .subscribe({
-        next: (response) => this.slots.set(response.slots),
-        error: (error) => this.toastError(resolveApiError(error))
+        next: (response) => {
+          this.slots.set(response.slots);
+          this.slotsPage.set(response);
+        },
+        error: (error) => this.toastError(resolveApiError(error, this.i18n))
       });
+  }
+
+  onSlotsPageChange(event: { page?: number }): void {
+    this.slotsPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
+    this.loadSlots();
   }
 
   openBooking(slot: AvailableSlotResponse): void {
@@ -150,7 +166,10 @@ export class PublicSlotsPageComponent implements OnInit {
       return;
     }
     this.bookingLoading.set(true);
-    const bookSlotRequest: BookSlotRequest = this.bookingForm.getRawValue();
+    const bookSlotRequest: BookSlotRequest = {
+      ...this.bookingForm.getRawValue(),
+      language: this.i18n.apiLanguage()
+    };
     this.publicApi.bookSlot({
       slotId: this.selectedSlot.slotId,
       bookSlotRequest
@@ -164,7 +183,7 @@ export class PublicSlotsPageComponent implements OnInit {
           this.bookingSuccessVisible = true;
           this.loadSlots();
         },
-        error: (error) => this.toastError(resolveApiError(error))
+        error: (error) => this.toastError(resolveApiError(error, this.i18n))
       });
   }
 
@@ -173,7 +192,10 @@ export class PublicSlotsPageComponent implements OnInit {
       return;
     }
     this.subscribeLoading.set(true);
-    const notificationSubscriptionRequest: NotificationSubscriptionRequest = this.subscriptionForm.getRawValue();
+    const notificationSubscriptionRequest: NotificationSubscriptionRequest = {
+      ...this.subscriptionForm.getRawValue(),
+      language: this.i18n.apiLanguage()
+    };
     this.publicApi.subscribeNotifications({ notificationSubscriptionRequest })
       .pipe(finalize(() => this.subscribeLoading.set(false)))
       .subscribe({
@@ -181,7 +203,7 @@ export class PublicSlotsPageComponent implements OnInit {
           this.messageService.add({ severity: 'success', summary: this.i18n.t('subscribe.success') });
           this.subscriptionForm.reset();
         },
-        error: (error) => this.toastError(resolveApiError(error))
+        error: (error) => this.toastError(resolveApiError(error, this.i18n))
       });
   }
 
@@ -213,7 +235,7 @@ export class PublicSlotsPageComponent implements OnInit {
           this.applyLoggedOutBookingDefaults();
           return of(null);
         }
-        this.toastError(resolveApiError(error));
+        this.toastError(resolveApiError(error, this.i18n));
         return of(null);
       })
     ).subscribe({

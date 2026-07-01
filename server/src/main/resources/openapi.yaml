@@ -28,6 +28,16 @@ paths:
           in: query
           schema:
             type: boolean
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
           description: Available bookable slots
@@ -165,6 +175,17 @@ paths:
     get:
       tags: [user]
       operationId: getMyBookings
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
           description: User bookings
@@ -243,6 +264,17 @@ paths:
     get:
       tags: [teacher]
       operationId: getTeacherEinAbs
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
           description: Teacher EinAbs
@@ -315,6 +347,17 @@ paths:
     get:
       tags: [teacher]
       operationId: getTeacherBookings
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
           description: Bookings for teacher slots
@@ -377,6 +420,17 @@ paths:
     get:
       tags: [teacher]
       operationId: getTeacherIcalCandidates
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
           description: Candidate iCal events for the teacher
@@ -384,10 +438,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IcalCandidateListResponse'
+  /api/teacher/slots/{slotId}/booking:
+    delete:
+      tags: [teacher]
+      operationId: cancelTeacherSlotBooking
+      parameters:
+        - $ref: '#/components/parameters/SlotId'
+      responses:
+        '200':
+          description: Slot booking cancelled by teacher
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
   /api/admin/teachers:
     get:
       tags: [admin]
       operationId: getAdminTeachers
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
           description: All teachers
@@ -425,10 +503,47 @@ paths:
                 $ref: '#/components/schemas/TeacherResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/admin/teachers/{teacherId}/grant-admin:
+    put:
+      tags: [admin]
+      operationId: grantAdminTeacher
+      parameters:
+        - $ref: '#/components/parameters/TeacherId'
+      responses:
+        '200':
+          description: Teacher granted admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherResponse'
+  /api/admin/teachers/{teacherId}/revoke-admin:
+    put:
+      tags: [admin]
+      operationId: revokeAdminTeacher
+      parameters:
+        - $ref: '#/components/parameters/TeacherId'
+      responses:
+        '200':
+          description: Teacher admin revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherResponse'
   /api/admin/einabs:
     get:
       tags: [admin]
       operationId: getAdminEinAbs
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
           description: All EinAbs
@@ -440,6 +555,17 @@ paths:
     get:
       tags: [admin]
       operationId: getAdminBookings
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
       responses:
         '200':
           description: All bookings
@@ -562,21 +688,31 @@ components:
       properties:
         message:
           type: string
+        deliveryTarget:
+          type: string
     ErrorResponse:
       type: object
-      required: [message, status]
+      required: [message, status, code]
       properties:
         status:
           type: integer
         message:
           type: string
+        code:
+          $ref: '#/components/schemas/ErrorCode'
         details:
           type: array
           items:
             type: string
+    ErrorCode:
+      type: string
+      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, INVALID_UNSUBSCRIBE_TOKEN, TEACHER_ACCOUNT_REQUIRED, TEACHER_EMAIL_ALREADY_EXISTS, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, TEACHERS_CANNOT_BOOK, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, EINAB_NOT_FOUND, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED]
+    Language:
+      type: string
+      enum: [de, en, gws]
     EinAbCategory:
       type: string
-      enum: [SUPERMARKET, TAKEOUT, MARKET, RESTAURANT, FAIRTEILER_CLEANING]
+      enum: [SUPERMARKET, TAKEOUT, MARKET, BAKERY, RESTAURANT, FAIRTEILER_CLEANING]
     SlotStatus:
       type: string
       enum: [AVAILABLE, BOOKED, DONE, CANCELLED]
@@ -585,7 +721,7 @@ components:
       enum: [USER, TEACHER, ADMIN]
     BookSlotRequest:
       type: object
-      required: [email, name, foodsharingId, phoneNumber]
+      required: [email, name, foodsharingId, phoneNumber, language]
       properties:
         email:
           type: string
@@ -602,9 +738,11 @@ components:
           type: string
           minLength: 3
           maxLength: 50
+        language:
+          $ref: '#/components/schemas/Language'
     TeacherSignupRequest:
       type: object
-      required: [email, foodsharingId, name]
+      required: [email, foodsharingId, name, phoneNumber, language]
       properties:
         email:
           type: string
@@ -617,16 +755,24 @@ components:
           type: string
           minLength: 1
           maxLength: 200
+        phoneNumber:
+          type: string
+          minLength: 3
+          maxLength: 50
         icalLink:
           type: string
           format: uri
+        language:
+          $ref: '#/components/schemas/Language'
     NotificationSubscriptionRequest:
       type: object
-      required: [email]
+      required: [email, language]
       properties:
         email:
           type: string
           format: email
+        language:
+          $ref: '#/components/schemas/Language'
     NotificationUnsubscribeRequest:
       type: object
       required: [token]
@@ -645,11 +791,11 @@ components:
           type: boolean
     LoginRequest:
       type: object
-      required: [email]
+      required: [foodsharingId]
       properties:
-        email:
+        foodsharingId:
           type: string
-          format: email
+          minLength: 1
     VerifyTokenRequest:
       type: object
       required: [token]
@@ -659,7 +805,7 @@ components:
           minLength: 1
     AuthResponse:
       type: object
-      required: [authToken, expiresAt, roles, email]
+      required: [authToken, expiresAt, roles, email, foodsharingId]
       properties:
         authToken:
           type: string
@@ -669,6 +815,8 @@ components:
         email:
           type: string
           format: email
+        foodsharingId:
+          type: string
         displayName:
           type: string
         roles:
@@ -677,7 +825,7 @@ components:
             $ref: '#/components/schemas/UserRole'
     TeacherResponse:
       type: object
-      required: [id, email, foodsharingId, name, active, createdAt, updatedAt]
+      required: [id, email, foodsharingId, name, phoneNumber, active, isAdmin, language, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -689,10 +837,16 @@ components:
           type: string
         name:
           type: string
+        phoneNumber:
+          type: string
         icalLink:
           type: string
         active:
           type: boolean
+        isAdmin:
+          type: boolean
+        language:
+          $ref: '#/components/schemas/Language'
         createdAt:
           type: string
           format: date-time
@@ -701,12 +855,25 @@ components:
           format: date-time
     TeacherListResponse:
       type: object
-      required: [teachers]
+      required: [teachers, page, size, totalElements, totalPages]
       properties:
         teachers:
           type: array
           items:
             $ref: '#/components/schemas/TeacherResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
     TeacherSelfResponse:
       allOf:
         - $ref: '#/components/schemas/TeacherResponse'
@@ -719,13 +886,20 @@ components:
                 $ref: '#/components/schemas/IcalCandidate'
     UpdateTeacherMeRequest:
       type: object
+      required: [phoneNumber, language]
       properties:
+        phoneNumber:
+          type: string
+          minLength: 3
+          maxLength: 50
         icalLink:
           type: string
           maxLength: 2000
+        language:
+          $ref: '#/components/schemas/Language'
     BookingUserResponse:
       type: object
-      required: [id, email, name, foodsharingId, phoneNumber, createdAt, updatedAt]
+      required: [id, email, name, foodsharingId, phoneNumber, language, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -739,6 +913,8 @@ components:
           type: string
         phoneNumber:
           type: string
+        language:
+          $ref: '#/components/schemas/Language'
         createdAt:
           type: string
           format: date-time
@@ -792,7 +968,7 @@ components:
           type: boolean
     EinAbResponse:
       type: object
-      required: [id, category, startDateTime, teacher, visitFairteiler, slotCount, createdAt, updatedAt]
+      required: [id, category, startDateTime, publicLocation, teacher, visitFairteiler, slotCount, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -808,11 +984,15 @@ components:
           type: string
         whatToBring:
           type: string
+        hint:
+          type: string
         teacher:
           $ref: '#/components/schemas/TeacherResponse'
         visitFairteiler:
           type: boolean
         slotCount:
+          type: integer
+        minimumPickupCount:
           type: integer
         createdAt:
           type: string
@@ -867,21 +1047,36 @@ components:
         teacherId:
           type: string
           format: uuid
+        minimumPickupCount:
+          type: integer
         visitFairteiler:
           type: boolean
         status:
           $ref: '#/components/schemas/SlotStatus'
     AvailableSlotListResponse:
       type: object
-      required: [slots]
+      required: [slots, page, size, totalElements, totalPages]
       properties:
         slots:
           type: array
           items:
             $ref: '#/components/schemas/AvailableSlotResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
     BookingDetailResponse:
       type: object
-      required: [slotId, einAbId, category, startDateTime, teacherName, status, bookingUser]
+      required: [slotId, einAbId, category, startDateTime, teacherName, teacherPhoneNumber, status, bookingUser]
       properties:
         slotId:
           type: string
@@ -898,7 +1093,11 @@ components:
           type: string
         whatToBring:
           type: string
+        hint:
+          type: string
         teacherName:
+          type: string
+        teacherPhoneNumber:
           type: string
         visitFairteiler:
           type: boolean
@@ -908,12 +1107,25 @@ components:
           $ref: '#/components/schemas/BookingUserResponse'
     BookingListResponse:
       type: object
-      required: [bookings]
+      required: [bookings, page, size, totalElements, totalPages]
       properties:
         bookings:
           type: array
           items:
             $ref: '#/components/schemas/BookingDetailResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
     TeacherEinAbResponse:
       allOf:
         - $ref: '#/components/schemas/EinAbResponse'
@@ -926,23 +1138,49 @@ components:
                 $ref: '#/components/schemas/SlotResponse'
     TeacherEinAbListResponse:
       type: object
-      required: [einAbs]
+      required: [einAbs, page, size, totalElements, totalPages]
       properties:
         einAbs:
           type: array
           items:
             $ref: '#/components/schemas/TeacherEinAbResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
     AdminEinAbListResponse:
       type: object
-      required: [einAbs]
+      required: [einAbs, page, size, totalElements, totalPages]
       properties:
         einAbs:
           type: array
           items:
             $ref: '#/components/schemas/EinAbResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
     UpsertEinAbRequest:
       type: object
-      required: [category, startDateTime, visitFairteiler, slotCount]
+      required: [category, startDateTime, publicLocation, visitFairteiler, slotCount]
       properties:
         category:
           $ref: '#/components/schemas/EinAbCategory'
@@ -954,8 +1192,12 @@ components:
           maxLength: 500
         publicLocation:
           type: string
+          minLength: 1
           maxLength: 500
         whatToBring:
+          type: string
+          maxLength: 4000
+        hint:
           type: string
           maxLength: 4000
         visitFairteiler:
@@ -964,6 +1206,9 @@ components:
           type: integer
           minimum: 1
           maximum: 3
+        minimumPickupCount:
+          type: integer
+          minimum: 0
     CreateBookingCommentRequest:
       type: object
       required: [comment]
@@ -1013,9 +1258,22 @@ components:
           type: string
     IcalCandidateListResponse:
       type: object
-      required: [candidates]
+      required: [candidates, page, size, totalElements, totalPages]
       properties:
         candidates:
           type: array
           items:
             $ref: '#/components/schemas/IcalCandidate'
+        page:
+          type: integer
+        size:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean

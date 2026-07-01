@@ -39,7 +39,7 @@
         <ng-template pTemplate="body" let-slot>
           <tr>
             <td>{{ i18n.categoryLabel(slot.category) }}</td>
-            <td>{{ slot.startDateTime | date: 'medium' }}</td>
+            <td>{{ slot.startDateTime | zurichDateTime }}</td>
             <td>{{ displayPublicLocation(slot) }}</td>
             <td>{{ slot.teacherName }}</td>
             <td>
@@ -66,7 +66,7 @@
             <div class="slot-card__meta">
               <div>
                 <span class="slot-card__label">{{ i18n.t('slots.date') }}</span>
-                <div>{{ slot.startDateTime | date: 'medium' }}</div>
+                <div>{{ slot.startDateTime | zurichDateTime }}</div>
               </div>
               <div>
                 <span class="slot-card__label">{{ i18n.t('common.location') }}</span>
@@ -76,6 +76,10 @@
                 <span class="slot-card__label">{{ i18n.t('slots.teacher') }}</span>
                 <div>{{ slot.teacherName }}</div>
               </div>
+              <div>
+                <span class="slot-card__label">{{ i18n.t('common.visitFairteiler') }}</span>
+                <div>{{ slot.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no') }}</div>
+              </div>
             </div>
 
             <div class="slot-card__actions">
@@ -84,6 +88,15 @@
           </article>
         }
       </div>
+
+      <p-paginator
+        [rows]="pageSize"
+        [totalRecords]="slotsPage()?.totalElements ?? 0"
+        [first]="(slotsPage()?.page ?? 0) * pageSize"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="{first} - {last} / {totalRecords}"
+        (onPageChange)="onSlotsPageChange($event)">
+      </p-paginator>
     }
   </p-card>
 
@@ -100,7 +113,7 @@
 <p-dialog [(visible)]="bookingVisible" [modal]="true" [header]="i18n.t('book.dialogTitle')" [style]="{ width: '32rem', maxWidth: '95vw' }">
   <form class="stack-form" [formGroup]="bookingForm" (ngSubmit)="confirmBooking()">
     @if (selectedSlot) {
-      <p class="empty-state">{{ i18n.categoryLabel(selectedSlot.category) }} - {{ selectedSlot.startDateTime | date: 'medium' }} - {{ displayPublicLocation(selectedSlot) }}</p>
+      <p class="empty-state">{{ i18n.categoryLabel(selectedSlot.category) }} - {{ selectedSlot.startDateTime | zurichDateTime }} - {{ displayPublicLocation(selectedSlot) }}</p>
     }
     @if (bookingIdentityLocked() && bookingProfile()) {
       <div class="info-grid">
@@ -132,7 +145,7 @@
     </div>
 
     <div class="empty-state">
-      {{ i18n.categoryLabel(bookingDetails()!.category) }} - {{ bookingDetails()!.startDateTime | date: 'medium' }}
+      {{ i18n.categoryLabel(bookingDetails()!.category) }} - {{ bookingDetails()!.startDateTime | zurichDateTime }}
     </div>
 
     <div class="stack-form">

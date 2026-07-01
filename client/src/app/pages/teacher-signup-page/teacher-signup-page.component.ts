@@ -23,6 +23,7 @@ export class TeacherSignupPageComponent {
     name: ['', [Validators.required]],
     email: ['', [Validators.required, Validators.email]],
     foodsharingId: ['', [Validators.required]],
+    phoneNumber: ['', [Validators.required, Validators.minLength(3)]],
     icalLink: ['']
   });
 
@@ -33,13 +34,16 @@ export class TeacherSignupPageComponent {
     if (this.form.invalid) {
       return;
     }
-    const teacherSignupRequest: TeacherSignupRequest = this.form.getRawValue();
+    const teacherSignupRequest: TeacherSignupRequest = {
+      ...this.form.getRawValue(),
+      language: this.i18n.apiLanguage()
+    };
     this.publicApi.signupTeacher({ teacherSignupRequest }).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: this.i18n.t('teacherSignup.success') });
         this.form.reset();
       },
-      error: (error) => this.messageService.add({ severity: 'error', summary: resolveApiError(error) })
+      error: (error) => this.messageService.add({ severity: 'error', summary: resolveApiError(error, this.i18n) })
     });
   }
 }

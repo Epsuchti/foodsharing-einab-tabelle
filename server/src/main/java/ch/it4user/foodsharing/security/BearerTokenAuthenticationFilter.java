@@ -8,8 +8,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -37,7 +36,7 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
         if (authorization != null && authorization.startsWith("Bearer ")) {
             String rawToken = authorization.substring("Bearer ".length()).trim();
             authSessionRepository.findByTokenHash(tokenService.hash(rawToken))
-                    .filter(session -> session.getExpiresAt().isAfter(OffsetDateTime.now(ZoneOffset.UTC)))
+                    .filter(session -> session.getExpiresAt().isAfter(Instant.now()))
                     .ifPresent(this::authenticate);
         }
         filterChain.doFilter(request, response);
@@ -49,6 +48,6 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
                 .collect(Collectors.toList());
         SecurityContextHolder.getContext().setAuthentication(
-                new UsernamePasswordAuthenticationToken(session.getEmail(), session.getTokenHash(), authorities));
+                new UsernamePasswordAuthenticationToken(session.getFoodsharingId(), session.getTokenHash(), authorities));
     }
 }

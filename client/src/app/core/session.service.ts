@@ -52,6 +52,10 @@ export class SessionService {
     return '/';
   }
 
+  foodsharingId(): string | null {
+    return this.session()?.foodsharingId ?? null;
+  }
+
   private loadSession(): SessionState {
     const raw = localStorage.getItem(this.storageKey);
     if (!raw) {

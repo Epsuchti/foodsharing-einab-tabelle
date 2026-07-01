@@ -15,9 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,22 +42,26 @@ public class AdminService {
         this.bookingCommentRepository = bookingCommentRepository;
     }
 
-    public List<Teacher> getTeachers() {
-        return teacherService.findAllTeachers();
+    public Page<Teacher> getTeachers(int page, int size) {
+        return teacherService.findAllTeachers(page, size);
     }
 
     public Teacher setTeacherActive(java.util.UUID teacherId, boolean active) {
         return teacherService.setTeacherActive(teacherId, active);
     }
 
-    public List<EinAb> getEinAbs() {
-        return teacherService.findAllEinAbs();
+    public Teacher setTeacherAdmin(UUID teacherId, boolean admin) {
+        return teacherService.setTeacherAdmin(teacherId, admin);
     }
 
-    public List<Slot> getBookings() {
-        return slotRepository.findAllByStatusInOrderByEinAbStartDateTimeAsc(ACTIVE_BOOKING_STATUSES).stream()
-                .filter(slot -> slot.getBookingUser() == null || slot.getBookingUser().isActive())
-                .toList();
+    public Page<EinAb> getEinAbs(int page, int size) {
+        return teacherService.findAllEinAbs(page, size);
+    }
+
+    public Page<Slot> getBookings(int page, int size) {
+        return slotRepository.findAllByStatusInOrderByEinAbStartDateTimeAsc(
+                ACTIVE_BOOKING_STATUSES,
+                org.springframework.data.domain.PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
     }
 
     public AdminUsersView getUsers(int page, int size, boolean threePickupsOnly) {
@@ -77,9 +79,9 @@ public class AdminService {
                 .toList();
         int fromIndex = Math.min(safePage * safeSize, sortedUsers.size());
         int toIndex = Math.min(fromIndex + safeSize, sortedUsers.size());
-        Page<BookingUser> bookingUsers = new PageImpl<>(
+        Page<BookingUser> bookingUsers = new org.springframework.data.domain.PageImpl<>(
                 sortedUsers.subList(fromIndex, toIndex),
-                PageRequest.of(safePage, safeSize),
+                org.springframework.data.domain.PageRequest.of(safePage, safeSize),
                 sortedUsers.size());
         return new AdminUsersView(bookingUsers, bookingsByUser, commentsByUser);
     }
@@ -105,7 +107,7 @@ public class AdminService {
         return comments.stream().collect(Collectors.groupingBy(comment -> comment.getBookingUser().getId()));
     }
 
-    private java.time.OffsetDateTime latestPickupAt(List<Slot> bookings) {
+    private java.time.Instant latestPickupAt(List<Slot> bookings) {
         return bookings.stream()
                 .map(slot -> slot.getEinAb().getStartDateTime())
                 .max(Comparator.naturalOrder())

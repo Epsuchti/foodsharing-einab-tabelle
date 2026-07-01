@@ -6,18 +6,20 @@ import ch.it4user.foodsharing.domain.entity.BookingUser;
 import ch.it4user.foodsharing.domain.entity.Slot;
 import ch.it4user.foodsharing.domain.entity.Teacher;
 import ch.it4user.foodsharing.domain.enumtype.EinAbCategory;
+import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
 import ch.it4user.foodsharing.repository.EinAbRepository;
 import ch.it4user.foodsharing.repository.BookingCommentRepository;
 import ch.it4user.foodsharing.repository.BookingUserRepository;
 import ch.it4user.foodsharing.repository.SlotRepository;
 import ch.it4user.foodsharing.repository.TeacherRepository;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TeacherService {
 
     private static final Set<SlotStatus> BLOCKING_STATUSES = Set.of(SlotStatus.BOOKED, SlotStatus.DONE);
+    private static final String IMMUTABLE_ADMIN_EMAIL = "ez@it4user.ch";
 
     private final TeacherRepository teacherRepository;
     private final EinAbRepository einAbRepository;
@@ -52,37 +55,45 @@ public class TeacherService {
     }
 
     @Transactional
-    public Teacher signup(String email, String foodsharingId, String name, String icalLink) {
+    public Teacher signup(String email, String foodsharingId, String name, String phoneNumber, String icalLink, LanguageCode language) {
         if (teacherRepository.existsByEmailIgnoreCase(email.trim().toLowerCase())) {
-            throw new ApiException(HttpStatus.CONFLICT, "Teacher email already exists");
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.TEACHER_EMAIL_ALREADY_EXISTS);
         }
         if (teacherRepository.existsByFoodsharingIdIgnoreCase(foodsharingId.trim())) {
-            throw new ApiException(HttpStatus.CONFLICT, "Teacher foodsharing ID already exists");
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.TEACHER_FOODSHARING_ID_ALREADY_EXISTS);
         }
         Teacher teacher = new Teacher();
         teacher.setEmail(email.trim().toLowerCase());
         teacher.setFoodsharingId(foodsharingId.trim());
         teacher.setName(name.trim());
+        teacher.setPhoneNumber(phoneNumber.trim());
         teacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
-        teacher.setActive(false);
+        teacher.setPreferredLanguage(language);
+        boolean immutableAdmin = IMMUTABLE_ADMIN_EMAIL.equalsIgnoreCase(teacher.getEmail());
+        teacher.setAdmin(immutableAdmin);
+        teacher.setActive(immutableAdmin);
         return teacherRepository.save(teacher);
     }
 
     @Transactional
-    public Teacher updateIcalLink(Teacher teacher, String icalLink) {
+    public Teacher updateProfile(Teacher teacher, String phoneNumber, String icalLink, LanguageCode language) {
+        teacher.setPhoneNumber(phoneNumber.trim());
         teacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
+        teacher.setPreferredLanguage(language);
         return teacher;
     }
 
-    public List<EinAb> findTeacherEinAbs(Teacher teacher) {
-        return einAbRepository.findAllByTeacherOrderByStartDateTimeAsc(teacher);
+    public Page<EinAb> findTeacherEinAbs(Teacher teacher, int page, int size) {
+        return einAbRepository.findAllByTeacherOrderByStartDateTimeAsc(
+                teacher,
+                PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
-    public List<Slot> findTeacherBookings(Teacher teacher) {
-        return slotRepository.findAllByTeacherAndStatuses(teacher, Set.of(SlotStatus.BOOKED, SlotStatus.DONE))
-                .stream()
-                .filter(slot -> slot.getBookingUser() == null || slot.getBookingUser().isActive())
-                .toList();
+    public Page<Slot> findTeacherBookings(Teacher teacher, int page, int size) {
+        return slotRepository.findAllByTeacherAndStatuses(
+                teacher,
+                Set.of(SlotStatus.BOOKED, SlotStatus.DONE),
+                PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
     public List<BookingComment> findBookingComments(UUID bookingUserId) {
@@ -97,7 +108,7 @@ public class TeacherService {
     public BookingComment addBookingComment(Teacher teacher, UUID bookingUserId, String comment) {
         BookingUser bookingUser = requireBookingUser(bookingUserId);
         if (!bookingUser.isActive()) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Booking user is disabled");
+            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.BOOKING_USER_DISABLED);
         }
         BookingComment bookingComment = new BookingComment();
         bookingComment.setBookingUser(bookingUser);
@@ -113,23 +124,27 @@ public class TeacherService {
     @Transactional
     public EinAb createEinAb(Teacher teacher,
                              EinAbCategory category,
-                             OffsetDateTime startDateTime,
+                             Instant startDateTime,
                              String location,
                              String publicLocation,
                              String whatToBring,
+                             String hint,
                              boolean visitFairteiler,
-                             int slotCount) {
+                             int slotCount,
+                             Integer minimumPickupCount) {
         ensureTeacherActive(teacher);
-        validateSlotCount(slotCount);
+        validateEinAb(slotCount, publicLocation, minimumPickupCount);
         EinAb einAb = new EinAb();
         einAb.setTeacher(teacher);
         einAb.setCategory(category);
         einAb.setStartDateTime(startDateTime);
         einAb.setLocation(normalizeLocation(location));
-        einAb.setPublicLocation(normalizeLocation(publicLocation));
+        einAb.setPublicLocation(normalizeRequiredLocation(publicLocation));
         einAb.setWhatToBring(normalizeWhatToBring(whatToBring));
+        einAb.setHint(normalizeWhatToBring(hint));
         einAb.setVisitFairteiler(visitFairteiler);
         einAb.setSlotCount(slotCount);
+        einAb.setMinimumPickupCount(normalizeMinimumPickupCount(minimumPickupCount));
         EinAb savedEinAb = einAbRepository.save(einAb);
         createSlots(savedEinAb, slotCount);
         notificationService.notifyNewEinAb(savedEinAb);
@@ -140,30 +155,34 @@ public class TeacherService {
     public EinAb updateEinAb(Teacher teacher,
                              UUID einAbId,
                              EinAbCategory category,
-                             OffsetDateTime startDateTime,
+                             Instant startDateTime,
                              String location,
                              String publicLocation,
                              String whatToBring,
+                             String hint,
                              boolean visitFairteiler,
                              int slotCount,
+                             Integer minimumPickupCount,
                              boolean admin) {
-        validateSlotCount(slotCount);
+        validateEinAb(slotCount, publicLocation, minimumPickupCount);
         EinAb einAb = requireTeacherEinAb(teacher, einAbId, admin);
         if (!admin) {
             ensureTeacherActive(teacher);
         }
         int existingSlots = slotRepository.findAllByEinAbOrderByCreatedAtAsc(einAb).size();
         if (slotCount < existingSlots) {
-            throw new ApiException(HttpStatus.CONFLICT, "Reducing slot count is not supported once slots exist");
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.SLOT_COUNT_REDUCTION_NOT_SUPPORTED);
         }
 
         einAb.setCategory(category);
         einAb.setStartDateTime(startDateTime);
         einAb.setLocation(normalizeLocation(location));
-        einAb.setPublicLocation(normalizeLocation(publicLocation));
+        einAb.setPublicLocation(normalizeRequiredLocation(publicLocation));
         einAb.setWhatToBring(normalizeWhatToBring(whatToBring));
+        einAb.setHint(normalizeWhatToBring(hint));
         einAb.setVisitFairteiler(visitFairteiler);
         einAb.setSlotCount(slotCount);
+        einAb.setMinimumPickupCount(normalizeMinimumPickupCount(minimumPickupCount));
         if (slotCount > existingSlots) {
             createSlots(einAb, slotCount - existingSlots);
         }
@@ -174,29 +193,59 @@ public class TeacherService {
     public void deleteEinAb(Teacher teacher, UUID einAbId, boolean admin) {
         EinAb einAb = requireTeacherEinAb(teacher, einAbId, admin);
         if (slotRepository.existsByEinAbAndStatusIn(einAb, BLOCKING_STATUSES)) {
-            throw new ApiException(HttpStatus.CONFLICT, "Booked or completed slots prevent deleting this EinAb");
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.BOOKED_SLOTS_PREVENT_DELETE);
         }
         List<Slot> slots = slotRepository.findAllByEinAbOrderByCreatedAtAsc(einAb);
         slotRepository.deleteAll(slots);
         einAbRepository.delete(einAb);
     }
 
-    public List<EinAb> findAllEinAbs() {
-        return einAbRepository.findAllByOrderByStartDateTimeAsc();
+    public Page<EinAb> findAllEinAbs(int page, int size) {
+        return einAbRepository.findAllByOrderByStartDateTimeAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
-    public List<Teacher> findAllTeachers() {
-        return teacherRepository.findAll().stream()
-                .sorted(java.util.Comparator.comparing(Teacher::getName, String.CASE_INSENSITIVE_ORDER))
-                .toList();
+    public Page<Teacher> findAllTeachers(int page, int size) {
+        return teacherRepository.findAllByOrderByNameAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
     @Transactional
     public Teacher setTeacherActive(UUID teacherId, boolean active) {
         Teacher teacher = teacherRepository.findById(teacherId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Teacher not found"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
         teacher.setActive(active);
         return teacher;
+    }
+
+    @Transactional
+    public Teacher setTeacherAdmin(UUID teacherId, boolean admin) {
+        Teacher teacher = teacherRepository.findById(teacherId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
+        if (IMMUTABLE_ADMIN_EMAIL.equalsIgnoreCase(teacher.getEmail()) && !admin) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.DEFAULT_ADMIN_CANNOT_BE_CHANGED);
+        }
+        teacher.setAdmin(admin);
+        if (admin) {
+            teacher.setActive(true);
+        }
+        return teacher;
+    }
+
+    @Transactional
+    public Slot cancelBookedSlot(Teacher teacher, UUID slotId, boolean admin) {
+        Slot slot = slotRepository.findForUpdateById(slotId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.SLOT_NOT_FOUND));
+        if (!admin && !slot.getEinAb().getTeacher().getId().equals(teacher.getId())) {
+            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ONLY_OWN_EINABS_MANAGEABLE);
+        }
+        if (slot.getStatus() != SlotStatus.BOOKED || slot.getBookingUser() == null) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.ONLY_BOOKED_APPOINTMENTS_CANCELLABLE);
+        }
+        notificationService.notifyTeacherCancelledBooking(slot);
+        slot.setStatus(SlotStatus.AVAILABLE);
+        slot.setBookingUser(null);
+        slot.setBookedAt(null);
+        slot.setDoneAt(null);
+        return slot;
     }
 
     private void createSlots(EinAb einAb, int count) {
@@ -212,36 +261,64 @@ public class TeacherService {
 
     private void ensureTeacherActive(Teacher teacher) {
         if (!teacher.isActive()) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "Teacher must be active to manage EinAbs");
+            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.TEACHER_INACTIVE);
         }
     }
 
     private void validateSlotCount(int slotCount) {
         if (slotCount < 1 || slotCount > 3) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "Slot count must be between 1 and 3");
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.SLOT_COUNT_OUT_OF_RANGE);
         }
+    }
+
+    private void validateEinAb(int slotCount, String publicLocation, Integer minimumPickupCount) {
+        validateSlotCount(slotCount);
+        normalizeRequiredLocation(publicLocation);
+        normalizeMinimumPickupCount(minimumPickupCount);
     }
 
     private String normalizeLocation(String location) {
         return location == null || location.isBlank() ? null : location.trim();
     }
 
+    private String normalizeRequiredLocation(String location) {
+        String normalized = normalizeLocation(location);
+        if (normalized == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.PUBLIC_LOCATION_REQUIRED);
+        }
+        return normalized;
+    }
+
     private String normalizeWhatToBring(String whatToBring) {
         return whatToBring == null || whatToBring.isBlank() ? null : whatToBring.trim();
     }
 
+    private Integer normalizeMinimumPickupCount(Integer minimumPickupCount) {
+        if (minimumPickupCount == null) {
+            return null;
+        }
+        if (minimumPickupCount < 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("minimumPickupCount"));
+        }
+        return minimumPickupCount;
+    }
+
     private EinAb requireTeacherEinAb(Teacher teacher, UUID einAbId, boolean admin) {
         EinAb einAb = einAbRepository.findById(einAbId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "EinAb not found"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.EINAB_NOT_FOUND));
         if (!admin && !einAb.getTeacher().getId().equals(teacher.getId())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "You can only manage your own EinAbs");
+            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ONLY_OWN_EINABS_MANAGEABLE);
         }
         return einAb;
     }
 
     private BookingUser requireBookingUser(UUID bookingUserId) {
         return bookingUserRepository.findById(bookingUserId)
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Booking user not found"));
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_USER_NOT_FOUND));
+    }
+
+    private int normalizeSize(int size) {
+        return Math.min(Math.max(size, 1), 100);
     }
 
 }

@@ -5,6 +5,7 @@ import ch.it4user.foodsharing.openapi.model.AvailableSlotListResponse;
 import ch.it4user.foodsharing.openapi.model.BookSlotRequest;
 import ch.it4user.foodsharing.openapi.model.BookingDetailResponse;
 import ch.it4user.foodsharing.openapi.model.EinAbCategory;
+import ch.it4user.foodsharing.openapi.model.Language;
 import ch.it4user.foodsharing.openapi.model.NotificationSubscriptionRequest;
 import ch.it4user.foodsharing.openapi.model.NotificationSubscriptionResponse;
 import ch.it4user.foodsharing.openapi.model.NotificationUnsubscribeRequest;
@@ -37,11 +38,14 @@ public class PublicController implements PublicApi {
     }
 
     @Override
-    public ResponseEntity<AvailableSlotListResponse> getAvailableSlots(String search,
-                                                                       EinAbCategory category,
-                                                                       Boolean visitFairteiler) {
+    public ResponseEntity<AvailableSlotListResponse> getAvailableSlots(
+            String search,
+            EinAbCategory category,
+            Boolean visitFairteiler,
+            Integer page,
+            Integer size) {
         return ResponseEntity.ok(mapper.toAvailableSlotListResponse(
-                publicService.findAvailableSlots(search, mapCategory(category), visitFairteiler)));
+                publicService.findAvailableSlots(search, mapCategory(category), visitFairteiler, page == null ? 0 : page, size == null ? 20 : size)));
     }
 
     @Override
@@ -52,7 +56,8 @@ public class PublicController implements PublicApi {
                         bookSlotRequest.getEmail(),
                         bookSlotRequest.getName(),
                         bookSlotRequest.getFoodsharingId(),
-                        bookSlotRequest.getPhoneNumber())));
+                        bookSlotRequest.getPhoneNumber(),
+                        mapLanguage(bookSlotRequest.getLanguage()))));
     }
 
     @Override
@@ -61,7 +66,10 @@ public class PublicController implements PublicApi {
                 teacherSignupRequest.getEmail(),
                 teacherSignupRequest.getFoodsharingId(),
                 teacherSignupRequest.getName(),
+                teacherSignupRequest.getPhoneNumber(),
                 teacherSignupRequest.getIcalLink() == null ? null : teacherSignupRequest.getIcalLink().toString()
+                ,
+                mapLanguage(teacherSignupRequest.getLanguage())
         ));
         return ResponseEntity.status(201).body(response);
     }
@@ -70,7 +78,7 @@ public class PublicController implements PublicApi {
     public ResponseEntity<NotificationSubscriptionResponse> subscribeNotifications(
             NotificationSubscriptionRequest notificationSubscriptionRequest) {
         return ResponseEntity.ok(mapper.toNotificationResponse(
-                notificationService.subscribe(notificationSubscriptionRequest.getEmail())));
+                notificationService.subscribe(notificationSubscriptionRequest.getEmail(), mapLanguage(notificationSubscriptionRequest.getLanguage()))));
     }
 
     @Override
@@ -82,5 +90,9 @@ public class PublicController implements PublicApi {
 
     private ch.it4user.foodsharing.domain.enumtype.EinAbCategory mapCategory(EinAbCategory category) {
         return category == null ? null : ch.it4user.foodsharing.domain.enumtype.EinAbCategory.valueOf(category.getValue());
+    }
+
+    private ch.it4user.foodsharing.domain.enumtype.LanguageCode mapLanguage(Language language) {
+        return ch.it4user.foodsharing.domain.enumtype.LanguageCode.fromCode(language == null ? "de" : language.getValue());
     }
 }

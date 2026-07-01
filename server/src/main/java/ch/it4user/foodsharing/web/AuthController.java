@@ -20,10 +20,7 @@ public class AuthController implements AuthApi {
 
     @Override
     public ResponseEntity<MessageResponse> requestLogin(LoginRequest loginRequest) {
-        authService.requestLogin(loginRequest.getEmail());
-        MessageResponse response = new MessageResponse();
-        response.setMessage("Login link sent if the email is known.");
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(authService.requestLogin(loginRequest.getFoodsharingId()));
     }
 
     @Override

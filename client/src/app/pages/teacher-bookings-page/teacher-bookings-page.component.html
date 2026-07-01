@@ -18,7 +18,7 @@
             </div>
           </p-accordion-header>
           <p-accordion-content>
-          <p-table [value]="group.bookings">
+          <p-table [value]="group.bookings" [paginator]="true" [rows]="5">
             <ng-template pTemplate="header">
               <tr>
                 <th>{{ i18n.t('slots.category') }}</th>
@@ -26,15 +26,21 @@
                 <th>{{ i18n.t('common.location') }}</th>
                 <th>{{ i18n.t('slots.teacher') }}</th>
                 <th>{{ i18n.t('common.status') }}</th>
+                <th>{{ i18n.t('common.actions') }}</th>
               </tr>
             </ng-template>
             <ng-template pTemplate="body" let-booking>
               <tr>
                 <td>{{ i18n.categoryLabel(booking.category) }}</td>
-                <td>{{ booking.startDateTime | date: 'medium' }}</td>
+                <td>{{ booking.startDateTime | zurichDateTime }}</td>
                 <td>{{ booking.location ?? '-' }}</td>
                 <td>{{ booking.teacherName }}</td>
                 <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
+                <td class="actions-cell">
+                  @if (booking.status === SlotStatus.Booked) {
+                    <button pButton type="button" size="small" severity="danger" icon="pi pi-times" [label]="i18n.t('teacher.cancelBookedSlot')" (click)="cancelBooking(booking.slotId)"></button>
+                  }
+                </td>
               </tr>
             </ng-template>
           </p-table>
@@ -51,7 +57,7 @@
                 @for (comment of commentsForUser(group.bookingUserId); track comment.id) {
                   <div class="comment-item">
                     <strong>{{ comment.teacherName }}</strong>
-                    <div>{{ comment.createdAt | date: 'short' }}</div>
+                    <div>{{ comment.createdAt | zurichDateTime: 'short' }}</div>
                     <p>{{ comment.comment }}</p>
                   </div>
                 }
@@ -88,3 +94,5 @@
     </div>
   </form>
 </p-dialog>
+
+<p-confirmDialog></p-confirmDialog>

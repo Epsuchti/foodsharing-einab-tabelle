@@ -18,11 +18,11 @@
       <tr>
         <td>{{ booking.bookingUser?.name ?? '-' }}</td>
         <td>{{ i18n.categoryLabel(booking.category) }}</td>
-        <td>{{ booking.startDateTime | date: 'medium' }}</td>
+        <td>{{ booking.startDateTime | zurichDateTime }}</td>
         <td>{{ booking.teacherName }}</td>
         <td>{{ booking.location ?? '-' }}</td>
         <td style="white-space: pre-wrap;">{{ booking.whatToBring ?? '-' }}</td>
-        <td>{{ booking.bookingUser?.phoneNumber ?? '-' }}</td>
+        <td>{{ booking.teacherPhoneNumber ?? '-' }}</td>
         <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
         <td class="actions-cell">
           @if (booking.status === SlotStatus.Booked) {
@@ -32,4 +32,12 @@
       </tr>
     </ng-template>
   </p-table>
+  <p-paginator
+    [rows]="pageSize"
+    [totalRecords]="bookingsPage()?.totalElements ?? 0"
+    [first]="(bookingsPage()?.page ?? 0) * pageSize"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="{first} - {last} / {totalRecords}"
+    (onPageChange)="onPageChange($event)">
+  </p-paginator>
 </p-card>

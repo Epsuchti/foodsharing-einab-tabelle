@@ -1,10 +1,15 @@
 package ch.it4user.foodsharing.service;
 
-import java.util.Map;
-import java.util.stream.Collectors;
-import java.time.OffsetDateTime;
+import ch.it4user.foodsharing.domain.entity.EinAb;
+import ch.it4user.foodsharing.domain.entity.Slot;
+import ch.it4user.foodsharing.domain.enumtype.EinAbCategory;
+import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
@@ -13,6 +18,152 @@ public class EmailTemplateService {
 
     private static final ZoneId SWISS_ZONE = ZoneId.of("Europe/Zurich");
     private static final DateTimeFormatter SWISS_DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+
+    public String loginSubject(LanguageCode language) {
+        return switch (language) {
+            case EN -> "Your foodsharing login link";
+            case GWS -> "Din Foodsharing Login-Link";
+            case DE -> "Dein Foodsharing Login-Link";
+        };
+    }
+
+    public String loginBody(LanguageCode language, String loginLink) {
+        return render(
+                switch (language) {
+                    case EN -> "Login link";
+                    case GWS -> "Login-Link";
+                    case DE -> "Login-Link";
+                },
+                paragraph(switch (language) {
+                    case EN -> "Hello,";
+                    case GWS -> "Hoi,";
+                    case DE -> "Hallo,";
+                })
+                        + paragraph(switch (language) {
+                            case EN -> "Open this link to sign in:";
+                            case GWS -> "Mach dä Link uf zum Ilogge:";
+                            case DE -> "Öffne diesen Link zum Einloggen:";
+                        })
+                        + button(switch (language) {
+                            case EN -> "Sign in";
+                            case GWS -> "Ilogge";
+                            case DE -> "Einloggen";
+                        }, loginLink)
+                        + paragraph(switch (language) {
+                            case EN -> "If you did not request this email, you can ignore it.";
+                            case GWS -> "Wenn du die E-Mail nid aagforderet hesch, chasch si eifach ignoriere.";
+                            case DE -> "Wenn du diese E-Mail nicht angefordert hast, kannst du sie ignorieren.";
+                        }));
+    }
+
+    public String bookingConfirmationSubject(LanguageCode language) {
+        return switch (language) {
+            case EN -> "Your foodsharing pickup details";
+            case GWS -> "Dini Foodsharing Abholig";
+            case DE -> "Deine Foodsharing-Abholung";
+        };
+    }
+
+    public String bookingConfirmationBody(LanguageCode language, Slot slot, String manageUrl) {
+        Map<String, String> details = bookingDetails(language, slot.getEinAb(), slot.getEinAb().getTeacher().getName(), slot.getEinAb().getTeacher().getPhoneNumber());
+        return render(
+                switch (language) {
+                    case EN -> "Booking confirmed";
+                    case GWS -> "Buechig bestätigt";
+                    case DE -> "Buchung bestätigt";
+                },
+                paragraph(greeting(language, slot.getBookingUser().getName()))
+                        + paragraph(switch (language) {
+                            case EN -> "Your pickup has been booked successfully.";
+                            case GWS -> "Dini Abholig isch erfougrich buecht worde.";
+                            case DE -> "Deine Abholung wurde erfolgreich gebucht.";
+                        })
+                        + detailsTable(details)
+                        + note(switch (language) {
+                            case EN -> "You can log in later with the Foodsharing ID you used for this booking.";
+                            case GWS -> "Du chasch di spöter mit dr Foodsharing-ID vo dere Buechig ilogge.";
+                            case DE -> "Du kannst dich später mit der Foodsharing-ID dieser Buchung einloggen.";
+                        })
+                        + button(switch (language) {
+                            case EN -> "View bookings";
+                            case GWS -> "Buechige aaluege";
+                            case DE -> "Buchungen ansehen";
+                        }, manageUrl));
+    }
+
+    public String teacherCancellationSubject(LanguageCode language) {
+        return switch (language) {
+            case EN -> "Your pickup was cancelled";
+            case GWS -> "Dini Abholig isch abgsagt worde";
+            case DE -> "Deine Abholung wurde abgesagt";
+        };
+    }
+
+    public String teacherCancellationBody(LanguageCode language, Slot slot, String manageUrl) {
+        Map<String, String> details = bookingDetails(language, slot.getEinAb(), slot.getEinAb().getTeacher().getName(), slot.getEinAb().getTeacher().getPhoneNumber());
+        return render(
+                switch (language) {
+                    case EN -> "Pickup cancelled";
+                    case GWS -> "Abholig abgsagt";
+                    case DE -> "Abholung abgesagt";
+                },
+                paragraph(greeting(language, slot.getBookingUser().getName()))
+                        + paragraph(switch (language) {
+                            case EN -> "The EinAb giver cancelled your booked pickup.";
+                            case GWS -> "D EinAb-Geberin het dini buechti Abholig abgsagt.";
+                            case DE -> "Die EinAb-Geberin hat deine gebuchte Abholung abgesagt.";
+                        })
+                        + detailsTable(details)
+                        + button(switch (language) {
+                            case EN -> "Open bookings";
+                            case GWS -> "Buechige öffne";
+                            case DE -> "Buchungen öffnen";
+                        }, manageUrl));
+    }
+
+    public String notificationSubject(LanguageCode language) {
+        return switch (language) {
+            case EN -> "New foodsharing EinAb slot";
+            case GWS -> "Neue Foodsharing EinAb";
+            case DE -> "Neue Foodsharing EinAb";
+        };
+    }
+
+    public String notificationBody(LanguageCode language, EinAb einAb, String unsubscribeUrl) {
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put(label(language, "teacher"), einAb.getTeacher().getName());
+        details.put(label(language, "category"), categoryLabel(language, einAb.getCategory()));
+        details.put(label(language, "start"), swissDateTime(einAb.getStartDateTime()));
+        details.put(label(language, "publicLocation"), valueOrDash(einAb.getPublicLocation()));
+        details.put(label(language, "fairteiler"), yesNo(language, einAb.isVisitFairteiler()));
+        return render(
+                switch (language) {
+                    case EN -> "New EinAb slot";
+                    case GWS -> "Neui EinAb";
+                    case DE -> "Neue EinAb";
+                },
+                paragraph(switch (language) {
+                    case EN -> "Hello,";
+                    case GWS -> "Hoi,";
+                    case DE -> "Hallo,";
+                })
+                        + paragraph(switch (language) {
+                            case EN -> "A new EinAb slot is available.";
+                            case GWS -> "Es git e neui EinAb.";
+                            case DE -> "Eine neue EinAb ist verfügbar.";
+                        })
+                        + detailsTable(details)
+                        + paragraphHtml(switch (language) {
+                            case EN -> "Want to stop these emails? " + link("Opt out here", unsubscribeUrl) + ".";
+                            case GWS -> "Wotsch die E-Mails nüm? " + link("Da abmelde", unsubscribeUrl) + ".";
+                            case DE -> "Du möchtest diese E-Mails nicht mehr? " + link("Hier abmelden", unsubscribeUrl) + ".";
+                        })
+                        + button(switch (language) {
+                            case EN -> "Unsubscribe";
+                            case GWS -> "Abmelde";
+                            case DE -> "Abmelden";
+                        }, unsubscribeUrl));
+    }
 
     public String render(String title, String bodyHtml) {
         return """
@@ -80,11 +231,123 @@ public class EmailTemplateService {
                 """.formatted(escape(text));
     }
 
-    public String swissDateTime(OffsetDateTime value) {
+    public String swissDateTime(Instant value) {
         if (value == null) {
             return "";
         }
-        return SWISS_DATE_TIME.format(value.atZoneSameInstant(SWISS_ZONE));
+        return SWISS_DATE_TIME.format(value.atZone(SWISS_ZONE));
+    }
+
+    private Map<String, String> bookingDetails(LanguageCode language, EinAb einAb, String teacherName, String teacherPhone) {
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put(label(language, "teacher"), teacherName);
+        details.put(label(language, "teacherPhone"), valueOrDash(teacherPhone));
+        details.put(label(language, "category"), categoryLabel(language, einAb.getCategory()));
+        details.put(label(language, "start"), swissDateTime(einAb.getStartDateTime()));
+        details.put(label(language, "location"), valueOrDash(einAb.getLocation()));
+        details.put(label(language, "publicLocation"), valueOrDash(einAb.getPublicLocation()));
+        details.put(label(language, "whatToBring"), valueOrDash(einAb.getWhatToBring()));
+        details.put(label(language, "hint"), valueOrDash(einAb.getHint()));
+        details.put(label(language, "fairteiler"), yesNo(language, einAb.isVisitFairteiler()));
+        return details;
+    }
+
+    private String greeting(LanguageCode language, String name) {
+        return switch (language) {
+            case EN -> "Hello " + name + ",";
+            case GWS -> "Hoi " + name + ",";
+            case DE -> "Hallo " + name + ",";
+        };
+    }
+
+    private String yesNo(LanguageCode language, boolean value) {
+        return switch (language) {
+            case EN -> value ? "Yes" : "No";
+            case GWS -> value ? "Jo" : "Nei";
+            case DE -> value ? "Ja" : "Nein";
+        };
+    }
+
+    private String label(LanguageCode language, String key) {
+        return switch (key) {
+            case "teacher" -> switch (language) {
+                case EN -> "EinAb giver";
+                case GWS -> "EinAb-Geberin";
+                case DE -> "EinAb-Geberin";
+            };
+            case "teacherPhone" -> switch (language) {
+                case EN -> "Phone";
+                case GWS -> "Telefon";
+                case DE -> "Telefon";
+            };
+            case "category" -> switch (language) {
+                case EN -> "Category";
+                case GWS -> "Kategorie";
+                case DE -> "Kategorie";
+            };
+            case "start" -> switch (language) {
+                case EN -> "Start";
+                case GWS -> "Start";
+                case DE -> "Beginn";
+            };
+            case "location" -> switch (language) {
+                case EN -> "Location";
+                case GWS -> "Ort";
+                case DE -> "Ort";
+            };
+            case "publicLocation" -> switch (language) {
+                case EN -> "Public location";
+                case GWS -> "Öffentleche Ort";
+                case DE -> "Öffentlicher Ort";
+            };
+            case "whatToBring" -> switch (language) {
+                case EN -> "What to bring";
+                case GWS -> "Was mibringe";
+                case DE -> "Was mitbringen";
+            };
+            case "hint" -> switch (language) {
+                case EN -> "Hint";
+                case GWS -> "Hiwis";
+                case DE -> "Hinweis";
+            };
+            case "fairteiler" -> switch (language) {
+                case EN -> "Fairteiler visit";
+                case GWS -> "Fairteiler-Bsuech";
+                case DE -> "Fairteiler-Besuch";
+            };
+            default -> key;
+        };
+    }
+
+    private String categoryLabel(LanguageCode language, EinAbCategory category) {
+        return switch (category) {
+            case SUPERMARKET -> switch (language) {
+                case EN -> "Supermarket";
+                case GWS -> "Supermärt";
+                case DE -> "Supermarkt";
+            };
+            case TAKEOUT -> "Takeout";
+            case MARKET -> switch (language) {
+                case EN -> "Market";
+                case GWS -> "Määrt";
+                case DE -> "Markt";
+            };
+            case BAKERY -> switch (language) {
+                case EN -> "Bakery";
+                case GWS -> "Bäckerei";
+                case DE -> "Bäckerei";
+            };
+            case RESTAURANT -> "Restaurant";
+            case FAIRTEILER_CLEANING -> switch (language) {
+                case EN -> "Fairteiler cleaning";
+                case GWS -> "Fairteiler-Putz";
+                case DE -> "Fairteiler-Reinigung";
+            };
+        };
+    }
+
+    private String valueOrDash(String value) {
+        return value == null || value.isBlank() ? "-" : value;
     }
 
     private String escape(String value) {

@@ -7,7 +7,9 @@
         <tr>
           <th>{{ i18n.t('common.name') }}</th>
           <th>{{ i18n.t('common.email') }}</th>
+          <th>{{ i18n.t('common.phoneNumber') }}</th>
           <th>{{ i18n.t('common.status') }}</th>
+          <th>{{ i18n.t('admin.adminFlag') }}</th>
           <th>{{ i18n.t('common.actions') }}</th>
         </tr>
       </ng-template>
@@ -15,17 +17,32 @@
         <tr>
           <td>{{ teacher.name }}</td>
           <td>{{ teacher.email }}</td>
+          <td>{{ teacher.phoneNumber }}</td>
           <td><p-tag [severity]="teacher.active ? 'success' : 'warn'" [value]="teacher.active ? i18n.t('common.active') : i18n.t('common.inactive')"></p-tag></td>
+          <td><p-tag [severity]="teacher.isAdmin ? 'contrast' : 'secondary'" [value]="teacher.isAdmin ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
           <td class="actions-cell">
             @if (teacher.active) {
               <button pButton size="small" severity="danger" [label]="i18n.t('admin.disable')" (click)="toggleTeacher(teacher, false)"></button>
             } @else {
               <button pButton size="small" [label]="i18n.t('admin.enable')" (click)="toggleTeacher(teacher, true)"></button>
             }
+            @if (teacher.isAdmin) {
+              <button pButton size="small" severity="secondary" [label]="i18n.t('admin.revokeAdmin')" (click)="toggleAdmin(teacher, false)"></button>
+            } @else {
+              <button pButton size="small" severity="contrast" [label]="i18n.t('admin.makeAdmin')" (click)="toggleAdmin(teacher, true)"></button>
+            }
           </td>
         </tr>
       </ng-template>
     </p-table>
+    <p-paginator
+      [rows]="pageSize"
+      [totalRecords]="teachersPage()?.totalElements ?? 0"
+      [first]="(teachersPage()?.page ?? 0) * pageSize"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="{first} - {last} / {totalRecords}"
+      (onPageChange)="onTeachersPageChange($event)">
+    </p-paginator>
   </p-card>
 
   <p-card>
@@ -43,13 +60,21 @@
       <ng-template pTemplate="body" let-einab>
         <tr>
           <td>{{ i18n.categoryLabel(einab.category) }}</td>
-          <td>{{ einab.startDateTime | date: 'medium' }}</td>
+          <td>{{ einab.startDateTime | zurichDateTime }}</td>
           <td>{{ einab.location ?? '-' }}</td>
           <td>{{ einab.publicLocation ?? '-' }}</td>
           <td>{{ einab.teacher.name }}</td>
         </tr>
       </ng-template>
     </p-table>
+    <p-paginator
+      [rows]="pageSize"
+      [totalRecords]="einAbsPage()?.totalElements ?? 0"
+      [first]="(einAbsPage()?.page ?? 0) * pageSize"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="{first} - {last} / {totalRecords}"
+      (onPageChange)="onEinAbsPageChange($event)">
+    </p-paginator>
   </p-card>
 
   <p-card>
@@ -60,6 +85,7 @@
           <th>{{ i18n.t('common.name') }}</th>
           <th>{{ i18n.t('slots.category') }}</th>
           <th>{{ i18n.t('slots.teacher') }}</th>
+          <th>{{ i18n.t('slots.date') }}</th>
           <th>{{ i18n.t('common.location') }}</th>
           <th>{{ i18n.t('common.foodsharingId') }}</th>
           <th>{{ i18n.t('common.phoneNumber') }}</th>
@@ -71,6 +97,7 @@
           <td>{{ booking.bookingUser?.name ?? '-' }}</td>
           <td>{{ i18n.categoryLabel(booking.category) }}</td>
           <td>{{ booking.teacherName }}</td>
+          <td>{{ booking.startDateTime | zurichDateTime }}</td>
           <td>{{ booking.location ?? '-' }}</td>
           <td>{{ booking.bookingUser?.foodsharingId }}</td>
           <td>{{ booking.bookingUser?.phoneNumber ?? '-' }}</td>
@@ -78,6 +105,14 @@
         </tr>
       </ng-template>
     </p-table>
+    <p-paginator
+      [rows]="pageSize"
+      [totalRecords]="bookingsPage()?.totalElements ?? 0"
+      [first]="(bookingsPage()?.page ?? 0) * pageSize"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="{first} - {last} / {totalRecords}"
+      (onPageChange)="onBookingsPageChange($event)">
+    </p-paginator>
   </p-card>
 
   <p-card>
@@ -114,7 +149,7 @@
 
               <h4>{{ i18n.t('admin.userPickups') }}</h4>
               @if (user.bookings.length) {
-                <p-table [value]="user.bookings">
+                <p-table [value]="user.bookings" [paginator]="true" [rows]="5">
                   <ng-template pTemplate="header">
                     <tr>
                       <th>{{ i18n.t('slots.category') }}</th>
@@ -127,7 +162,7 @@
                   <ng-template pTemplate="body" let-booking>
                     <tr>
                       <td>{{ i18n.categoryLabel(booking.category) }}</td>
-                      <td>{{ booking.startDateTime | date: 'medium' }}</td>
+                      <td>{{ booking.startDateTime | zurichDateTime }}</td>
                       <td>{{ booking.location ?? '-' }}</td>
                       <td>{{ booking.teacherName }}</td>
                       <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
@@ -140,7 +175,7 @@
 
               <h4>{{ i18n.t('admin.userComments') }}</h4>
               @if (user.comments.length) {
-                <p-table [value]="user.comments">
+                <p-table [value]="user.comments" [paginator]="true" [rows]="5">
                   <ng-template pTemplate="header">
                     <tr>
                       <th>{{ i18n.t('slots.teacher') }}</th>
@@ -152,7 +187,7 @@
                     <tr>
                       <td>{{ comment.teacherName }}</td>
                       <td>{{ comment.comment }}</td>
-                      <td>{{ comment.createdAt | date: 'medium' }}</td>
+                      <td>{{ comment.createdAt | zurichDateTime }}</td>
                     </tr>
                   </ng-template>
                 </p-table>

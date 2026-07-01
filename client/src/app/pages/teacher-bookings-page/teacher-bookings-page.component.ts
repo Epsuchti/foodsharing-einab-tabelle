@@ -1,4 +1,4 @@
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
@@ -8,18 +8,21 @@ import {
   BookingCommentResponse,
   BookingDetailResponse,
   CreateBookingCommentRequest,
+  SlotStatus,
   TeacherService
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
 import { I18nService } from '../../core/i18n.service';
+import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { DialogModule } from 'primeng/dialog';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
 
 type BookingGroup = {
   bookingUserId: string;
@@ -33,11 +36,12 @@ type BookingGroup = {
 @Component({
   selector: 'app-teacher-bookings-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, DatePipe, AccordionModule, CardModule, ButtonModule, DialogModule, TableModule, TagModule, TextareaModule],
+  imports: [CommonModule, ReactiveFormsModule, ZurichDateTimePipe, AccordionModule, CardModule, ButtonModule, DialogModule, ConfirmDialogModule, TableModule, TagModule, TextareaModule],
   templateUrl: './teacher-bookings-page.component.html'
 })
 export class TeacherBookingsPageComponent implements OnInit {
   readonly i18n = inject(I18nService);
+  readonly SlotStatus = SlotStatus;
 
   protected readonly bookings = signal<BookingDetailResponse[]>([]);
   protected readonly commentsByUserId = signal<Record<string, BookingCommentResponse[]>>({});
@@ -75,6 +79,7 @@ export class TeacherBookingsPageComponent implements OnInit {
 
   private readonly teacherApi = inject(TeacherService);
   private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmationService);
 
   ngOnInit(): void {
     this.reload();
@@ -82,14 +87,14 @@ export class TeacherBookingsPageComponent implements OnInit {
 
   reload(): void {
     this.loading.set(true);
-    this.teacherApi.getTeacherBookings().subscribe({
+    this.teacherApi.getTeacherBookings({ page: 0, size: 100 }).subscribe({
       next: (response) => {
         this.bookings.set(response.bookings);
         this.loadComments(response.bookings);
       },
       error: (error) => {
         this.loading.set(false);
-        this.toastError(resolveApiError(error));
+        this.toastError(resolveApiError(error, this.i18n));
       }
     });
   }
@@ -128,7 +133,19 @@ export class TeacherBookingsPageComponent implements OnInit {
       },
       error: (error) => {
         this.commentLoading.set(false);
-        this.toastError(resolveApiError(error));
+        this.toastError(resolveApiError(error, this.i18n));
+      }
+    });
+  }
+
+  cancelBooking(slotId: string): void {
+    this.confirmationService.confirm({
+      message: this.i18n.t('confirm.cancelTeacherBooking'),
+      accept: () => {
+        this.teacherApi.cancelTeacherSlotBooking({ slotId }).subscribe({
+          next: () => this.reload(),
+          error: (error) => this.toastError(resolveApiError(error, this.i18n))
+        });
       }
     });
   }
@@ -160,7 +177,7 @@ export class TeacherBookingsPageComponent implements OnInit {
       },
       error: (error) => {
         this.loading.set(false);
-        this.toastError(resolveApiError(error));
+        this.toastError(resolveApiError(error, this.i18n));
       }
     });
   }
@@ -173,7 +190,7 @@ export class TeacherBookingsPageComponent implements OnInit {
       },
       error: (error) => {
         this.commentLoading.set(false);
-        this.toastError(resolveApiError(error));
+        this.toastError(resolveApiError(error, this.i18n));
       }
     });
   }

@@ -1,7 +1,10 @@
 package ch.it4user.foodsharing.domain.entity;
 
+import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,10 +26,20 @@ public class Teacher extends BaseEntity {
     @Column(nullable = false, length = 200)
     private String name;
 
+    @Column(nullable = false, length = 50)
+    private String phoneNumber;
+
     @Column(length = 2000)
     private String icalLink;
 
     @Column(nullable = false)
     private boolean active = false;
+
+    @Column(name = "is_admin", nullable = false)
+    private boolean admin = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private LanguageCode preferredLanguage = LanguageCode.DE;
 
 }
