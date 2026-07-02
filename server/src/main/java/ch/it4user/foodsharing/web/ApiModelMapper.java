@@ -3,7 +3,6 @@ package ch.it4user.foodsharing.web;
 import ch.it4user.foodsharing.domain.entity.BookingComment;
 import ch.it4user.foodsharing.domain.entity.BookingUser;
 import ch.it4user.foodsharing.domain.entity.EinAb;
-import ch.it4user.foodsharing.domain.entity.NotificationSubscription;
 import ch.it4user.foodsharing.domain.entity.Slot;
 import ch.it4user.foodsharing.domain.entity.Teacher;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
@@ -18,7 +17,6 @@ import ch.it4user.foodsharing.openapi.model.BookingListResponse;
 import ch.it4user.foodsharing.openapi.model.BookingUserResponse;
 import ch.it4user.foodsharing.openapi.model.EinAbResponse;
 import ch.it4user.foodsharing.openapi.model.IcalCandidateListResponse;
-import ch.it4user.foodsharing.openapi.model.NotificationSubscriptionResponse;
 import ch.it4user.foodsharing.openapi.model.SlotResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbResponse;
@@ -225,13 +223,6 @@ public class ApiModelMapper {
         IcalCandidateListResponse response = new IcalCandidateListResponse();
         response.setCandidates(candidates.getContent());
         fillPage(response, candidates);
-        return response;
-    }
-
-    public NotificationSubscriptionResponse toNotificationResponse(NotificationSubscription subscription) {
-        NotificationSubscriptionResponse response = new NotificationSubscriptionResponse();
-        response.setEmail(subscription.getEmail());
-        response.setActive(subscription.isActive());
         return response;
     }
 

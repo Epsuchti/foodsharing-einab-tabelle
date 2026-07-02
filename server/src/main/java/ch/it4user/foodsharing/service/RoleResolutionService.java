@@ -10,8 +10,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class RoleResolutionService {
 
-    private static final String IMMUTABLE_ADMIN_EMAIL = "ez@it4user.ch";
-
     private final TeacherRepository teacherRepository;
     private final BookingUserRepository bookingUserRepository;
 
@@ -29,7 +27,7 @@ public class RoleResolutionService {
         }
         teacherRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId).ifPresent(teacher -> {
             roles.add(UserRole.TEACHER);
-            if (teacher.isAdmin() || IMMUTABLE_ADMIN_EMAIL.equalsIgnoreCase(teacher.getEmail())) {
+            if (teacher.isAdmin()) {
                 roles.add(UserRole.ADMIN);
             }
         });

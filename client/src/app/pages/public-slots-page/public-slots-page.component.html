@@ -100,14 +100,6 @@
     }
   </p-card>
 
-  <p-card>
-    <ng-template pTemplate="title">{{ i18n.t('slots.subscribeTitle') }}</ng-template>
-    <p>{{ i18n.t('slots.subscribeHint') }}</p>
-    <form class="stack-form" [formGroup]="subscriptionForm" (ngSubmit)="subscribe()">
-      <input pInputText formControlName="email" [placeholder]="i18n.t('common.email')" />
-      <button pButton type="submit" icon="pi pi-bell" [label]="i18n.t('slots.subscribeTitle')" [disabled]="subscriptionForm.invalid || subscribeLoading()"></button>
-    </form>
-  </p-card>
 </section>
 
 <p-dialog [(visible)]="bookingVisible" [modal]="true" [header]="i18n.t('book.dialogTitle')" [style]="{ width: '32rem', maxWidth: '95vw' }">
@@ -118,15 +110,10 @@
     @if (bookingIdentityLocked() && bookingProfile()) {
       <div class="info-grid">
         <div><strong>{{ bookingProfile()?.name }}</strong></div>
-        <div>{{ bookingProfile()?.email }}</div>
         <div>{{ bookingProfile()?.foodsharingId }}</div>
-        <div>{{ bookingProfile()?.phoneNumber }}</div>
       </div>
     } @else {
-      <input pInputText formControlName="name" [placeholder]="i18n.t('common.name')" />
-      <input pInputText formControlName="email" [placeholder]="i18n.t('common.email')" />
       <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" />
-      <input pInputText formControlName="phoneNumber" [placeholder]="i18n.t('common.phoneNumber')" />
     }
     <div class="dialog-actions">
       <button pButton type="button" severity="secondary" [label]="i18n.t('common.cancel')" (click)="bookingVisible = false"></button>
@@ -139,9 +126,7 @@
   @if (bookingDetails()) {
     <div class="info-grid">
       <div><strong>{{ bookingDetails()?.bookingUser?.name }}</strong></div>
-      <div>{{ bookingDetails()?.bookingUser?.email }}</div>
       <div>{{ bookingDetails()?.bookingUser?.foodsharingId }}</div>
-      <div>{{ bookingDetails()?.bookingUser?.phoneNumber }}</div>
     </div>
 
     <div class="empty-state">

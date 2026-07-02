@@ -6,7 +6,6 @@ import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.domain.enumtype.EinAbCategory;
 import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
 import ch.it4user.foodsharing.repository.SlotRepository;
-import ch.it4user.foodsharing.repository.TeacherRepository;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -18,26 +17,26 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PublicService {
 
-    private static final Set<SlotStatus> ACTIVE_BOOKING_STATUSES = Set.of(SlotStatus.BOOKED, SlotStatus.DONE);
+    private static final Set<SlotStatus> ACTIVE_BOOKING_STATUSES = Set.of(SlotStatus.PENDING_CONFIRMATION, SlotStatus.BOOKED, SlotStatus.DONE);
 
     private final SlotRepository slotRepository;
     private final BookingUserService bookingUserService;
-    private final TeacherRepository teacherRepository;
-    private final EmailService emailService;
-    private final EmailTemplateService emailTemplateService;
+    private final FoodsharingMessageService messageService;
+    private final MessageTemplateService messageTemplateService;
+    private final TokenService tokenService;
     private final AppProperties appProperties;
 
     public PublicService(SlotRepository slotRepository,
                          BookingUserService bookingUserService,
-                         TeacherRepository teacherRepository,
-                         EmailService emailService,
-                         EmailTemplateService emailTemplateService,
+                         FoodsharingMessageService messageService,
+                         MessageTemplateService messageTemplateService,
+                         TokenService tokenService,
                          AppProperties appProperties) {
         this.slotRepository = slotRepository;
         this.bookingUserService = bookingUserService;
-        this.teacherRepository = teacherRepository;
-        this.emailService = emailService;
-        this.emailTemplateService = emailTemplateService;
+        this.messageService = messageService;
+        this.messageTemplateService = messageTemplateService;
+        this.tokenService = tokenService;
         this.appProperties = appProperties;
     }
 
@@ -50,18 +49,14 @@ public class PublicService {
     }
 
     @Transactional
-    public Slot bookSlot(UUID slotId, String email, String name, String foodsharingId, String phoneNumber, LanguageCode language) {
-        String normalizedEmail = email.trim().toLowerCase();
-        if (teacherRepository.existsByFoodsharingIdIgnoreCase(foodsharingId.trim())) {
-            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.TEACHERS_CANNOT_BOOK);
-        }
+    public Slot bookSlot(UUID slotId, String foodsharingId, LanguageCode language) {
         Slot slot = slotRepository.findForUpdateById(slotId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.SLOT_NOT_FOUND));
         if (slot.getStatus() != SlotStatus.AVAILABLE) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.SLOT_NOT_AVAILABLE);
         }
 
-        BookingUser bookingUser = bookingUserService.getOrCreate(normalizedEmail, name, foodsharingId, phoneNumber, language);
+        BookingUser bookingUser = bookingUserService.getOrCreate(foodsharingId, language);
         if (slotRepository.existsByBookingUserAndStatusInAndEinAbTeacher(
                 bookingUser, ACTIVE_BOOKING_STATUSES, slot.getEinAb().getTeacher())) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_ALREADY_BOOKED_WITH_TEACHER);
@@ -80,9 +75,12 @@ public class PublicService {
         }
 
         slot.setBookingUser(bookingUser);
-        slot.setStatus(SlotStatus.BOOKED);
+        String rawToken = tokenService.generateToken();
+        slot.setStatus(SlotStatus.PENDING_CONFIRMATION);
         slot.setBookedAt(java.time.Instant.now());
-        sendBookingConfirmationEmail(slot);
+        slot.setPendingConfirmationTokenHash(tokenService.hash(rawToken));
+        slot.setPendingConfirmationExpiresAt(java.time.Instant.now().plus(1, java.time.temporal.ChronoUnit.HOURS));
+        sendBookingConfirmationMessage(slot, rawToken);
         return slot;
     }
 
@@ -95,13 +93,26 @@ public class PublicService {
         return normalized == null ? null : "%" + normalized.toLowerCase() + "%";
     }
 
-    private void sendBookingConfirmationEmail(Slot slot) {
-        String manageUrl = appProperties.getFrontend().getBaseUrl() + "/my-bookings";
+    private void sendBookingConfirmationMessage(Slot slot, String rawToken) {
+        String confirmUrl = appProperties.getFrontend().getBaseUrl() + "/confirm-booking?token=" + rawToken;
         LanguageCode language = slot.getBookingUser().getPreferredLanguage();
-        emailService.send(
-                slot.getBookingUser().getEmail(),
-                emailTemplateService.bookingConfirmationSubject(language),
-                emailTemplateService.bookingConfirmationBody(language, slot, manageUrl));
+        messageService.send(
+                slot.getBookingUser().getFoodsharingId(),
+                messageTemplateService.bookingConfirmationSubject(language),
+                messageTemplateService.bookingConfirmationBody(language, slot, confirmUrl));
+    }
+
+    @Transactional
+    public Slot confirmBooking(String token) {
+        Slot slot = slotRepository.findByPendingConfirmationTokenHash(tokenService.hash(token))
+                .orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.INVALID_BOOKING_CONFIRMATION_TOKEN));
+        if (slot.getPendingConfirmationExpiresAt() == null || slot.getPendingConfirmationExpiresAt().isBefore(java.time.Instant.now())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.BOOKING_CONFIRMATION_EXPIRED);
+        }
+        slot.setStatus(SlotStatus.BOOKED);
+        slot.setPendingConfirmationTokenHash(null);
+        slot.setPendingConfirmationExpiresAt(null);
+        return slot;
     }
 
     private int normalizeSize(int size) {

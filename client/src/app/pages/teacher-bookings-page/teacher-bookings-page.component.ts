@@ -27,7 +27,6 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 type BookingGroup = {
   bookingUserId: string;
   name: string;
-  email: string;
   foodsharingId: string;
   phoneNumber: string;
   bookings: BookingDetailResponse[];
@@ -67,14 +66,13 @@ export class TeacherBookingsPageComponent implements OnInit {
         groups.set(user.id, {
           bookingUserId: user.id,
           name: user.name,
-          email: user.email,
           foodsharingId: user.foodsharingId,
           phoneNumber: user.phoneNumber,
           bookings: [booking]
         });
       }
     }
-    return Array.from(groups.values()).sort((left, right) => left.name.localeCompare(right.name) || left.email.localeCompare(right.email));
+    return Array.from(groups.values()).sort((left, right) => left.name.localeCompare(right.name));
   });
 
   private readonly teacherApi = inject(TeacherService);

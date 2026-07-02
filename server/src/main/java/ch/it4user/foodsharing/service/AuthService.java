@@ -1,8 +1,8 @@
 package ch.it4user.foodsharing.service;
 
 import ch.it4user.foodsharing.domain.entity.AuthSession;
-import ch.it4user.foodsharing.domain.entity.BookingUser;
 import ch.it4user.foodsharing.domain.entity.LoginToken;
+import ch.it4user.foodsharing.domain.entity.BookingUser;
 import ch.it4user.foodsharing.domain.entity.Teacher;
 import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.domain.enumtype.UserRole;
@@ -30,30 +30,33 @@ public class AuthService {
     private final AuthSessionRepository authSessionRepository;
     private final RoleResolutionService roleResolutionService;
     private final TokenService tokenService;
-    private final EmailService emailService;
-    private final EmailTemplateService emailTemplateService;
+    private final FoodsharingMessageService messageService;
+    private final MessageTemplateService messageTemplateService;
     private final AppProperties appProperties;
     private final TeacherRepository teacherRepository;
     private final BookingUserRepository bookingUserRepository;
+    private final BookingUserService bookingUserService;
 
     public AuthService(LoginTokenRepository loginTokenRepository,
                        AuthSessionRepository authSessionRepository,
                        RoleResolutionService roleResolutionService,
                        TokenService tokenService,
-                       EmailService emailService,
-                       EmailTemplateService emailTemplateService,
+                       FoodsharingMessageService messageService,
+                       MessageTemplateService messageTemplateService,
                        AppProperties appProperties,
                        TeacherRepository teacherRepository,
-                       BookingUserRepository bookingUserRepository) {
+                       BookingUserRepository bookingUserRepository,
+                       BookingUserService bookingUserService) {
         this.loginTokenRepository = loginTokenRepository;
         this.authSessionRepository = authSessionRepository;
         this.roleResolutionService = roleResolutionService;
         this.tokenService = tokenService;
-        this.emailService = emailService;
-        this.emailTemplateService = emailTemplateService;
+        this.messageService = messageService;
+        this.messageTemplateService = messageTemplateService;
         this.appProperties = appProperties;
         this.teacherRepository = teacherRepository;
         this.bookingUserRepository = bookingUserRepository;
+        this.bookingUserService = bookingUserService;
     }
 
     @Transactional
@@ -61,21 +64,20 @@ public class AuthService {
         LoginTarget loginTarget = resolveLoginTarget(foodsharingId);
         String rawToken = tokenService.generateToken();
         LoginToken loginToken = new LoginToken();
-        loginToken.setEmail(loginTarget.email());
         loginToken.setFoodsharingId(loginTarget.foodsharingId());
         loginToken.setTokenHash(tokenService.hash(rawToken));
         loginToken.setExpiresAt(Instant.now().plus(appProperties.getAuth().getLoginTokenValidityMinutes(), ChronoUnit.MINUTES));
         loginTokenRepository.save(loginToken);
 
         String loginLink = appProperties.getFrontend().getBaseUrl() + "/verify-login?token=" + rawToken;
-        emailService.send(
-                loginTarget.email(),
-                emailTemplateService.loginSubject(loginTarget.language()),
-                emailTemplateService.loginBody(loginTarget.language(), loginLink));
+        messageService.send(
+                loginTarget.foodsharingId(),
+                messageTemplateService.loginSubject(loginTarget.language()),
+                messageTemplateService.loginBody(loginTarget.language(), loginLink));
 
         MessageResponse response = new MessageResponse();
         response.setMessage("LOGIN_LINK_SENT");
-        response.setDeliveryTarget(maskEmail(loginTarget.email()));
+        response.setDeliveryTarget("Foodsharing ID " + loginTarget.foodsharingId());
         return response;
     }
 
@@ -95,7 +97,6 @@ public class AuthService {
         loginToken.setUsedAt(Instant.now());
         String rawAuthToken = tokenService.generateToken();
         AuthSession authSession = new AuthSession();
-        authSession.setEmail(loginToken.getEmail());
         authSession.setFoodsharingId(loginToken.getFoodsharingId());
         authSession.setTokenHash(tokenService.hash(rawAuthToken));
         authSession.setRoles(roles.stream().map(Enum::name).sorted().collect(Collectors.joining(",")));
@@ -111,7 +112,7 @@ public class AuthService {
         AuthResponse response = new AuthResponse();
         response.setAuthToken(rawAuthToken);
         response.setExpiresAt(OffsetDateTime.ofInstant(authSession.getExpiresAt(), ZoneOffset.UTC));
-        response.setEmail(authSession.getEmail());
+        response.setEmail(null);
         response.setFoodsharingId(authSession.getFoodsharingId());
         response.setDisplayName(displayName);
         response.setRoles(roles.stream()
@@ -123,30 +124,11 @@ public class AuthService {
 
     private LoginTarget resolveLoginTarget(String foodsharingId) {
         String normalizedFoodsharingId = foodsharingId.trim();
-        return bookingUserRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(normalizedFoodsharingId)
-                .map(user -> new LoginTarget(
-                        user.getFoodsharingId(),
-                        user.getEmail(),
-                        user.getPreferredLanguage()))
-                .or(() -> teacherRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId)
-                        .map(teacher -> new LoginTarget(
-                                teacher.getFoodsharingId(),
-                                teacher.getEmail(),
-                                teacher.getPreferredLanguage())))
-                .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ACCOUNT_NOT_FOUND));
+        BookingUser user = bookingUserRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(normalizedFoodsharingId)
+                .orElseGet(() -> bookingUserService.getOrCreate(normalizedFoodsharingId, LanguageCode.DE));
+        return new LoginTarget(user.getFoodsharingId(), user.getPreferredLanguage());
     }
 
-    private String maskEmail(String email) {
-        int atIndex = email.indexOf('@');
-        if (atIndex <= 0) {
-            return email;
-        }
-        String localPart = email.substring(0, atIndex);
-        String domain = email.substring(atIndex);
-        String masked = localPart.charAt(0) + "*".repeat(Math.max(1, localPart.length() - 1));
-        return masked + domain;
-    }
-
-    private record LoginTarget(String foodsharingId, String email, LanguageCode language) {
+    private record LoginTarget(String foodsharingId, LanguageCode language) {
     }
 }

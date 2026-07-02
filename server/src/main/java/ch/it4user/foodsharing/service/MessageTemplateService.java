@@ -14,7 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
 @Service
-public class EmailTemplateService {
+public class MessageTemplateService {
 
     private static final ZoneId SWISS_ZONE = ZoneId.of("Europe/Zurich");
     private static final DateTimeFormatter SWISS_DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
@@ -50,9 +50,9 @@ public class EmailTemplateService {
                             case DE -> "Einloggen";
                         }, loginLink)
                         + paragraph(switch (language) {
-                            case EN -> "If you did not request this email, you can ignore it.";
-                            case GWS -> "Wenn du die E-Mail nid aagforderet hesch, chasch si eifach ignoriere.";
-                            case DE -> "Wenn du diese E-Mail nicht angefordert hast, kannst du sie ignorieren.";
+                            case EN -> "If you did not request this message, you can ignore it.";
+                            case GWS -> "Wenn du die Nachricht nid aagforderet hesch, chasch si eifach ignoriere.";
+                            case DE -> "Wenn du diese Nachricht nicht angefordert hast, kannst du sie ignorieren.";
                         }));
     }
 
@@ -68,15 +68,15 @@ public class EmailTemplateService {
         Map<String, String> details = bookingDetails(language, slot.getEinAb(), slot.getEinAb().getTeacher().getName(), slot.getEinAb().getTeacher().getPhoneNumber());
         return render(
                 switch (language) {
-                    case EN -> "Booking confirmed";
-                    case GWS -> "Buechig bestätigt";
-                    case DE -> "Buchung bestätigt";
+                    case EN -> "Confirm booking";
+                    case GWS -> "Buechig bestätige";
+                    case DE -> "Buchung bestätigen";
                 },
                 paragraph(greeting(language, slot.getBookingUser().getName()))
                         + paragraph(switch (language) {
-                            case EN -> "Your pickup has been booked successfully.";
-                            case GWS -> "Dini Abholig isch erfougrich buecht worde.";
-                            case DE -> "Deine Abholung wurde erfolgreich gebucht.";
+                            case EN -> "Please confirm this pickup within one hour.";
+                            case GWS -> "Bitte bestätig die Abholig innerhalb vo einere Stund.";
+                            case DE -> "Bitte bestätige diese Abholung innerhalb einer Stunde.";
                         })
                         + detailsTable(details)
                         + note(switch (language) {
@@ -85,9 +85,9 @@ public class EmailTemplateService {
                             case DE -> "Du kannst dich später mit der Foodsharing-ID dieser Buchung einloggen.";
                         })
                         + button(switch (language) {
-                            case EN -> "View bookings";
-                            case GWS -> "Buechige aaluege";
-                            case DE -> "Buchungen ansehen";
+                            case EN -> "Confirm pickup";
+                            case GWS -> "Abholig bestätige";
+                            case DE -> "Abholung bestätigen";
                         }, manageUrl));
     }
 
@@ -119,50 +119,6 @@ public class EmailTemplateService {
                             case GWS -> "Buechige öffne";
                             case DE -> "Buchungen öffnen";
                         }, manageUrl));
-    }
-
-    public String notificationSubject(LanguageCode language) {
-        return switch (language) {
-            case EN -> "New foodsharing EinAb slot";
-            case GWS -> "Neue Foodsharing EinAb";
-            case DE -> "Neue Foodsharing EinAb";
-        };
-    }
-
-    public String notificationBody(LanguageCode language, EinAb einAb, String unsubscribeUrl) {
-        Map<String, String> details = new LinkedHashMap<>();
-        details.put(label(language, "teacher"), einAb.getTeacher().getName());
-        details.put(label(language, "category"), categoryLabel(language, einAb.getCategory()));
-        details.put(label(language, "start"), swissDateTime(einAb.getStartDateTime()));
-        details.put(label(language, "publicLocation"), valueOrDash(einAb.getPublicLocation()));
-        details.put(label(language, "fairteiler"), yesNo(language, einAb.isVisitFairteiler()));
-        return render(
-                switch (language) {
-                    case EN -> "New EinAb slot";
-                    case GWS -> "Neui EinAb";
-                    case DE -> "Neue EinAb";
-                },
-                paragraph(switch (language) {
-                    case EN -> "Hello,";
-                    case GWS -> "Hoi,";
-                    case DE -> "Hallo,";
-                })
-                        + paragraph(switch (language) {
-                            case EN -> "A new EinAb slot is available.";
-                            case GWS -> "Es git e neui EinAb.";
-                            case DE -> "Eine neue EinAb ist verfügbar.";
-                        })
-                        + detailsTable(details)
-                        + paragraphHtml(switch (language) {
-                            case EN -> "Want to stop these emails? " + link("Opt out here", unsubscribeUrl) + ".";
-                            case GWS -> "Wotsch die E-Mails nüm? " + link("Da abmelde", unsubscribeUrl) + ".";
-                            case DE -> "Du möchtest diese E-Mails nicht mehr? " + link("Hier abmelden", unsubscribeUrl) + ".";
-                        })
-                        + button(switch (language) {
-                            case EN -> "Unsubscribe";
-                            case GWS -> "Abmelde";
-                            case DE -> "Abmelden";
-                        }, unsubscribeUrl));
     }
 
     public String render(String title, String bodyHtml) {

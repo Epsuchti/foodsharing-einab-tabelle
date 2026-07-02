@@ -9,7 +9,7 @@ import java.time.Instant;
 @Table(name = "auth_sessions")
 public class AuthSession extends BaseEntity {
 
-    @Column(nullable = false, length = 255)
+    @Column(length = 255)
     private String email;
 
     @Column(nullable = false, length = 100)

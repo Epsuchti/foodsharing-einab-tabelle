@@ -7,7 +7,7 @@ public class AppProperties {
 
     private final Auth auth = new Auth();
     private final Frontend frontend = new Frontend();
-    private final Mail mail = new Mail();
+    private final Foodsharing foodsharing = new Foodsharing();
 
     public Auth getAuth() {
         return auth;
@@ -17,8 +17,8 @@ public class AppProperties {
         return frontend;
     }
 
-    public Mail getMail() {
-        return mail;
+    public Foodsharing getFoodsharing() {
+        return foodsharing;
     }
 
     public static class Auth {
@@ -55,15 +55,19 @@ public class AppProperties {
         }
     }
 
-    public static class Mail {
-        private String from = "no-reply@foodsharing.local";
+    public static class Foodsharing {
+        private String baseUrl = "https://foodsharing.de";
+        private String adminUser = "";
+        private String adminPassword = "";
+        private String tokenEncryptionKey = "";
 
-        public String getFrom() {
-            return from;
-        }
-
-        public void setFrom(String from) {
-            this.from = from;
-        }
+        public String getBaseUrl() { return baseUrl; }
+        public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
+        public String getAdminUser() { return adminUser; }
+        public void setAdminUser(String adminUser) { this.adminUser = adminUser; }
+        public String getAdminPassword() { return adminPassword; }
+        public void setAdminPassword(String adminPassword) { this.adminPassword = adminPassword; }
+        public String getTokenEncryptionKey() { return tokenEncryptionKey; }
+        public void setTokenEncryptionKey(String tokenEncryptionKey) { this.tokenEncryptionKey = tokenEncryptionKey; }
     }
 }

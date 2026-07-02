@@ -72,6 +72,26 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/public/bookings/confirm:
+    post:
+      tags: [public]
+      operationId: confirmBooking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyTokenRequest'
+      responses:
+        '200':
+          description: Booking confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingDetailResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
   /api/public/teachers/signup:
     post:
       tags: [public]
@@ -93,44 +113,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/public/notifications/subscribe:
-    post:
-      tags: [public]
-      operationId: subscribeNotifications
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NotificationSubscriptionRequest'
-      responses:
-        '200':
-          description: Subscription stored
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationSubscriptionResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-  /api/public/notifications/unsubscribe:
-    post:
-      tags: [public]
-      operationId: unsubscribeNotifications
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NotificationUnsubscribeRequest'
-      responses:
-        '200':
-          description: Subscription disabled
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationSubscriptionResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
   /api/auth/request-login:
     post:
       tags: [auth]
@@ -143,7 +125,7 @@ paths:
               $ref: '#/components/schemas/LoginRequest'
       responses:
         '200':
-          description: Login email requested
+          description: Foodsharing message requested
           content:
             application/json:
               schema:
@@ -706,7 +688,7 @@ components:
             type: string
     ErrorCode:
       type: string
-      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, INVALID_UNSUBSCRIBE_TOKEN, TEACHER_ACCOUNT_REQUIRED, TEACHER_EMAIL_ALREADY_EXISTS, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, TEACHERS_CANNOT_BOOK, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, EINAB_NOT_FOUND, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED]
+      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, TEACHER_ACCOUNT_REQUIRED, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, EINAB_NOT_FOUND, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED, INVALID_BOOKING_CONFIRMATION_TOKEN, BOOKING_CONFIRMATION_EXPIRED]
     Language:
       type: string
       enum: [de, en, gws]
@@ -715,80 +697,31 @@ components:
       enum: [SUPERMARKET, TAKEOUT, MARKET, BAKERY, RESTAURANT, FAIRTEILER_CLEANING]
     SlotStatus:
       type: string
-      enum: [AVAILABLE, BOOKED, DONE, CANCELLED]
+      enum: [AVAILABLE, PENDING_CONFIRMATION, BOOKED, DONE, CANCELLED]
     UserRole:
       type: string
       enum: [USER, TEACHER, ADMIN]
     BookSlotRequest:
       type: object
-      required: [email, name, foodsharingId, phoneNumber, language]
+      required: [foodsharingId, language]
       properties:
-        email:
-          type: string
-          format: email
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
         foodsharingId:
           type: string
-          minLength: 1
-          maxLength: 100
-        phoneNumber:
-          type: string
-          minLength: 3
-          maxLength: 50
+          pattern: '^\d+$'
         language:
           $ref: '#/components/schemas/Language'
     TeacherSignupRequest:
       type: object
-      required: [email, foodsharingId, name, phoneNumber, language]
+      required: [foodsharingId, language]
       properties:
-        email:
-          type: string
-          format: email
         foodsharingId:
           type: string
-          minLength: 1
-          maxLength: 100
-        name:
-          type: string
-          minLength: 1
-          maxLength: 200
-        phoneNumber:
-          type: string
-          minLength: 3
-          maxLength: 50
+          pattern: '^\d+$'
         icalLink:
           type: string
           format: uri
         language:
           $ref: '#/components/schemas/Language'
-    NotificationSubscriptionRequest:
-      type: object
-      required: [email, language]
-      properties:
-        email:
-          type: string
-          format: email
-        language:
-          $ref: '#/components/schemas/Language'
-    NotificationUnsubscribeRequest:
-      type: object
-      required: [token]
-      properties:
-        token:
-          type: string
-          minLength: 1
-    NotificationSubscriptionResponse:
-      type: object
-      required: [email, active]
-      properties:
-        email:
-          type: string
-          format: email
-        active:
-          type: boolean
     LoginRequest:
       type: object
       required: [foodsharingId]
@@ -805,7 +738,7 @@ components:
           minLength: 1
     AuthResponse:
       type: object
-      required: [authToken, expiresAt, roles, email, foodsharingId]
+      required: [authToken, expiresAt, roles, foodsharingId]
       properties:
         authToken:
           type: string
@@ -825,7 +758,7 @@ components:
             $ref: '#/components/schemas/UserRole'
     TeacherResponse:
       type: object
-      required: [id, email, foodsharingId, name, phoneNumber, active, isAdmin, language, createdAt, updatedAt]
+      required: [id, foodsharingId, name, active, isAdmin, language, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -899,7 +832,7 @@ components:
           $ref: '#/components/schemas/Language'
     BookingUserResponse:
       type: object
-      required: [id, email, name, foodsharingId, phoneNumber, language, createdAt, updatedAt]
+      required: [id, name, foodsharingId, language, createdAt, updatedAt]
       properties:
         id:
           type: string

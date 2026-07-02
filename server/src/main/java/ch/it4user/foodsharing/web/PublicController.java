@@ -6,12 +6,8 @@ import ch.it4user.foodsharing.openapi.model.BookSlotRequest;
 import ch.it4user.foodsharing.openapi.model.BookingDetailResponse;
 import ch.it4user.foodsharing.openapi.model.EinAbCategory;
 import ch.it4user.foodsharing.openapi.model.Language;
-import ch.it4user.foodsharing.openapi.model.NotificationSubscriptionRequest;
-import ch.it4user.foodsharing.openapi.model.NotificationSubscriptionResponse;
-import ch.it4user.foodsharing.openapi.model.NotificationUnsubscribeRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSignupRequest;
-import ch.it4user.foodsharing.service.NotificationService;
 import ch.it4user.foodsharing.service.PublicService;
 import ch.it4user.foodsharing.service.TeacherService;
 import org.springframework.http.ResponseEntity;
@@ -24,16 +20,13 @@ public class PublicController implements PublicApi {
 
     private final PublicService publicService;
     private final TeacherService teacherService;
-    private final NotificationService notificationService;
     private final ApiModelMapper mapper;
 
     public PublicController(PublicService publicService,
                             TeacherService teacherService,
-                            NotificationService notificationService,
                             ApiModelMapper mapper) {
         this.publicService = publicService;
         this.teacherService = teacherService;
-        this.notificationService = notificationService;
         this.mapper = mapper;
     }
 
@@ -53,39 +46,24 @@ public class PublicController implements PublicApi {
         return ResponseEntity.ok(mapper.toBookingDetailResponse(
                 publicService.bookSlot(
                         slotId,
-                        bookSlotRequest.getEmail(),
-                        bookSlotRequest.getName(),
                         bookSlotRequest.getFoodsharingId(),
-                        bookSlotRequest.getPhoneNumber(),
                         mapLanguage(bookSlotRequest.getLanguage()))));
     }
 
+
+    @Override
+    public ResponseEntity<BookingDetailResponse> confirmBooking(ch.it4user.foodsharing.openapi.model.VerifyTokenRequest verifyTokenRequest) {
+        return ResponseEntity.ok(mapper.toBookingDetailResponse(publicService.confirmBooking(verifyTokenRequest.getToken())));
+    }
     @Override
     public ResponseEntity<TeacherResponse> signupTeacher(TeacherSignupRequest teacherSignupRequest) {
         TeacherResponse response = mapper.toTeacherResponse(teacherService.signup(
-                teacherSignupRequest.getEmail(),
                 teacherSignupRequest.getFoodsharingId(),
-                teacherSignupRequest.getName(),
-                teacherSignupRequest.getPhoneNumber(),
                 teacherSignupRequest.getIcalLink() == null ? null : teacherSignupRequest.getIcalLink().toString()
                 ,
                 mapLanguage(teacherSignupRequest.getLanguage())
         ));
         return ResponseEntity.status(201).body(response);
-    }
-
-    @Override
-    public ResponseEntity<NotificationSubscriptionResponse> subscribeNotifications(
-            NotificationSubscriptionRequest notificationSubscriptionRequest) {
-        return ResponseEntity.ok(mapper.toNotificationResponse(
-                notificationService.subscribe(notificationSubscriptionRequest.getEmail(), mapLanguage(notificationSubscriptionRequest.getLanguage()))));
-    }
-
-    @Override
-    public ResponseEntity<NotificationSubscriptionResponse> unsubscribeNotifications(
-            NotificationUnsubscribeRequest notificationUnsubscribeRequest) {
-        return ResponseEntity.ok(mapper.toNotificationResponse(
-                notificationService.unsubscribe(notificationUnsubscribeRequest.getToken())));
     }
 
     private ch.it4user.foodsharing.domain.enumtype.EinAbCategory mapCategory(EinAbCategory category) {

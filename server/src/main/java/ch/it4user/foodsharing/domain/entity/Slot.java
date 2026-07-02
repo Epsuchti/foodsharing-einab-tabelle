@@ -36,6 +36,12 @@ public class Slot extends BaseEntity {
     @Column
     private Instant bookedAt;
 
+    @Column(length = 64)
+    private String pendingConfirmationTokenHash;
+
+    @Column
+    private Instant pendingConfirmationExpiresAt;
+
     @Column
     private Instant doneAt;
 
