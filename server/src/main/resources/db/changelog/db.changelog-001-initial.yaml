@@ -123,6 +123,70 @@ databaseChangeLog:
               - column: {name: csrf_token_ciphertext, type: TEXT}
               - column: {name: authenticated_at, type: TIMESTAMP WITH TIME ZONE}
         - createTable:
+            tableName: foodsharing_admin_connections
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: admin_user_id, type: UUID, constraints: {nullable: false, unique: true}}
+              - column: {name: foodsharing_user_id, type: VARCHAR(100)}
+              - column: {name: foodsharing_email, type: VARCHAR(255), constraints: {nullable: false}}
+              - column: {name: session_cookie_ciphertext, type: TEXT}
+              - column: {name: csrf_token_ciphertext, type: TEXT}
+              - column: {name: authenticated_at, type: TIMESTAMP WITH TIME ZONE}
+        - addForeignKeyConstraint:
+            baseTableName: foodsharing_admin_connections
+            baseColumnNames: admin_user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_foodsharing_admin_connections_admin
+        - createTable:
+            tableName: foodsharing_store_automations
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: admin_connection_id, type: UUID, constraints: {nullable: false}}
+              - column: {name: store_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: store_name, type: VARCHAR(255), defaultValue: '', constraints: {nullable: false}}
+              - column: {name: enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: gap_rule_enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: minimum_gap_days, type: INT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: cleaning_rule_enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+        - addForeignKeyConstraint:
+            baseTableName: foodsharing_store_automations
+            baseColumnNames: admin_connection_id
+            referencedTableName: foodsharing_admin_connections
+            referencedColumnNames: id
+            constraintName: fk_foodsharing_store_automations_connection
+        - addUniqueConstraint:
+            tableName: foodsharing_store_automations
+            columnNames: admin_connection_id, store_id
+            constraintName: uk_foodsharing_store_automations_connection_store
+        - createTable:
+            tableName: foodsharing_pickup_automation_audits
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: admin_connection_id, type: UUID, constraints: {nullable: false}}
+              - column: {name: store_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: foodsharing_user_id, type: VARCHAR(100), constraints: {nullable: false}}
+              - column: {name: pickup_date, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: dry_run, type: BOOLEAN, constraints: {nullable: false}}
+              - column: {name: decision, type: VARCHAR(32), constraints: {nullable: false}}
+              - column: {name: reasons, type: VARCHAR(4000), constraints: {nullable: false}}
+              - column: {name: foodsharing_error, type: TEXT}
+        - addForeignKeyConstraint:
+            baseTableName: foodsharing_pickup_automation_audits
+            baseColumnNames: admin_connection_id
+            referencedTableName: foodsharing_admin_connections
+            referencedColumnNames: id
+            constraintName: fk_foodsharing_pickup_automation_audits_connection
+        - createTable:
             tableName: login_tokens
             columns:
               - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}

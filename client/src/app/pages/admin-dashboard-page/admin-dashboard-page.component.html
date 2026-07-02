@@ -43,6 +43,96 @@
     </p-paginator>
   </p-card>
 
+
+
+  <p-card>
+    <ng-template pTemplate="title">Foodsharing pickup automation</ng-template>
+    @if (!foodsharingStatus()?.connected) {
+      <div class="form-grid">
+        <label>Email <input pInputText type="email" [ngModel]="foodsharingEmail()" (ngModelChange)="foodsharingEmail.set($event)"></label>
+        <label>Password <input pInputText type="password" [(ngModel)]="foodsharingPassword"></label>
+        <button pButton type="button" label="Connect foodsharing" (click)="connectFoodsharing()"></button>
+      </div>
+    } @else {
+      <p>Connected as {{ foodsharingStatus()?.email }}. Automation is globally enabled with dry-run defaults on the server.</p>
+      <div class="actions-cell">
+        <button pButton type="button" severity="secondary" label="Disconnect" (click)="disconnectFoodsharing()"></button>
+        <button pButton type="button" label="Run dry-run now" (click)="runFoodsharingDryRun()"></button>
+      </div>
+
+      @if (foodsharingRunResult()) {
+        <p class="empty-state">Dry-run: evaluated {{ foodsharingRunResult()?.evaluated }}, would confirm {{ foodsharingRunResult()?.confirmed }}, would decline {{ foodsharingRunResult()?.declined }}, failed {{ foodsharingRunResult()?.failed }}.</p>
+      }
+
+      <h3>Stores</h3>
+      <p-table [value]="foodsharingStores()">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Store ID</th><th>Name</th><th>Enabled</th><th>Gap rule</th><th>Min days</th><th>Cleaning rule</th><th>Actions</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-store>
+          <tr>
+            <td>{{ store.storeId }}</td>
+            <td>{{ store.storeName }}</td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="store.enabled"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="store.gapRuleEnabled"></p-checkbox></td>
+            <td><p-inputNumber [(ngModel)]="store.minimumGapDays" [min]="0" [showButtons]="true"></p-inputNumber></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="store.cleaningRuleEnabled"></p-checkbox></td>
+            <td><button pButton type="button" size="small" label="Save" (click)="saveFoodsharingStore(store)"></button></td>
+          </tr>
+        </ng-template>
+      </p-table>
+
+
+
+      <h3>Users with future pickups in your Stores</h3>
+      <p-table [value]="foodsharingFuturePickupUsers()" [paginator]="true" [rows]="10" sortField="futurePickupCount" [sortOrder]="-1">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Name</th>
+            <th>Foodsharing ID</th>
+            <th pSortableColumn="futurePickupCount">Future pickups <p-sortIcon field="futurePickupCount"></p-sortIcon></th>
+            <th>Pickup dates</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-user>
+          <tr>
+            <td>{{ user.name || '-' }}</td>
+            <td>{{ user.foodsharingUserId }}</td>
+            <td>{{ user.futurePickupCount }}</td>
+            <td>
+              @for (pickup of user.futurePickups; track pickup.storeId + '-' + pickup.pickupDate) {
+                <div>
+                  {{ pickup.pickupDate | date:'short' }} — {{ pickup.storeName }} ({{ pickup.storeId }})
+                  <p-tag [severity]="pickup.confirmed ? 'success' : 'warn'" [value]="pickup.confirmed ? 'confirmed' : 'pending'"></p-tag>
+                </div>
+              }
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+
+      <h3>Recent automation decisions</h3>
+      <p-table [value]="foodsharingAudit()" [paginator]="true" [rows]="10">
+        <ng-template pTemplate="header">
+          <tr><th>Decision</th><th>Store</th><th>User</th><th>Pickup</th><th>Dry-run</th><th>Reasons</th></tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-entry>
+          <tr>
+            <td><p-tag [value]="entry.decision"></p-tag></td>
+            <td>{{ entry.storeId }}</td>
+            <td>{{ entry.foodsharingUserId }}</td>
+            <td>{{ entry.pickupDate | date:'short' }}</td>
+            <td>{{ entry.dryRun ? 'yes' : 'no' }}</td>
+            <td>{{ entry.reasons }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+  </p-card>
+
+
   <p-card>
     <ng-template pTemplate="title">{{ i18n.t('admin.einabs') }}</ng-template>
     <p-table [value]="einAbs()">
