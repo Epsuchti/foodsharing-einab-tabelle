@@ -1,10 +1,9 @@
 package ch.it4user.foodsharing.web;
 
 import ch.it4user.foodsharing.domain.entity.BookingComment;
-import ch.it4user.foodsharing.domain.entity.BookingUser;
 import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.Slot;
-import ch.it4user.foodsharing.domain.entity.Teacher;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserResponse;
 import ch.it4user.foodsharing.openapi.model.AdminEinAbListResponse;
@@ -36,7 +35,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ApiModelMapper {
 
-    public TeacherResponse toTeacherResponse(Teacher teacher) {
+    public TeacherResponse toTeacherResponse(User teacher) {
         TeacherResponse response = new TeacherResponse();
         response.setId(teacher.getId());
         response.setEmail(teacher.getEmail());
@@ -52,21 +51,21 @@ public class ApiModelMapper {
         return response;
     }
 
-    public TeacherSelfResponse toTeacherSelfResponse(Teacher teacher, List<ch.it4user.foodsharing.openapi.model.IcalCandidate> candidates) {
+    public TeacherSelfResponse toTeacherSelfResponse(User teacher, List<ch.it4user.foodsharing.openapi.model.IcalCandidate> candidates) {
         TeacherSelfResponse response = new TeacherSelfResponse();
         copyTeacher(toTeacherResponse(teacher), response);
         response.setIcalCandidates(candidates);
         return response;
     }
 
-    public TeacherListResponse toTeacherListResponse(Page<Teacher> teachers) {
+    public TeacherListResponse toTeacherListResponse(Page<User> teachers) {
         TeacherListResponse response = new TeacherListResponse();
         response.setTeachers(teachers.getContent().stream().map(this::toTeacherResponse).toList());
         fillPage(response, teachers);
         return response;
     }
 
-    public BookingUserResponse toBookingUserResponse(BookingUser bookingUser) {
+    public BookingUserResponse toBookingUserResponse(User bookingUser) {
         BookingUserResponse response = new BookingUserResponse();
         response.setId(bookingUser.getId());
         response.setEmail(bookingUser.getEmail());
@@ -88,7 +87,7 @@ public class ApiModelMapper {
         return response;
     }
 
-    public AdminBookingUserResponse toAdminBookingUserResponse(BookingUser bookingUser,
+    public AdminBookingUserResponse toAdminBookingUserResponse(User bookingUser,
                                                                Map<UUID, List<Slot>> bookingsByUser,
                                                                Map<UUID, List<BookingComment>> commentsByUser) {
         AdminBookingUserResponse response = new AdminBookingUserResponse();
@@ -129,6 +128,7 @@ public class ApiModelMapper {
         response.setCategory(ch.it4user.foodsharing.openapi.model.EinAbCategory.fromValue(slot.getEinAb().getCategory().name()));
         response.setStartDateTime(toOffsetDateTime(slot.getEinAb().getStartDateTime()));
         response.setLocation(slot.getEinAb().getLocation());
+        response.setPublicLocation(slot.getEinAb().getPublicLocation());
         response.setWhatToBring(slot.getEinAb().getWhatToBring());
         response.setHint(slot.getEinAb().getHint());
         response.setTeacherName(slot.getEinAb().getTeacher().getName());

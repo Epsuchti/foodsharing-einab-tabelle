@@ -31,6 +31,7 @@
       }
       @if (sessionService.hasRole(UserRole.Admin)) {
         <a routerLink="/admin" routerLinkActive="active">{{ i18n.t('nav.admin') }}</a>
+        <a routerLink="/admin/foodsharing-automation" routerLinkActive="active">{{ i18n.t('nav.adminAutomation') }}</a>
       }
     </nav>
     <div class="header-actions header-actions--desktop">
@@ -60,6 +61,7 @@
         }
         @if (sessionService.hasRole(UserRole.Admin)) {
           <a routerLink="/admin" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.admin') }}</a>
+          <a routerLink="/admin/foodsharing-automation" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.adminAutomation') }}</a>
         }
       </nav>
       <div class="header-actions header-actions--mobile">

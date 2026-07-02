@@ -1,8 +1,8 @@
 package ch.it4user.foodsharing.service;
 
-import ch.it4user.foodsharing.domain.entity.Teacher;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.enumtype.UserRole;
-import ch.it4user.foodsharing.repository.TeacherRepository;
+import ch.it4user.foodsharing.repository.UserRepository;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -13,10 +13,10 @@ import org.springframework.stereotype.Service;
 @Service
 public class CurrentActorService {
 
-    private final TeacherRepository teacherRepository;
+    private final UserRepository userRepository;
 
-    public CurrentActorService(TeacherRepository teacherRepository) {
-        this.teacherRepository = teacherRepository;
+    public CurrentActorService(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
     public String requireEmail() {
@@ -46,8 +46,9 @@ public class CurrentActorService {
                 .collect(java.util.stream.Collectors.toSet());
     }
 
-    public Teacher requireTeacher() {
-        return teacherRepository.findByFoodsharingIdIgnoreCase(requireFoodsharingId())
+    public User requireTeacher() {
+        return userRepository.findByFoodsharingIdIgnoreCase(requireFoodsharingId())
+                .filter(User::isTeacher)
                 .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.TEACHER_ACCOUNT_REQUIRED));
     }
 

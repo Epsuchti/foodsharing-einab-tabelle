@@ -2,17 +2,15 @@ package ch.it4user.foodsharing.service;
 
 import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.BookingComment;
-import ch.it4user.foodsharing.domain.entity.BookingUser;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.entity.Slot;
-import ch.it4user.foodsharing.domain.entity.Teacher;
 import ch.it4user.foodsharing.domain.enumtype.EinAbCategory;
 import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
 import ch.it4user.foodsharing.repository.EinAbRepository;
 import ch.it4user.foodsharing.repository.BookingCommentRepository;
-import ch.it4user.foodsharing.repository.BookingUserRepository;
+import ch.it4user.foodsharing.repository.UserRepository;
 import ch.it4user.foodsharing.repository.SlotRepository;
-import ch.it4user.foodsharing.repository.TeacherRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,59 +27,58 @@ public class TeacherService {
 
     private static final Set<SlotStatus> BLOCKING_STATUSES = Set.of(SlotStatus.PENDING_CONFIRMATION, SlotStatus.BOOKED, SlotStatus.DONE);
 
-    private final TeacherRepository teacherRepository;
+    private final UserRepository userRepository;
     private final EinAbRepository einAbRepository;
     private final SlotRepository slotRepository;
-    private final BookingUserRepository bookingUserRepository;
     private final BookingCommentRepository bookingCommentRepository;
     private final IcalImportService icalImportService;
     private final FoodsharingClient foodsharingClient;
 
-    public TeacherService(TeacherRepository teacherRepository,
+    public TeacherService(UserRepository userRepository,
                           EinAbRepository einAbRepository,
                           SlotRepository slotRepository,
-                          BookingUserRepository bookingUserRepository,
                           BookingCommentRepository bookingCommentRepository,
                           IcalImportService icalImportService,
                           FoodsharingClient foodsharingClient) {
-        this.teacherRepository = teacherRepository;
+        this.userRepository = userRepository;
         this.einAbRepository = einAbRepository;
         this.slotRepository = slotRepository;
-        this.bookingUserRepository = bookingUserRepository;
         this.bookingCommentRepository = bookingCommentRepository;
         this.icalImportService = icalImportService;
         this.foodsharingClient = foodsharingClient;
     }
 
     @Transactional
-    public Teacher signup(String foodsharingId, String icalLink, LanguageCode language) {
+    public User signup(String foodsharingId, String icalLink, LanguageCode language) {
         String normalizedFoodsharingId = foodsharingId.trim();
         FoodsharingUserInfo foodsharingUser = foodsharingClient.getUser(normalizedFoodsharingId);
-        Teacher teacher = teacherRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId).orElseGet(Teacher::new);
+        User teacher = userRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId).orElseGet(User::new);
         teacher.setFoodsharingId(foodsharingUser.foodsharingId());
         teacher.setName(foodsharingUser.name());
         teacher.setTeacher(true);
         teacher.setActive(true);
         teacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
         teacher.setPreferredLanguage(language);
-        return teacherRepository.save(teacher);
+        return userRepository.save(teacher);
     }
 
     @Transactional
-    public Teacher updateProfile(Teacher teacher, String phoneNumber, String icalLink, LanguageCode language) {
-        teacher.setPhoneNumber(phoneNumber.trim());
-        teacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
-        teacher.setPreferredLanguage(language);
-        return teacher;
+    public User updateProfile(User teacher, String phoneNumber, String icalLink, LanguageCode language) {
+        User managedTeacher = userRepository.findById(teacher.getId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
+        managedTeacher.setPhoneNumber(phoneNumber == null ? null : phoneNumber.trim());
+        managedTeacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
+        managedTeacher.setPreferredLanguage(language);
+        return managedTeacher;
     }
 
-    public Page<EinAb> findTeacherEinAbs(Teacher teacher, int page, int size) {
+    public Page<EinAb> findTeacherEinAbs(User teacher, int page, int size) {
         return einAbRepository.findAllByTeacherOrderByStartDateTimeAsc(
                 teacher,
                 PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
-    public Page<Slot> findTeacherBookings(Teacher teacher, int page, int size) {
+    public Page<Slot> findTeacherBookings(User teacher, int page, int size) {
         return slotRepository.findAllByTeacherAndStatuses(
                 teacher,
                 Set.of(SlotStatus.PENDING_CONFIRMATION, SlotStatus.BOOKED, SlotStatus.DONE),
@@ -89,7 +86,7 @@ public class TeacherService {
     }
 
     public List<BookingComment> findBookingComments(UUID bookingUserId) {
-        BookingUser bookingUser = requireBookingUser(bookingUserId);
+        User bookingUser = requireBookingUser(bookingUserId);
         if (!bookingUser.isActive()) {
             return List.of();
         }
@@ -97,8 +94,8 @@ public class TeacherService {
     }
 
     @Transactional
-    public BookingComment addBookingComment(Teacher teacher, UUID bookingUserId, String comment) {
-        BookingUser bookingUser = requireBookingUser(bookingUserId);
+    public BookingComment addBookingComment(User teacher, UUID bookingUserId, String comment) {
+        User bookingUser = requireBookingUser(bookingUserId);
         if (!bookingUser.isActive()) {
             throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.BOOKING_USER_DISABLED);
         }
@@ -109,12 +106,12 @@ public class TeacherService {
         return bookingCommentRepository.save(bookingComment);
     }
 
-    public List<ch.it4user.foodsharing.openapi.model.IcalCandidate> getIcalCandidates(Teacher teacher) {
+    public List<ch.it4user.foodsharing.openapi.model.IcalCandidate> getIcalCandidates(User teacher) {
         return icalImportService.loadCandidates(teacher.getIcalLink());
     }
 
     @Transactional
-    public EinAb createEinAb(Teacher teacher,
+    public EinAb createEinAb(User teacher,
                              EinAbCategory category,
                              Instant startDateTime,
                              String location,
@@ -139,11 +136,11 @@ public class TeacherService {
         einAb.setMinimumPickupCount(normalizeMinimumPickupCount(minimumPickupCount));
         EinAb savedEinAb = einAbRepository.save(einAb);
         createSlots(savedEinAb, slotCount);
-        return savedEinAb;
+        return reloadEinAbWithTeacher(savedEinAb.getId());
     }
 
     @Transactional
-    public EinAb updateEinAb(Teacher teacher,
+    public EinAb updateEinAb(User teacher,
                              UUID einAbId,
                              EinAbCategory category,
                              Instant startDateTime,
@@ -177,11 +174,11 @@ public class TeacherService {
         if (slotCount > existingSlots) {
             createSlots(einAb, slotCount - existingSlots);
         }
-        return einAb;
+        return reloadEinAbWithTeacher(einAb.getId());
     }
 
     @Transactional
-    public void deleteEinAb(Teacher teacher, UUID einAbId, boolean admin) {
+    public void deleteEinAb(User teacher, UUID einAbId, boolean admin) {
         EinAb einAb = requireTeacherEinAb(teacher, einAbId, admin);
         if (slotRepository.existsByEinAbAndStatusIn(einAb, BLOCKING_STATUSES)) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.BOOKED_SLOTS_PREVENT_DELETE);
@@ -195,21 +192,23 @@ public class TeacherService {
         return einAbRepository.findAllByOrderByStartDateTimeAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
-    public Page<Teacher> findAllTeachers(int page, int size) {
-        return teacherRepository.findAllByTeacherTrueOrderByNameAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
+    public Page<User> findAllTeachers(int page, int size) {
+        return userRepository.findAllByTeacherTrueOrderByNameAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
     @Transactional
-    public Teacher setTeacherActive(UUID teacherId, boolean active) {
-        Teacher teacher = teacherRepository.findById(teacherId)
+    public User setTeacherActive(UUID teacherId, boolean active) {
+        User teacher = userRepository.findById(teacherId)
+                .filter(User::isTeacher)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
         teacher.setActive(active);
         return teacher;
     }
 
     @Transactional
-    public Teacher setTeacherAdmin(UUID teacherId, boolean admin) {
-        Teacher teacher = teacherRepository.findById(teacherId)
+    public User setTeacherAdmin(UUID teacherId, boolean admin) {
+        User teacher = userRepository.findById(teacherId)
+                .filter(User::isTeacher)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
         teacher.setAdmin(admin);
         if (admin) {
@@ -219,7 +218,7 @@ public class TeacherService {
     }
 
     @Transactional
-    public Slot cancelBookedSlot(Teacher teacher, UUID slotId, boolean admin) {
+    public Slot cancelBookedSlot(User teacher, UUID slotId, boolean admin) {
         Slot slot = slotRepository.findForUpdateById(slotId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.SLOT_NOT_FOUND));
         if (!admin && !slot.getEinAb().getTeacher().getId().equals(teacher.getId())) {
@@ -246,7 +245,7 @@ public class TeacherService {
         slotRepository.saveAll(slots);
     }
 
-    private void ensureTeacherActive(Teacher teacher) {
+    private void ensureTeacherActive(User teacher) {
         if (!teacher.isActive()) {
             throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.TEACHER_INACTIVE);
         }
@@ -290,7 +289,7 @@ public class TeacherService {
         return minimumPickupCount;
     }
 
-    private EinAb requireTeacherEinAb(Teacher teacher, UUID einAbId, boolean admin) {
+    private EinAb requireTeacherEinAb(User teacher, UUID einAbId, boolean admin) {
         EinAb einAb = einAbRepository.findById(einAbId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.EINAB_NOT_FOUND));
         if (!admin && !einAb.getTeacher().getId().equals(teacher.getId())) {
@@ -299,8 +298,13 @@ public class TeacherService {
         return einAb;
     }
 
-    private BookingUser requireBookingUser(UUID bookingUserId) {
-        return bookingUserRepository.findById(bookingUserId)
+    private EinAb reloadEinAbWithTeacher(UUID einAbId) {
+        return einAbRepository.findWithTeacherById(einAbId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.EINAB_NOT_FOUND));
+    }
+
+    private User requireBookingUser(UUID bookingUserId) {
+        return userRepository.findById(bookingUserId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_USER_NOT_FOUND));
     }
 

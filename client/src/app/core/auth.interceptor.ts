@@ -8,18 +8,18 @@ export const authInterceptor: HttpInterceptorFn = (request, next): Observable<Ht
   const sessionService = inject(SessionService);
   const token = sessionService.token();
   if (!token) {
-    return next(request).pipe(handleForbidden(sessionService)) as Observable<HttpEvent<unknown>>;
+    return next(request).pipe(handleUnauthorized(sessionService)) as Observable<HttpEvent<unknown>>;
   }
   return next(request.clone({
     setHeaders: {
       Authorization: `Bearer ${token}`
     }
-  })).pipe(handleForbidden(sessionService)) as Observable<HttpEvent<unknown>>;
+  })).pipe(handleUnauthorized(sessionService)) as Observable<HttpEvent<unknown>>;
 };
 
-function handleForbidden(sessionService: SessionService) {
+function handleUnauthorized(sessionService: SessionService) {
   return catchError((error: unknown): Observable<HttpEvent<unknown>> => {
-    if (error instanceof HttpErrorResponse && error.status === 403 && sessionService.isAuthenticated()) {
+    if (error instanceof HttpErrorResponse && error.status === 401 && sessionService.isAuthenticated()) {
       sessionService.clearSession();
     }
     return throwError(() => error);

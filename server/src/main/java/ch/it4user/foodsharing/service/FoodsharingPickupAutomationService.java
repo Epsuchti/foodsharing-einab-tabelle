@@ -1,18 +1,27 @@
 package ch.it4user.foodsharing.service;
 
 import ch.it4user.foodsharing.domain.entity.FoodsharingAdminConnection;
+import ch.it4user.foodsharing.domain.entity.FoodsharingFuturePickupUsersCache;
 import ch.it4user.foodsharing.domain.entity.FoodsharingPickupAutomationAudit;
+import ch.it4user.foodsharing.domain.entity.FoodsharingStoreMembersCache;
+import ch.it4user.foodsharing.domain.entity.FoodsharingStorePickupsCache;
 import ch.it4user.foodsharing.domain.entity.FoodsharingStoreAutomation;
-import ch.it4user.foodsharing.domain.entity.Teacher;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.enumtype.FoodsharingPickupAutomationDecision;
 import ch.it4user.foodsharing.repository.FoodsharingAdminConnectionRepository;
 import ch.it4user.foodsharing.repository.FoodsharingPickupAutomationAuditRepository;
+import ch.it4user.foodsharing.repository.FoodsharingFuturePickupUsersCacheRepository;
+import ch.it4user.foodsharing.repository.FoodsharingStoreMembersCacheRepository;
+import ch.it4user.foodsharing.repository.FoodsharingStorePickupsCacheRepository;
 import ch.it4user.foodsharing.repository.FoodsharingStoreAutomationRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -29,14 +38,18 @@ public class FoodsharingPickupAutomationService {
     private final FoodsharingAdminConnectionRepository connectionRepository;
     private final FoodsharingStoreAutomationRepository automationRepository;
     private final FoodsharingPickupAutomationAuditRepository auditRepository;
+    private final FoodsharingFuturePickupUsersCacheRepository futurePickupUsersCacheRepository;
+    private final FoodsharingStoreMembersCacheRepository storeMembersCacheRepository;
+    private final FoodsharingStorePickupsCacheRepository storePickupsCacheRepository;
+    private final ObjectMapper objectMapper;
 
-    public FoodsharingPickupAutomationService(AppProperties appProperties, CurrentActorService currentActorService, CryptoService cryptoService, FoodsharingPickupApiClient client, FoodsharingAdminConnectionRepository connectionRepository, FoodsharingStoreAutomationRepository automationRepository, FoodsharingPickupAutomationAuditRepository auditRepository) {
-        this.appProperties = appProperties; this.currentActorService = currentActorService; this.cryptoService = cryptoService; this.client = client; this.connectionRepository = connectionRepository; this.automationRepository = automationRepository; this.auditRepository = auditRepository;
+    public FoodsharingPickupAutomationService(AppProperties appProperties, CurrentActorService currentActorService, CryptoService cryptoService, FoodsharingPickupApiClient client, FoodsharingAdminConnectionRepository connectionRepository, FoodsharingStoreAutomationRepository automationRepository, FoodsharingPickupAutomationAuditRepository auditRepository, FoodsharingFuturePickupUsersCacheRepository futurePickupUsersCacheRepository, FoodsharingStoreMembersCacheRepository storeMembersCacheRepository, FoodsharingStorePickupsCacheRepository storePickupsCacheRepository, ObjectMapper objectMapper) {
+        this.appProperties = appProperties; this.currentActorService = currentActorService; this.cryptoService = cryptoService; this.client = client; this.connectionRepository = connectionRepository; this.automationRepository = automationRepository; this.auditRepository = auditRepository; this.futurePickupUsersCacheRepository = futurePickupUsersCacheRepository; this.storeMembersCacheRepository = storeMembersCacheRepository; this.storePickupsCacheRepository = storePickupsCacheRepository; this.objectMapper = objectMapper;
     }
 
     @Transactional
     public ConnectionStatus connect(String email, String password) {
-        Teacher admin = currentActorService.requireTeacher();
+        User admin = currentActorService.requireTeacher();
         var session = client.login(email, password);
         FoodsharingAdminConnection c = connectionRepository.findByAdminUser(admin).orElseGet(FoodsharingAdminConnection::new);
         c.setAdminUser(admin); c.setFoodsharingEmail(email); c.setFoodsharingUserId(session.foodsharingUserId()); c.setSessionCookieCiphertext(cryptoService.encrypt(session.cookie())); c.setCsrfTokenCiphertext(cryptoService.encrypt(session.csrf())); c.setAuthenticatedAt(Instant.now());
@@ -52,7 +65,7 @@ public class FoodsharingPickupAutomationService {
     @Transactional
     public List<StoreAutomationView> stores() {
         FoodsharingAdminConnection c = requireConnection();
-        List<FoodsharingPickupModels.Store> stores = client.stores(c);
+        List<FoodsharingPickupModels.Store> stores = managedStores(c);
         List<StoreAutomationView> views = new ArrayList<>();
         for (var s : stores) {
             FoodsharingStoreAutomation a = automationRepository.findByAdminConnectionAndStoreId(c, s.id()).orElseGet(() -> { var n = new FoodsharingStoreAutomation(); n.setAdminConnection(c); n.setStoreId(s.id()); return n; });
@@ -71,12 +84,36 @@ public class FoodsharingPickupAutomationService {
 
     public List<AuditView> audit() { return auditRepository.findTop100ByAdminConnectionOrderByCreatedAtDesc(requireConnection()).stream().map(this::view).toList(); }
 
+    @Transactional(readOnly = true)
     public List<StorePickupUserView> futurePickupUsers() {
         FoodsharingAdminConnection connection = requireConnection();
+        Duration ttl = Duration.parse(appProperties.getFoodsharing().getAutomation().getFuturePickupCacheTtl());
+        Instant now = Instant.now();
+        var existingCache = futurePickupUsersCacheRepository.findByAdminConnection(connection);
+        if (existingCache.isPresent()) {
+            FoodsharingFuturePickupUsersCache cache = existingCache.get();
+            if (cache.getRefreshedAt() != null && cache.getRefreshedAt().plus(ttl).isAfter(now)) {
+                try {
+                    return deserializeFuturePickupUsers(cache.getPayloadJson());
+                } catch (RuntimeException ignored) {
+                    // Fall through and refresh from Foodsharing if the cached payload is unreadable.
+                }
+            }
+        }
+        List<StorePickupUserView> fresh = loadFuturePickupUsers(connection);
+        FoodsharingFuturePickupUsersCache cache = existingCache.orElseGet(FoodsharingFuturePickupUsersCache::new);
+        cache.setAdminConnection(connection);
+        cache.setRefreshedAt(now);
+        cache.setPayloadJson(serializeFuturePickupUsers(fresh));
+        futurePickupUsersCacheRepository.save(cache);
+        return fresh;
+    }
+
+    private List<StorePickupUserView> loadFuturePickupUsers(FoodsharingAdminConnection connection) {
         Map<String, StorePickupUserBuilder> users = new LinkedHashMap<>();
         Instant now = Instant.now();
-        for (FoodsharingPickupModels.Store store : client.stores(connection)) {
-            for (FoodsharingPickupModels.Pickup pickup : client.pickups(connection, store.id())) {
+        for (FoodsharingPickupModels.Store store : managedStores(connection)) {
+            for (FoodsharingPickupModels.Pickup pickup : storePickups(connection, store.id())) {
                 if (pickup.date().isBefore(now)) {
                     continue;
                 }
@@ -97,44 +134,209 @@ public class FoodsharingPickupAutomationService {
                 .toList();
     }
 
+    private List<FoodsharingPickupModels.Store> managedStores(FoodsharingAdminConnection connection) {
+        return client.stores(connection).stream()
+                .filter(FoodsharingPickupModels.Store::isManaging)
+                .toList();
+    }
+
+    private List<StorePickupUserView> deserializeFuturePickupUsers(String payloadJson) {
+        try {
+            return objectMapper.readValue(payloadJson, new TypeReference<List<StorePickupUserView>>() {});
+        } catch (Exception ex) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ApiErrorCode.UNEXPECTED_ERROR, List.of("Could not read cached future pickup users."));
+        }
+    }
+
+    private String serializeFuturePickupUsers(List<StorePickupUserView> users) {
+        try {
+            return objectMapper.writeValueAsString(users);
+        } catch (Exception ex) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ApiErrorCode.UNEXPECTED_ERROR, List.of("Could not store future pickup users cache."));
+        }
+    }
+
+    private List<FoodsharingPickupModels.Pickup> deserializeStorePickups(String payloadJson) {
+        try {
+            return objectMapper.readValue(payloadJson, new TypeReference<List<FoodsharingPickupModels.Pickup>>() {});
+        } catch (Exception ex) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ApiErrorCode.UNEXPECTED_ERROR, List.of("Could not read cached store pickups."));
+        }
+    }
+
+    private String serializeStorePickups(List<FoodsharingPickupModels.Pickup> pickups) {
+        try {
+            return objectMapper.writeValueAsString(pickups);
+        } catch (Exception ex) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ApiErrorCode.UNEXPECTED_ERROR, List.of("Could not store cached store pickups."));
+        }
+    }
+
+    private List<FoodsharingPickupModels.StoreMember> storeMembers(FoodsharingAdminConnection connection, long storeId) {
+        Duration ttl = Duration.parse(appProperties.getFoodsharing().getAutomation().getStoreMembersCacheTtl());
+        Instant now = Instant.now();
+        var existingCache = storeMembersCacheRepository.findByAdminConnectionAndStoreId(connection, storeId);
+        if (existingCache.isPresent()) {
+            FoodsharingStoreMembersCache cache = existingCache.get();
+            if (cache.getRefreshedAt() != null && cache.getRefreshedAt().plus(ttl).isAfter(now)) {
+                try {
+                    return deserializeStoreMembers(cache.getPayloadJson());
+                } catch (RuntimeException ignored) {
+                    // Fall through and refresh from Foodsharing if the cached payload is unreadable.
+                }
+            }
+        }
+        List<FoodsharingPickupModels.StoreMember> fresh = client.members(connection, storeId);
+        FoodsharingStoreMembersCache cache = existingCache.orElseGet(FoodsharingStoreMembersCache::new);
+        cache.setAdminConnection(connection);
+        cache.setStoreId(storeId);
+        cache.setRefreshedAt(now);
+        cache.setPayloadJson(serializeStoreMembers(fresh));
+        storeMembersCacheRepository.save(cache);
+        return fresh;
+    }
+
+    private List<FoodsharingPickupModels.StoreMember> deserializeStoreMembers(String payloadJson) {
+        try {
+            return objectMapper.readValue(payloadJson, new TypeReference<List<FoodsharingPickupModels.StoreMember>>() {});
+        } catch (Exception ex) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ApiErrorCode.UNEXPECTED_ERROR, List.of("Could not read cached store members."));
+        }
+    }
+
+    private String serializeStoreMembers(List<FoodsharingPickupModels.StoreMember> members) {
+        try {
+            return objectMapper.writeValueAsString(members);
+        } catch (Exception ex) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ApiErrorCode.UNEXPECTED_ERROR, List.of("Could not store cached store members."));
+        }
+    }
+
     @Transactional
     public FoodsharingPickupModels.RunResult run(boolean dryRun) { return run(automationRepository.findAllByEnabledTrue(), dryRun || appProperties.getFoodsharing().getAutomation().isDryRun()); }
 
     @Scheduled(fixedDelayString = "#{T(java.time.Duration).parse('${app.foodsharing.automation.poll-interval:PT5M}').toMillis()}")
+    @Transactional
     public void scheduledRun() { if (appProperties.getFoodsharing().getAutomation().isEnabled()) run(appProperties.getFoodsharing().getAutomation().isDryRun()); }
 
     private FoodsharingPickupModels.RunResult run(List<FoodsharingStoreAutomation> automations, boolean dryRun) {
         int evaluated=0, confirmed=0, declined=0, failed=0; List<String> messages = new ArrayList<>();
-        for (FoodsharingStoreAutomation a : automations) for (var p : client.pickups(a.getAdminConnection(), a.getStoreId())) for (var u : p.users()) if (!u.confirmed()) {
+        Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache = new HashMap<>();
+        Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache = new HashMap<>();
+        for (FoodsharingStoreAutomation a : automations) {
+            String cacheKey = cacheKey(a.getAdminConnection(), a.getStoreId());
+            List<FoodsharingPickupModels.Pickup> storePickups = storePickups(a.getAdminConnection(), a.getStoreId()).stream()
+                    .sorted(Comparator.comparing(FoodsharingPickupModels.Pickup::date))
+                    .toList();
+            initialPickupsCache.putIfAbsent(cacheKey, copyPickups(storePickups));
+            livePickupsCache.putIfAbsent(cacheKey, copyPickups(storePickups));
+            for (var p : storePickups) for (var u : p.users()) if (!u.confirmed()) {
             evaluated++;
             try {
-                var decision = evaluate(a, p.date(), u.id()); String reason = String.join("\n", decision.reasons());
-                if (decision.allowed()) { if (!dryRun) client.confirm(a.getAdminConnection(), a.getStoreId(), p.date(), u.id()); confirmed++; saveAudit(a, u.id(), p.date(), dryRun, dryRun ? FoodsharingPickupAutomationDecision.WOULD_CONFIRM : FoodsharingPickupAutomationDecision.CONFIRMED, reason, null); }
-                else { if (!dryRun) client.decline(a.getAdminConnection(), a.getStoreId(), p.date(), u.id(), reason); declined++; saveAudit(a, u.id(), p.date(), dryRun, dryRun ? FoodsharingPickupAutomationDecision.WOULD_DECLINE : FoodsharingPickupAutomationDecision.DECLINED, reason, null); }
+                var decision = evaluate(a, p.date(), u.id(), livePickupsCache, initialPickupsCache); String reason = String.join("\n", decision.reasons());
+                if (decision.allowed()) { if (!dryRun) client.confirm(a.getAdminConnection(), a.getStoreId(), p.date(), u.id()); confirmed++; saveAudit(a, u.id(), p.date(), dryRun, dryRun ? FoodsharingPickupAutomationDecision.WOULD_CONFIRM : FoodsharingPickupAutomationDecision.CONFIRMED, reason, null); updateLiveCache(livePickupsCache, cacheKey, p.date(), u.id(), true); }
+                else { if (!dryRun) client.decline(a.getAdminConnection(), a.getStoreId(), p.date(), u.id(), reason); declined++; saveAudit(a, u.id(), p.date(), dryRun, dryRun ? FoodsharingPickupAutomationDecision.WOULD_DECLINE : FoodsharingPickupAutomationDecision.DECLINED, reason, null); updateLiveCache(livePickupsCache, cacheKey, p.date(), u.id(), false); }
             } catch (RuntimeException ex) { failed++; messages.add(ex.getMessage()); saveAudit(a, u.id(), p.date(), dryRun, FoodsharingPickupAutomationDecision.FAILED, "Automation failed", ex.getMessage()); }
+            }
         }
         return new FoodsharingPickupModels.RunResult(evaluated, confirmed, declined, failed, dryRun, messages);
     }
 
-    private FoodsharingPickupModels.Decision evaluate(FoodsharingStoreAutomation a, Instant pickupDate, String userId) {
+    private FoodsharingPickupModels.Decision evaluate(FoodsharingStoreAutomation a, Instant pickupDate, String userId, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache) {
         List<String> reasons = new ArrayList<>();
         if (a.isGapRuleEnabled()) {
             Duration min = Duration.ofDays(a.getMinimumGapDays());
-            var sameStore = new ArrayList<FoodsharingPickupModels.UserPickup>(); sameStore.addAll(client.pastPickups(a.getAdminConnection(), userId)); sameStore.addAll(client.registeredPickups(a.getAdminConnection(), userId));
-            sameStore.stream().filter(p -> p.storeId() == a.getStoreId()).map(FoodsharingPickupModels.UserPickup::date).map(d -> Duration.between(d, pickupDate).abs()).filter(d -> d.compareTo(min) < 0).findAny().ifPresent(d -> reasons.add("Pickup gap is " + d.toDays() + " days; required minimum is " + a.getMinimumGapDays() + " days."));
+            pickups(livePickupsCache, a.getAdminConnection(), a.getStoreId()).stream()
+                    .filter(p -> p.date().isBefore(pickupDate))
+                    .filter(p -> p.users().stream().anyMatch(u -> u.id().equals(userId)))
+                    .map(FoodsharingPickupModels.Pickup::date)
+                    .map(d -> Duration.between(d, pickupDate))
+                    .filter(d -> d.compareTo(min) < 0)
+                    .findAny()
+                    .ifPresent(d -> reasons.add("Pickup gap is " + d.toDays() + " days; required minimum is " + a.getMinimumGapDays() + " days."));
         }
         if (a.isCleaningRuleEnabled()) {
             long cleaningStoreId = appProperties.getFoodsharing().getAutomation().getCleaningStoreId();
             if (cleaningStoreId <= 0) reasons.add("Cleaning store id is not configured.");
             else {
                 Instant now = Instant.now();
-                boolean past = client.pastPickups(a.getAdminConnection(), userId).stream().anyMatch(p -> p.storeId() == cleaningStoreId && !p.date().isBefore(now.minus(Duration.ofDays(183))));
-                boolean future = client.registeredPickups(a.getAdminConnection(), userId).stream().anyMatch(p -> p.storeId() == cleaningStoreId && !p.date().isBefore(now) && !p.date().isAfter(now.plus(Duration.ofDays(14))));
+                List<FoodsharingPickupModels.StoreMember> cleaningMembers = storeMembers(a.getAdminConnection(), cleaningStoreId);
+                boolean past = cleaningMembers.stream()
+                        .filter(member -> String.valueOf(member.id()).equals(userId))
+                        .anyMatch(member -> member.lastFetch() != null && !member.lastFetch().isBefore(now.minus(Duration.ofDays(183))));
+                List<FoodsharingPickupModels.Pickup> cleaningPickups = pickups(initialPickupsCache, a.getAdminConnection(), cleaningStoreId);
+                boolean future = cleaningPickups.stream().filter(p -> p.users().stream().anyMatch(u -> u.id().equals(userId))).anyMatch(p -> !p.date().isBefore(now) && !p.date().isAfter(now.plus(Duration.ofDays(14))));
                 if (!past && !future) reasons.add("No pickup in cleaning store " + cleaningStoreId + " in the last 6 months and no planned cleaning pickup in the next 2 weeks.");
             }
         }
         if (reasons.isEmpty()) reasons.add("All enabled pickup automation rules passed.");
         return new FoodsharingPickupModels.Decision(reasons.size() == 1 && reasons.get(0).startsWith("All enabled"), reasons);
+    }
+
+    private List<FoodsharingPickupModels.Pickup> storePickups(FoodsharingAdminConnection connection, long storeId) {
+        Duration ttl = Duration.parse(appProperties.getFoodsharing().getAutomation().getStorePickupCacheTtl());
+        Instant now = Instant.now();
+        var existingCache = storePickupsCacheRepository.findByAdminConnectionAndStoreId(connection, storeId);
+        if (existingCache.isPresent()) {
+            FoodsharingStorePickupsCache cache = existingCache.get();
+            if (cache.getRefreshedAt() != null && cache.getRefreshedAt().plus(ttl).isAfter(now)) {
+                try {
+                    return deserializeStorePickups(cache.getPayloadJson());
+                } catch (RuntimeException ignored) {
+                    // Fall through and refresh from Foodsharing if the cached payload is unreadable.
+                }
+            }
+        }
+        List<FoodsharingPickupModels.Pickup> fresh = client.pickups(connection, storeId);
+        FoodsharingStorePickupsCache cache = existingCache.orElseGet(FoodsharingStorePickupsCache::new);
+        cache.setAdminConnection(connection);
+        cache.setStoreId(storeId);
+        cache.setRefreshedAt(now);
+        cache.setPayloadJson(serializeStorePickups(fresh));
+        storePickupsCacheRepository.save(cache);
+        return fresh;
+    }
+
+    private List<FoodsharingPickupModels.Pickup> pickups(Map<String, List<FoodsharingPickupModels.Pickup>> cache, FoodsharingAdminConnection connection, long storeId) {
+        return cache.computeIfAbsent(cacheKey(connection, storeId), key -> storePickups(connection, storeId));
+    }
+
+    private String cacheKey(FoodsharingAdminConnection connection, long storeId) {
+        return connection.getId() + ":" + storeId;
+    }
+
+    private List<FoodsharingPickupModels.Pickup> copyPickups(List<FoodsharingPickupModels.Pickup> pickups) {
+        return pickups.stream()
+                .map(pickup -> new FoodsharingPickupModels.Pickup(pickup.storeId(), pickup.date(), new ArrayList<>(pickup.users())))
+                .toList();
+    }
+
+    private void updateLiveCache(Map<String, List<FoodsharingPickupModels.Pickup>> cache, String cacheKey, Instant pickupDate, String userId, boolean confirmed) {
+        List<FoodsharingPickupModels.Pickup> current = cache.get(cacheKey);
+        if (current == null) {
+            return;
+        }
+        List<FoodsharingPickupModels.Pickup> updated = new ArrayList<>();
+        for (FoodsharingPickupModels.Pickup pickup : current) {
+            if (!pickup.date().equals(pickupDate)) {
+                updated.add(pickup);
+                continue;
+            }
+            List<FoodsharingPickupModels.PickupUser> users = new ArrayList<>(pickup.users());
+            if (confirmed) {
+                for (int i = 0; i < users.size(); i++) {
+                    FoodsharingPickupModels.PickupUser currentUser = users.get(i);
+                    if (currentUser.id().equals(userId)) {
+                        users.set(i, new FoodsharingPickupModels.PickupUser(currentUser.id(), currentUser.name(), true));
+                        break;
+                    }
+                }
+            } else {
+                users.removeIf(currentUser -> currentUser.id().equals(userId));
+            }
+            updated.add(new FoodsharingPickupModels.Pickup(pickup.storeId(), pickup.date(), users));
+        }
+        cache.put(cacheKey, updated);
     }
 
     private void saveAudit(FoodsharingStoreAutomation a, String userId, Instant pickupDate, boolean dryRun, FoodsharingPickupAutomationDecision decision, String reasons, String error) { var audit = new FoodsharingPickupAutomationAudit(); audit.setAdminConnection(a.getAdminConnection()); audit.setStoreId(a.getStoreId()); audit.setFoodsharingUserId(userId); audit.setPickupDate(pickupDate); audit.setDryRun(dryRun); audit.setDecision(decision); audit.setReasons(reasons); audit.setFoodsharingError(error); auditRepository.save(audit); }

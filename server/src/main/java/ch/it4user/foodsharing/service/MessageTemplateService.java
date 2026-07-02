@@ -11,7 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.HtmlUtils;
 
 @Service
 public class MessageTemplateService {
@@ -21,74 +20,56 @@ public class MessageTemplateService {
 
     public String loginSubject(LanguageCode language) {
         return switch (language) {
-            case EN -> "Your foodsharing login link";
-            case GWS -> "Din Foodsharing Login-Link";
-            case DE -> "Dein Foodsharing Login-Link";
+            case EN -> "Your Foodsharing EinAB Tool Login Link";
+            case GWS -> "Din Foodsharing EinAB Tool Login-Link";
+            case DE -> "Dein Foodsharing EinAB Tool Login-Link";
         };
     }
 
     public String loginBody(LanguageCode language, String loginLink) {
-        return render(
+        return String.join("\n\n",
+                greeting(language),
                 switch (language) {
-                    case EN -> "Login link";
-                    case GWS -> "Login-Link";
-                    case DE -> "Login-Link";
+                    case EN -> "Open this link to sign in:";
+                    case GWS -> "Mach dä Link uf zum Ilogge:";
+                    case DE -> "Öffne diesen Link zum Einloggen:";
                 },
-                paragraph(switch (language) {
-                    case EN -> "Hello,";
-                    case GWS -> "Hoi,";
-                    case DE -> "Hallo,";
-                })
-                        + paragraph(switch (language) {
-                            case EN -> "Open this link to sign in:";
-                            case GWS -> "Mach dä Link uf zum Ilogge:";
-                            case DE -> "Öffne diesen Link zum Einloggen:";
-                        })
-                        + button(switch (language) {
-                            case EN -> "Sign in";
-                            case GWS -> "Ilogge";
-                            case DE -> "Einloggen";
-                        }, loginLink)
-                        + paragraph(switch (language) {
-                            case EN -> "If you did not request this message, you can ignore it.";
-                            case GWS -> "Wenn du die Nachricht nid aagforderet hesch, chasch si eifach ignoriere.";
-                            case DE -> "Wenn du diese Nachricht nicht angefordert hast, kannst du sie ignorieren.";
-                        }));
+                switch (language) {
+                    case EN -> "Sign in: " + loginLink;
+                    case GWS -> "Ilogge: " + loginLink;
+                    case DE -> "Einloggen: " + loginLink;
+                },
+                switch (language) {
+                    case EN -> "If you did not request this message, you can ignore it.";
+                    case GWS -> "Wenn du die Nachricht nid aagforderet hesch, chasch si eifach ignoriere.";
+                    case DE -> "Wenn du diese Nachricht nicht angefordert hast, kannst du sie ignorieren.";
+                });
     }
 
     public String bookingConfirmationSubject(LanguageCode language) {
         return switch (language) {
             case EN -> "Your foodsharing pickup details";
             case GWS -> "Dini Foodsharing Abholig";
-            case DE -> "Deine Foodsharing-Abholung";
+            case DE -> "Deine Foodsharing-Einführungs-Abholung";
         };
     }
 
-    public String bookingConfirmationBody(LanguageCode language, Slot slot, String manageUrl) {
+    public String bookingConfirmationBody(LanguageCode language, Slot slot, String manageUrl, long confirmWithinMinutes) {
         Map<String, String> details = bookingDetails(language, slot.getEinAb(), slot.getEinAb().getTeacher().getName(), slot.getEinAb().getTeacher().getPhoneNumber());
-        return render(
+        return String.join("\n\n",
+                greeting(language, slot.getBookingUser().getName()),
+                confirmWindowText(language, confirmWithinMinutes),
+                formatDetails(details),
                 switch (language) {
-                    case EN -> "Confirm booking";
-                    case GWS -> "Buechig bestätige";
-                    case DE -> "Buchung bestätigen";
+                    case EN -> "You can log in later with the Foodsharing ID you used for this booking.";
+                    case GWS -> "Du chasch di spöter mit dr Foodsharing-ID vo dere Buechig ilogge.";
+                    case DE -> "Du kannst dich später mit der Foodsharing-ID dieser Buchung einloggen.";
                 },
-                paragraph(greeting(language, slot.getBookingUser().getName()))
-                        + paragraph(switch (language) {
-                            case EN -> "Please confirm this pickup within one hour.";
-                            case GWS -> "Bitte bestätig die Abholig innerhalb vo einere Stund.";
-                            case DE -> "Bitte bestätige diese Abholung innerhalb einer Stunde.";
-                        })
-                        + detailsTable(details)
-                        + note(switch (language) {
-                            case EN -> "You can log in later with the Foodsharing ID you used for this booking.";
-                            case GWS -> "Du chasch di spöter mit dr Foodsharing-ID vo dere Buechig ilogge.";
-                            case DE -> "Du kannst dich später mit der Foodsharing-ID dieser Buchung einloggen.";
-                        })
-                        + button(switch (language) {
-                            case EN -> "Confirm pickup";
-                            case GWS -> "Abholig bestätige";
-                            case DE -> "Abholung bestätigen";
-                        }, manageUrl));
+                switch (language) {
+                    case EN -> "Confirm pickup: " + manageUrl;
+                    case GWS -> "Abholig bestätige: " + manageUrl;
+                    case DE -> "Abholung bestätigen: " + manageUrl;
+                });
     }
 
     public String teacherCancellationSubject(LanguageCode language) {
@@ -101,90 +82,19 @@ public class MessageTemplateService {
 
     public String teacherCancellationBody(LanguageCode language, Slot slot, String manageUrl) {
         Map<String, String> details = bookingDetails(language, slot.getEinAb(), slot.getEinAb().getTeacher().getName(), slot.getEinAb().getTeacher().getPhoneNumber());
-        return render(
+        return String.join("\n\n",
+                greeting(language, slot.getBookingUser().getName()),
                 switch (language) {
-                    case EN -> "Pickup cancelled";
-                    case GWS -> "Abholig abgsagt";
-                    case DE -> "Abholung abgesagt";
+                    case EN -> "The EinAb giver cancelled your booked pickup.";
+                    case GWS -> "D EinAb-Geberin het dini buechti Abholig abgsagt.";
+                    case DE -> "Die EinAb-Geberin hat deine gebuchte Abholung abgesagt.";
                 },
-                paragraph(greeting(language, slot.getBookingUser().getName()))
-                        + paragraph(switch (language) {
-                            case EN -> "The EinAb giver cancelled your booked pickup.";
-                            case GWS -> "D EinAb-Geberin het dini buechti Abholig abgsagt.";
-                            case DE -> "Die EinAb-Geberin hat deine gebuchte Abholung abgesagt.";
-                        })
-                        + detailsTable(details)
-                        + button(switch (language) {
-                            case EN -> "Open bookings";
-                            case GWS -> "Buechige öffne";
-                            case DE -> "Buchungen öffnen";
-                        }, manageUrl));
-    }
-
-    public String render(String title, String bodyHtml) {
-        return """
-                <html>
-                  <body style="margin:0;background:#f4f7f2;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#1f2937;">
-                    <div style="max-width:720px;margin:0 auto;background:#ffffff;border:1px solid #d9e8d7;border-radius:16px;overflow:hidden;box-shadow:0 12px 30px rgba(15,23,42,0.08);">
-                      <div style="background:#166534;color:#ffffff;padding:28px;">
-                        <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.85;">Foodsharing EinAb</div>
-                        <h1 style="margin:8px 0 0;font-size:28px;line-height:1.2;">%s</h1>
-                      </div>
-                      <div style="padding:28px;">%s</div>
-                    </div>
-                  </body>
-                </html>
-                """.formatted(escape(title), bodyHtml);
-    }
-
-    public String paragraph(String text) {
-        return "<p style=\"margin:0 0 16px;line-height:1.6;\">" + escape(text) + "</p>";
-    }
-
-    public String paragraphHtml(String html) {
-        return "<p style=\"margin:0 0 16px;line-height:1.6;\">" + html + "</p>";
-    }
-
-    public String button(String label, String url) {
-        return """
-                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:24px 0;">
-                  <tr>
-                    <td>
-                      <a href="%s" style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700;">%s</a>
-                    </td>
-                  </tr>
-                </table>
-                """.formatted(escape(url), escape(label));
-    }
-
-    public String link(String label, String url) {
-        return """
-                <a href="%s" style="color:#166534;text-decoration:underline;">%s</a>
-                """.formatted(escape(url), escape(label));
-    }
-
-    public String detailsTable(Map<String, String> fields) {
-        String rows = fields.entrySet().stream()
-                .map(entry -> """
-                        <tr>
-                          <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;font-weight:700;vertical-align:top;width:180px;">%s</td>
-                          <td style="padding:10px 12px;border-bottom:1px solid #e5e7eb;vertical-align:top;white-space:pre-wrap;">%s</td>
-                        </tr>
-                        """.formatted(escape(entry.getKey()), escape(entry.getValue())))
-                .collect(Collectors.joining());
-        return """
-                <table role="presentation" cellspacing="0" cellpadding="0" style="width:100%%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
-                  %s
-                </table>
-                """.formatted(rows);
-    }
-
-    public String note(String text) {
-        return """
-                <div style="margin-top:24px;padding:16px 18px;border-left:4px solid #16a34a;background:#f0fdf4;border-radius:10px;">
-                  <p style="margin:0;line-height:1.6;">%s</p>
-                </div>
-                """.formatted(escape(text));
+                formatDetails(details),
+                switch (language) {
+                    case EN -> "Open bookings: " + manageUrl;
+                    case GWS -> "Buechige öffne: " + manageUrl;
+                    case DE -> "Buchungen öffnen: " + manageUrl;
+                });
     }
 
     public String swissDateTime(Instant value) {
@@ -206,6 +116,43 @@ public class MessageTemplateService {
         details.put(label(language, "hint"), valueOrDash(einAb.getHint()));
         details.put(label(language, "fairteiler"), yesNo(language, einAb.isVisitFairteiler()));
         return details;
+    }
+
+    private String formatDetails(Map<String, String> fields) {
+        return fields.entrySet().stream()
+                .map(entry -> entry.getKey() + ": " + entry.getValue())
+                .collect(Collectors.joining("\n"));
+    }
+
+    private String greeting(LanguageCode language) {
+        return switch (language) {
+            case EN -> "Hello,";
+            case GWS -> "Hoi,";
+            case DE -> "Hallo,";
+        };
+    }
+
+    private String confirmWindowText(LanguageCode language, long minutes) {
+        if (minutes == 60) {
+            return switch (language) {
+                case EN -> "Please confirm this pickup within the next hour.";
+                case GWS -> "Bitte bestätig die Abholig innerhalb vo de nächste Stund.";
+                case DE -> "Bitte bestätige diese Abholung innerhalb der nächsten Stunde.";
+            };
+        }
+        if (minutes % 60 == 0) {
+            long hours = minutes / 60;
+            return switch (language) {
+                case EN -> "Please confirm this pickup within the next " + hours + (hours == 1 ? " hour." : " hours.");
+                case GWS -> "Bitte bestätig die Abholig innerhalb vo de nächste " + hours + (hours == 1 ? " Stund." : " Stund.");
+                case DE -> "Bitte bestätige diese Abholung innerhalb der nächsten " + hours + (hours == 1 ? " Stunde." : " Stunden.");
+            };
+        }
+        return switch (language) {
+            case EN -> "Please confirm this pickup within the next " + minutes + " minutes.";
+            case GWS -> "Bitte bestätig die Abholig innerhalb vo de nächste " + minutes + " Minute.";
+            case DE -> "Bitte bestätige diese Abholung innerhalb der nächsten " + minutes + " Minuten.";
+        };
     }
 
     private String greeting(LanguageCode language, String name) {
@@ -304,9 +251,5 @@ public class MessageTemplateService {
 
     private String valueOrDash(String value) {
         return value == null || value.isBlank() ? "-" : value;
-    }
-
-    private String escape(String value) {
-        return HtmlUtils.htmlEscape(value == null ? "" : value);
     }
 }

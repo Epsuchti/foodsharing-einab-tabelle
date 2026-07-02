@@ -1024,6 +1024,8 @@ components:
           format: date-time
         location:
           type: string
+        publicLocation:
+          type: string
         whatToBring:
           type: string
         hint:

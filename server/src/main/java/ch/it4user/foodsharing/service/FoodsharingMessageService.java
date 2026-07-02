@@ -1,7 +1,6 @@
 package ch.it4user.foodsharing.service;
 
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.HtmlUtils;
 
 @Service
 public class FoodsharingMessageService {
@@ -11,8 +10,11 @@ public class FoodsharingMessageService {
         this.foodsharingClient = foodsharingClient;
     }
 
-    public void send(String recipientFoodsharingId, String subject, String htmlBody) {
-        String plainBody = HtmlUtils.htmlUnescape(htmlBody.replaceAll("<[^>]+>", " ").replaceAll("\\s+", " ").trim());
-        foodsharingClient.sendMessage(recipientFoodsharingId, subject + "\n\n" + plainBody);
+    public void send(String recipientFoodsharingId, String subject, String body) {
+        foodsharingClient.sendMessage(recipientFoodsharingId, subject + "\n\n" + normalize(body));
+    }
+
+    private String normalize(String text) {
+        return text == null ? "" : text.replace("\r\n", "\n").replace('\r', '\n').trim().replaceAll("\n{3,}", "\n\n");
     }
 }

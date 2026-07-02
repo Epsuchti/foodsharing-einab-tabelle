@@ -6,7 +6,8 @@ import java.util.List;
 public final class FoodsharingPickupModels {
     private FoodsharingPickupModels() {}
 
-    public record Store(long id, String name) {}
+    public record Store(long id, String name, boolean isManaging) {}
+    public record StoreMember(long id, String name, Instant lastFetch, int fetchCount) {}
     public record Pickup(long storeId, Instant date, List<PickupUser> users) {}
     public record PickupUser(String id, String name, boolean confirmed) {}
     public record UserPickup(long storeId, String storeName, Instant date, boolean confirmed) {}

@@ -1,6 +1,6 @@
 package ch.it4user.foodsharing.service;
 
-import ch.it4user.foodsharing.domain.entity.BookingUser;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.entity.Slot;
 import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.domain.enumtype.EinAbCategory;
@@ -56,7 +56,7 @@ public class PublicService {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.SLOT_NOT_AVAILABLE);
         }
 
-        BookingUser bookingUser = bookingUserService.getOrCreate(foodsharingId, language);
+        User bookingUser = bookingUserService.getOrCreate(foodsharingId, language);
         if (slotRepository.existsByBookingUserAndStatusInAndEinAbTeacher(
                 bookingUser, ACTIVE_BOOKING_STATUSES, slot.getEinAb().getTeacher())) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_ALREADY_BOOKED_WITH_TEACHER);
@@ -79,8 +79,8 @@ public class PublicService {
         slot.setStatus(SlotStatus.PENDING_CONFIRMATION);
         slot.setBookedAt(java.time.Instant.now());
         slot.setPendingConfirmationTokenHash(tokenService.hash(rawToken));
-        slot.setPendingConfirmationExpiresAt(java.time.Instant.now().plus(1, java.time.temporal.ChronoUnit.HOURS));
-        sendBookingConfirmationMessage(slot, rawToken);
+        slot.setPendingConfirmationExpiresAt(java.time.Instant.now().plus(appProperties.getAuth().getBookingConfirmationValidityMinutes(), java.time.temporal.ChronoUnit.MINUTES));
+        sendBookingConfirmationMessage(slot, rawToken, appProperties.getAuth().getBookingConfirmationValidityMinutes());
         return slot;
     }
 
@@ -93,13 +93,13 @@ public class PublicService {
         return normalized == null ? null : "%" + normalized.toLowerCase() + "%";
     }
 
-    private void sendBookingConfirmationMessage(Slot slot, String rawToken) {
+    private void sendBookingConfirmationMessage(Slot slot, String rawToken, long confirmWithinMinutes) {
         String confirmUrl = appProperties.getFrontend().getBaseUrl() + "/confirm-booking?token=" + rawToken;
         LanguageCode language = slot.getBookingUser().getPreferredLanguage();
         messageService.send(
                 slot.getBookingUser().getFoodsharingId(),
                 messageTemplateService.bookingConfirmationSubject(language),
-                messageTemplateService.bookingConfirmationBody(language, slot, confirmUrl));
+                messageTemplateService.bookingConfirmationBody(language, slot, confirmUrl, confirmWithinMinutes));
     }
 
     @Transactional

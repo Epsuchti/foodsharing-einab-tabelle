@@ -24,6 +24,7 @@ public class AppProperties {
     public static class Auth {
         private long tokenValidityDays = 365;
         private long loginTokenValidityMinutes = 30;
+        private long bookingConfirmationValidityMinutes = 60;
 
         public long getTokenValidityDays() {
             return tokenValidityDays;
@@ -39,6 +40,14 @@ public class AppProperties {
 
         public void setLoginTokenValidityMinutes(long loginTokenValidityMinutes) {
             this.loginTokenValidityMinutes = loginTokenValidityMinutes;
+        }
+
+        public long getBookingConfirmationValidityMinutes() {
+            return bookingConfirmationValidityMinutes;
+        }
+
+        public void setBookingConfirmationValidityMinutes(long bookingConfirmationValidityMinutes) {
+            this.bookingConfirmationValidityMinutes = bookingConfirmationValidityMinutes;
         }
 
     }
@@ -78,6 +87,9 @@ public class AppProperties {
         private boolean dryRun = true;
         private long cleaningStoreId = 0;
         private String pollInterval = "PT5M";
+        private String futurePickupCacheTtl = "PT15M";
+        private String storePickupCacheTtl = "PT1M";
+        private String storeMembersCacheTtl = "PT1M";
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -87,5 +99,11 @@ public class AppProperties {
         public void setCleaningStoreId(long cleaningStoreId) { this.cleaningStoreId = cleaningStoreId; }
         public String getPollInterval() { return pollInterval; }
         public void setPollInterval(String pollInterval) { this.pollInterval = pollInterval; }
+        public String getFuturePickupCacheTtl() { return futurePickupCacheTtl; }
+        public void setFuturePickupCacheTtl(String futurePickupCacheTtl) { this.futurePickupCacheTtl = futurePickupCacheTtl; }
+        public String getStorePickupCacheTtl() { return storePickupCacheTtl; }
+        public void setStorePickupCacheTtl(String storePickupCacheTtl) { this.storePickupCacheTtl = storePickupCacheTtl; }
+        public String getStoreMembersCacheTtl() { return storeMembersCacheTtl; }
+        public void setStoreMembersCacheTtl(String storeMembersCacheTtl) { this.storeMembersCacheTtl = storeMembersCacheTtl; }
     }
 }

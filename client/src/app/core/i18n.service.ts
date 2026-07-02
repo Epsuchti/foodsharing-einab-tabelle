@@ -52,6 +52,7 @@ export class I18nService {
     const key = status ?? '';
     const labels: Record<string, string> = {
       [SlotStatus.Available]: this.t('status.available'),
+      [SlotStatus.PendingConfirmation]: this.t('status.pendingConfirmation'),
       [SlotStatus.Booked]: this.t('status.booked'),
       [SlotStatus.Done]: this.t('status.done'),
       [SlotStatus.Cancelled]: this.t('status.cancelled')

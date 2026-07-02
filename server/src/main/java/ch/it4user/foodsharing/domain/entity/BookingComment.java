@@ -19,11 +19,11 @@ public class BookingComment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "booking_user_id", nullable = false)
-    private BookingUser bookingUser;
+    private User bookingUser;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "teacher_id", nullable = false)
-    private Teacher teacher;
+    private User teacher;
 
     @Column(nullable = false, length = 4000)
     private String comment;

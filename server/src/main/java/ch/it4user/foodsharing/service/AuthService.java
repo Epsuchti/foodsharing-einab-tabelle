@@ -2,16 +2,14 @@ package ch.it4user.foodsharing.service;
 
 import ch.it4user.foodsharing.domain.entity.AuthSession;
 import ch.it4user.foodsharing.domain.entity.LoginToken;
-import ch.it4user.foodsharing.domain.entity.BookingUser;
-import ch.it4user.foodsharing.domain.entity.Teacher;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.domain.enumtype.UserRole;
 import ch.it4user.foodsharing.openapi.model.AuthResponse;
 import ch.it4user.foodsharing.openapi.model.MessageResponse;
-import ch.it4user.foodsharing.repository.BookingUserRepository;
 import ch.it4user.foodsharing.repository.AuthSessionRepository;
 import ch.it4user.foodsharing.repository.LoginTokenRepository;
-import ch.it4user.foodsharing.repository.TeacherRepository;
+import ch.it4user.foodsharing.repository.UserRepository;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -33,8 +31,7 @@ public class AuthService {
     private final FoodsharingMessageService messageService;
     private final MessageTemplateService messageTemplateService;
     private final AppProperties appProperties;
-    private final TeacherRepository teacherRepository;
-    private final BookingUserRepository bookingUserRepository;
+    private final UserRepository userRepository;
     private final BookingUserService bookingUserService;
 
     public AuthService(LoginTokenRepository loginTokenRepository,
@@ -44,8 +41,7 @@ public class AuthService {
                        FoodsharingMessageService messageService,
                        MessageTemplateService messageTemplateService,
                        AppProperties appProperties,
-                       TeacherRepository teacherRepository,
-                       BookingUserRepository bookingUserRepository,
+                       UserRepository userRepository,
                        BookingUserService bookingUserService) {
         this.loginTokenRepository = loginTokenRepository;
         this.authSessionRepository = authSessionRepository;
@@ -54,8 +50,7 @@ public class AuthService {
         this.messageService = messageService;
         this.messageTemplateService = messageTemplateService;
         this.appProperties = appProperties;
-        this.teacherRepository = teacherRepository;
-        this.bookingUserRepository = bookingUserRepository;
+        this.userRepository = userRepository;
         this.bookingUserService = bookingUserService;
     }
 
@@ -103,11 +98,9 @@ public class AuthService {
         authSession.setExpiresAt(Instant.now().plus(appProperties.getAuth().getTokenValidityDays(), ChronoUnit.DAYS));
         authSessionRepository.save(authSession);
 
-        String displayName = teacherRepository.findByFoodsharingIdIgnoreCase(loginToken.getFoodsharingId())
-                .map(Teacher::getName)
-                .orElseGet(() -> bookingUserRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(loginToken.getFoodsharingId())
-                        .map(BookingUser::getName)
-                        .orElse(loginToken.getFoodsharingId()));
+        String displayName = userRepository.findByFoodsharingIdIgnoreCase(loginToken.getFoodsharingId())
+                .map(User::getName)
+                .orElse(loginToken.getFoodsharingId());
 
         AuthResponse response = new AuthResponse();
         response.setAuthToken(rawAuthToken);
@@ -124,7 +117,7 @@ public class AuthService {
 
     private LoginTarget resolveLoginTarget(String foodsharingId) {
         String normalizedFoodsharingId = foodsharingId.trim();
-        BookingUser user = bookingUserRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(normalizedFoodsharingId)
+        User user = userRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(normalizedFoodsharingId)
                 .orElseGet(() -> bookingUserService.getOrCreate(normalizedFoodsharingId, LanguageCode.DE));
         return new LoginTarget(user.getFoodsharingId(), user.getPreferredLanguage());
     }

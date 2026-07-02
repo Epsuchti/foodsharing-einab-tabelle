@@ -31,7 +31,7 @@ public class Slot extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_user_id")
-    private BookingUser bookingUser;
+    private User bookingUser;
 
     @Column
     private Instant bookedAt;

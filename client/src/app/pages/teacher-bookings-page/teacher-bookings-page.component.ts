@@ -28,7 +28,7 @@ type BookingGroup = {
   bookingUserId: string;
   name: string;
   foodsharingId: string;
-  phoneNumber: string;
+  phoneNumber?: string;
   bookings: BookingDetailResponse[];
 };
 

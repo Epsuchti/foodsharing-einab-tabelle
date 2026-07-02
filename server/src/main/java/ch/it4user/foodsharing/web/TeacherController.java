@@ -1,7 +1,7 @@
 package ch.it4user.foodsharing.web;
 
 import ch.it4user.foodsharing.domain.entity.EinAb;
-import ch.it4user.foodsharing.domain.entity.Teacher;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.openapi.api.TeacherApi;
 import ch.it4user.foodsharing.openapi.model.BookingListResponse;
 import ch.it4user.foodsharing.openapi.model.BookingCommentListResponse;
@@ -46,14 +46,14 @@ public class TeacherController implements TeacherApi {
 
     @Override
     public ResponseEntity<TeacherSelfResponse> getTeacherMe() {
-        Teacher teacher = currentActorService.requireTeacher();
+        User teacher = currentActorService.requireTeacher();
         return ResponseEntity.ok(mapper.toTeacherSelfResponse(teacher, teacherService.getIcalCandidates(teacher)));
     }
 
     @Override
     public ResponseEntity<TeacherSelfResponse> updateTeacherMe(UpdateTeacherMeRequest updateTeacherMeRequest) {
-        Teacher teacher = currentActorService.requireTeacher();
-        Teacher updated = teacherService.updateProfile(
+        User teacher = currentActorService.requireTeacher();
+        User updated = teacherService.updateProfile(
                 teacher,
                 updateTeacherMeRequest.getPhoneNumber(),
                 updateTeacherMeRequest.getIcalLink(),
@@ -63,14 +63,14 @@ public class TeacherController implements TeacherApi {
 
     @Override
     public ResponseEntity<TeacherEinAbListResponse> getTeacherEinAbs(Integer page, Integer size) {
-        Teacher teacher = currentActorService.requireTeacher();
+        User teacher = currentActorService.requireTeacher();
         org.springframework.data.domain.Page<EinAb> einAbs = teacherService.findTeacherEinAbs(teacher, page == null ? 0 : page, size == null ? 20 : size);
         return ResponseEntity.ok(mapTeacherEinAbs(einAbs));
     }
 
     @Override
     public ResponseEntity<TeacherEinAbResponse> createTeacherEinAb(UpsertEinAbRequest upsertEinAbRequest) {
-        Teacher teacher = currentActorService.requireTeacher();
+        User teacher = currentActorService.requireTeacher();
         EinAb einAb = teacherService.createEinAb(
                 teacher,
                 ch.it4user.foodsharing.domain.enumtype.EinAbCategory.valueOf(upsertEinAbRequest.getCategory().getValue()),
@@ -88,7 +88,7 @@ public class TeacherController implements TeacherApi {
 
     @Override
     public ResponseEntity<TeacherEinAbResponse> updateTeacherEinAb(UUID einAbId, UpsertEinAbRequest upsertEinAbRequest) {
-        Teacher teacher = currentActorService.requireTeacher();
+        User teacher = currentActorService.requireTeacher();
         EinAb einAb = teacherService.updateEinAb(
                 teacher,
                 einAbId,

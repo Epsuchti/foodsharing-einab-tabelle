@@ -1,8 +1,8 @@
 package ch.it4user.foodsharing.service;
 
-import ch.it4user.foodsharing.domain.entity.BookingUser;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
-import ch.it4user.foodsharing.repository.BookingUserRepository;
+import ch.it4user.foodsharing.repository.UserRepository;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -11,16 +11,16 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class BookingUserService {
 
-    private final BookingUserRepository bookingUserRepository;
+    private final UserRepository bookingUserRepository;
     private final FoodsharingClient foodsharingClient;
 
-    public BookingUserService(BookingUserRepository bookingUserRepository, FoodsharingClient foodsharingClient) {
+    public BookingUserService(UserRepository bookingUserRepository, FoodsharingClient foodsharingClient) {
         this.bookingUserRepository = bookingUserRepository;
         this.foodsharingClient = foodsharingClient;
     }
 
     @Transactional
-    public BookingUser getOrCreate(String foodsharingId, LanguageCode language) {
+    public User getOrCreate(String foodsharingId, LanguageCode language) {
         String normalizedFoodsharingId = normalizeFoodsharingId(foodsharingId);
         FoodsharingUserInfo foodsharingUser = foodsharingClient.getUser(normalizedFoodsharingId);
         if (foodsharingUser.sleeping()) {
@@ -34,7 +34,7 @@ public class BookingUserService {
                     return existing;
                 })
                 .orElseGet(() -> {
-                    BookingUser bookingUser = new BookingUser();
+                    User bookingUser = new User();
                     bookingUser.setName(foodsharingUser.name());
                     bookingUser.setFoodsharingId(normalizedFoodsharingId);
                     bookingUser.setActive(true);
@@ -43,14 +43,14 @@ public class BookingUserService {
                 });
     }
 
-    public BookingUser getByFoodsharingId(String foodsharingId) {
+    public User getByFoodsharingId(String foodsharingId) {
         return bookingUserRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(normalizeFoodsharingId(foodsharingId))
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_USER_NOT_FOUND));
     }
 
     @Transactional
-    public BookingUser disable(UUID bookingUserId) {
-        BookingUser bookingUser = bookingUserRepository.findById(bookingUserId)
+    public User disable(UUID bookingUserId) {
+        User bookingUser = bookingUserRepository.findById(bookingUserId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_USER_NOT_FOUND));
         bookingUser.setActive(false);
         return bookingUser;

@@ -30,7 +30,7 @@ public class EinAb extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "teacher_id", nullable = false)
-    private Teacher teacher;
+    private User teacher;
 
     @Column(nullable = false)
     private boolean visitFairteiler;

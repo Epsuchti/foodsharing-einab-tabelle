@@ -1,6 +1,6 @@
 package ch.it4user.foodsharing.web;
 
-import ch.it4user.foodsharing.domain.entity.BookingUser;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.openapi.api.UserApi;
 import ch.it4user.foodsharing.openapi.model.BookingListResponse;
 import ch.it4user.foodsharing.openapi.model.BookingUserResponse;
@@ -31,7 +31,7 @@ public class UserController implements UserApi {
 
     @Override
     public ResponseEntity<BookingUserResponse> getMyProfile() {
-        BookingUser bookingUser = userService.getProfileByFoodsharingId(currentActorService.requireFoodsharingId());
+        User bookingUser = userService.getProfileByFoodsharingId(currentActorService.requireFoodsharingId());
         return ResponseEntity.ok(mapper.toBookingUserResponse(bookingUser));
     }
 

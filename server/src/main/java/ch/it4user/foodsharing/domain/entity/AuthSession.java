@@ -9,9 +9,6 @@ import java.time.Instant;
 @Table(name = "auth_sessions")
 public class AuthSession extends BaseEntity {
 
-    @Column(length = 255)
-    private String email;
-
     @Column(nullable = false, length = 100)
     private String foodsharingId;
 
@@ -23,14 +20,6 @@ public class AuthSession extends BaseEntity {
 
     @Column(nullable = false)
     private Instant expiresAt;
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
 
     public String getFoodsharingId() {
         return foodsharingId;

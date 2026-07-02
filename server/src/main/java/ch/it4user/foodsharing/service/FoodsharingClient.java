@@ -3,6 +3,7 @@ package ch.it4user.foodsharing.service;
 import ch.it4user.foodsharing.domain.entity.FoodsharingApiSession;
 import ch.it4user.foodsharing.repository.FoodsharingApiSessionRepository;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,7 +50,7 @@ public class FoodsharingClient {
         try {
             return restClient.get().uri(path, uriVariable).headers(h -> applySession(h, session)).retrieve().body(Map.class);
         } catch (HttpClientErrorException ex) {
-            if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED && !retried) { authenticate(); return authenticatedGet(path, uriVariable, true); }
+            if (shouldReauthenticate(ex, retried)) { authenticate(); return authenticatedGet(path, uriVariable, true); }
             throw ex;
         }
     }
@@ -61,9 +62,21 @@ public class FoodsharingClient {
             return restClient.post().uri(path, uriVariables).contentType(MediaType.APPLICATION_JSON)
                     .headers(h -> applySession(h, session)).body(request).retrieve().body(Map.class);
         } catch (HttpClientErrorException ex) {
-            if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED && !retried) { authenticate(); return authenticatedPost(path, request, true, uriVariables); }
+            if (shouldReauthenticate(ex, retried)) { authenticate(); return authenticatedPost(path, request, true, uriVariables); }
             throw ex;
         }
+    }
+
+    private boolean shouldReauthenticate(HttpClientErrorException ex, boolean retried) {
+        if (retried) {
+            return false;
+        }
+        if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+            return true;
+        }
+        return ex.getStatusCode() == HttpStatus.BAD_REQUEST
+                && ex.getResponseBodyAsString() != null
+                && ex.getResponseBodyAsString().contains("CSRF Failed");
     }
 
     private void applySession(HttpHeaders headers, SessionData session) {
@@ -72,7 +85,7 @@ public class FoodsharingClient {
     }
 
     private SessionData session() {
-        return sessionRepository.findAll().stream().findFirst()
+        return sessionRepository.findFirstByOrderByAuthenticatedAtDesc()
                 .map(s -> new SessionData(cryptoService.decrypt(s.getSessionCookieCiphertext()), cryptoService.decrypt(s.getCsrfTokenCiphertext())))
                 .orElseGet(this::authenticate);
     }
@@ -82,15 +95,30 @@ public class FoodsharingClient {
         var response = restClient.post().uri("/api/login").contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("email", appProperties.getFoodsharing().getAdminUser(), "password", appProperties.getFoodsharing().getAdminPassword(), "rememberMe", true))
                 .retrieve().toEntity(Map.class);
-        String cookie = String.join("; ", response.getHeaders().getOrEmpty(HttpHeaders.SET_COOKIE));
-        String csrf = response.getHeaders().getFirst("X-CSRF-Token");
-        if ((csrf == null || csrf.isBlank()) && response.getBody() != null && response.getBody().get("csrfToken") != null) csrf = String.valueOf(response.getBody().get("csrfToken"));
-        FoodsharingApiSession session = sessionRepository.findAll().stream().findFirst().orElseGet(FoodsharingApiSession::new);
-        session.setSessionCookieCiphertext(cryptoService.encrypt(cookie));
-        session.setCsrfTokenCiphertext(cryptoService.encrypt(csrf));
+        SessionData sessionData = extractSessionData(response.getHeaders().getOrEmpty(HttpHeaders.SET_COOKIE), response.getBody());
+        sessionRepository.deleteAll();
+        FoodsharingApiSession session = new FoodsharingApiSession();
+        session.setSessionCookieCiphertext(cryptoService.encrypt(sessionData.cookie()));
+        session.setCsrfTokenCiphertext(cryptoService.encrypt(sessionData.csrfToken()));
         session.setAuthenticatedAt(Instant.now());
         sessionRepository.save(session);
-        return new SessionData(cookie, csrf);
+        return sessionData;
+    }
+
+    private SessionData extractSessionData(List<String> setCookies, Map<?, ?> responseBody) {
+        List<String> cookiePairs = new ArrayList<>();
+        String csrf = null;
+        for (String setCookie : setCookies) {
+            String pair = setCookie.split(";", 2)[0];
+            cookiePairs.add(pair);
+            if (pair.startsWith("FS_CSRF_TOKEN=")) {
+                csrf = pair.substring("FS_CSRF_TOKEN=".length());
+            }
+        }
+        if ((csrf == null || csrf.isBlank()) && responseBody != null && responseBody.get("csrfToken") != null) {
+            csrf = String.valueOf(responseBody.get("csrfToken"));
+        }
+        return new SessionData(String.join("; ", cookiePairs), csrf);
     }
 
     private record SessionData(String cookie, String csrfToken) {}

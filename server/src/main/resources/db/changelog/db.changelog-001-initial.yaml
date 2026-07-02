@@ -2,6 +2,8 @@ databaseChangeLog:
   - changeSet:
       id: 001-create-core-tables
       author: codex
+      validCheckSum:
+        - 9:28e6e5a109e5b931e98e8f9a42eb7ea2
       changes:
         - createTable:
             tableName: users
@@ -19,6 +21,21 @@ databaseChangeLog:
               - column: {name: is_admin, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
               - column: {name: is_teacher, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
               - column: {name: preferred_language, type: VARCHAR(10), defaultValue: DE, constraints: {nullable: false}}
+        - insert:
+            tableName: users
+            columns:
+              - column: {name: id, value: "8e0f5f9d-7647-4f98-bdf7-63fbcadf0bd5"}
+              - column: {name: version, valueNumeric: 0}
+              - column: {name: created_at, valueComputed: CURRENT_TIMESTAMP}
+              - column: {name: updated_at, valueComputed: CURRENT_TIMESTAMP}
+              - column: {name: foodsharing_id, value: "420344"}
+              - column: {name: name, value: "Eric"}
+              - column: {name: phone_number, value: "076 683 90 77"}
+              - column: {name: ical_link, value: "https://foodsharing.de/api/calendar/c90b5c1ea036183b4361?formatting=html&events=accepted&pickups=true&history=true"}
+              - column: {name: active, valueBoolean: true}
+              - column: {name: is_admin, valueBoolean: true}
+              - column: {name: is_teacher, valueBoolean: true}
+              - column: {name: preferred_language, value: "DE"}
         - createTable:
             tableName: einabs
             columns:
@@ -141,6 +158,64 @@ databaseChangeLog:
             referencedTableName: users
             referencedColumnNames: id
             constraintName: fk_foodsharing_admin_connections_admin
+        - createTable:
+            tableName: foodsharing_future_pickup_users_cache
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: admin_connection_id, type: UUID, constraints: {nullable: false, unique: true}}
+              - column: {name: refreshed_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: payload_json, type: TEXT, constraints: {nullable: false}}
+        - addForeignKeyConstraint:
+            baseTableName: foodsharing_future_pickup_users_cache
+            baseColumnNames: admin_connection_id
+            referencedTableName: foodsharing_admin_connections
+            referencedColumnNames: id
+            constraintName: fk_foodsharing_future_pickup_users_cache_connection
+        - createTable:
+            tableName: foodsharing_store_pickups_cache
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: admin_connection_id, type: UUID, constraints: {nullable: false}}
+              - column: {name: store_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: refreshed_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: payload_json, type: TEXT, constraints: {nullable: false}}
+        - addForeignKeyConstraint:
+            baseTableName: foodsharing_store_pickups_cache
+            baseColumnNames: admin_connection_id
+            referencedTableName: foodsharing_admin_connections
+            referencedColumnNames: id
+            constraintName: fk_foodsharing_store_pickups_cache_connection
+        - addUniqueConstraint:
+            tableName: foodsharing_store_pickups_cache
+            columnNames: admin_connection_id, store_id
+            constraintName: uk_foodsharing_store_pickups_cache_connection_store
+        - createTable:
+            tableName: foodsharing_store_members_cache
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: admin_connection_id, type: UUID, constraints: {nullable: false}}
+              - column: {name: store_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: refreshed_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: payload_json, type: TEXT, constraints: {nullable: false}}
+        - addForeignKeyConstraint:
+            baseTableName: foodsharing_store_members_cache
+            baseColumnNames: admin_connection_id
+            referencedTableName: foodsharing_admin_connections
+            referencedColumnNames: id
+            constraintName: fk_foodsharing_store_members_cache_connection
+        - addUniqueConstraint:
+            tableName: foodsharing_store_members_cache
+            columnNames: admin_connection_id, store_id
+            constraintName: uk_foodsharing_store_members_cache_connection_store
         - createTable:
             tableName: foodsharing_store_automations
             columns:

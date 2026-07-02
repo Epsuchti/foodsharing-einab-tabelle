@@ -166,7 +166,7 @@ export class PublicSlotsPageComponent implements OnInit {
       bookSlotRequest
     }).pipe(finalize(() => this.bookingLoading.set(false)))
       .subscribe({
-        next: (response) => {
+      next: (response) => {
           this.messageService.add({ severity: 'success', summary: this.i18n.t('book.confirmationSent') });
           this.bookingVisible = false;
           this.bookingForm.reset();

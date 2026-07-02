@@ -2,9 +2,14 @@
   <ng-template pTemplate="title">{{ i18n.t('login.title') }}</ng-template>
   <p>{{ i18n.t('login.hint') }}</p>
   <form class="stack-form" [formGroup]="form" (ngSubmit)="submit()">
-    <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" />
-    <button pButton type="submit" icon="pi pi-envelope" [label]="i18n.t('login.submit')" [disabled]="form.invalid"></button>
+    <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" [disabled]="loading()" />
+    <button pButton type="submit" icon="pi pi-envelope" [label]="i18n.t('login.submit')" [disabled]="form.invalid || loading()" [loading]="loading()"></button>
   </form>
+  @if (loading()) {
+    <div class="loading-box">
+      <p-progressSpinner strokeWidth="4"></p-progressSpinner>
+    </div>
+  }
   <div class="dialog-actions login-actions">
     <a pButton severity="secondary" icon="pi pi-user-plus" [label]="i18n.t('login.teacherSignup')" routerLink="/teacher-signup"></a>
   </div>

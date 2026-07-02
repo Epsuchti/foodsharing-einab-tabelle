@@ -1,9 +1,8 @@
 package ch.it4user.foodsharing.repository;
 
-import ch.it4user.foodsharing.domain.entity.BookingUser;
 import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.Slot;
-import ch.it4user.foodsharing.domain.entity.Teacher;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.enumtype.EinAbCategory;
 import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
 import jakarta.persistence.LockModeType;
@@ -64,7 +63,7 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
           and s.status in :statuses
         order by s.einAb.startDateTime desc
         """)
-    List<Slot> findAllByBookingUsersAndStatuses(@Param("users") Collection<BookingUser> users,
+    List<Slot> findAllByBookingUsersAndStatuses(@Param("users") Collection<User> users,
                                                 @Param("statuses") Collection<SlotStatus> statuses);
 
     @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
@@ -75,7 +74,7 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
           and s.bookingUser.active = true
         order by s.einAb.startDateTime desc
         """)
-    List<Slot> findAllByActiveBookingUsersAndStatuses(@Param("users") Collection<BookingUser> users,
+    List<Slot> findAllByActiveBookingUsersAndStatuses(@Param("users") Collection<User> users,
                                                       @Param("statuses") Collection<SlotStatus> statuses);
 
     @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
@@ -85,7 +84,7 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
           and s.status in :statuses
         order by s.einAb.startDateTime desc
         """)
-    Page<Slot> findAllByBookingUserAndStatuses(@Param("bookingUser") BookingUser bookingUser,
+    Page<Slot> findAllByBookingUserAndStatuses(@Param("bookingUser") User bookingUser,
                                                @Param("statuses") Collection<SlotStatus> statuses,
                                                Pageable pageable);
 
@@ -96,26 +95,27 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
           and s.status in :statuses
         order by s.einAb.startDateTime desc
         """)
-    Page<Slot> findAllByTeacherAndStatuses(@Param("teacher") Teacher teacher,
+    Page<Slot> findAllByTeacherAndStatuses(@Param("teacher") User teacher,
                                            @Param("statuses") Collection<SlotStatus> statuses,
                                            Pageable pageable);
 
-    long countByBookingUserAndStatusIn(BookingUser bookingUser, Collection<SlotStatus> statuses);
+    long countByBookingUserAndStatusIn(User bookingUser, Collection<SlotStatus> statuses);
 
-    boolean existsByBookingUserAndStatusInAndEinAbTeacher(BookingUser bookingUser,
+    boolean existsByBookingUserAndStatusInAndEinAbTeacher(User bookingUser,
                                                            Collection<SlotStatus> statuses,
-                                                           Teacher teacher);
+                                                           User teacher);
 
-    boolean existsByBookingUserAndStatusInAndEinAbCategory(BookingUser bookingUser,
+    boolean existsByBookingUserAndStatusInAndEinAbCategory(User bookingUser,
                                                            Collection<SlotStatus> statuses,
                                                            EinAbCategory category);
 
-    long countByBookingUserAndStatus(BookingUser bookingUser, SlotStatus status);
+    long countByBookingUserAndStatus(User bookingUser, SlotStatus status);
 
     boolean existsByEinAbAndStatusIn(EinAb einAb, Collection<SlotStatus> statuses);
 
     List<Slot> findAllByEinAbOrderByCreatedAtAsc(EinAb einAb);
 
+    @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
     Optional<Slot> findByPendingConfirmationTokenHash(String tokenHash);
 
     List<Slot> findAllByStatusAndPendingConfirmationExpiresAtBefore(SlotStatus status, java.time.Instant expiresAt);

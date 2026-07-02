@@ -15,7 +15,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class Teacher extends BaseEntity {
+public class User extends BaseEntity {
 
     @Column(length = 255)
     private String email;
@@ -39,10 +39,9 @@ public class Teacher extends BaseEntity {
     private boolean admin = false;
 
     @Column(name = "is_teacher", nullable = false)
-    private boolean teacher = true;
+    private boolean teacher = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private LanguageCode preferredLanguage = LanguageCode.DE;
-
 }

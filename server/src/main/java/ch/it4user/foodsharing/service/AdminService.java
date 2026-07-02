@@ -1,13 +1,12 @@
 package ch.it4user.foodsharing.service;
 
 import ch.it4user.foodsharing.domain.entity.BookingComment;
-import ch.it4user.foodsharing.domain.entity.BookingUser;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.Slot;
-import ch.it4user.foodsharing.domain.entity.Teacher;
 import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
 import ch.it4user.foodsharing.repository.BookingCommentRepository;
-import ch.it4user.foodsharing.repository.BookingUserRepository;
+import ch.it4user.foodsharing.repository.UserRepository;
 import ch.it4user.foodsharing.repository.SlotRepository;
 import java.util.Collection;
 import java.util.Comparator;
@@ -27,30 +26,30 @@ public class AdminService {
     private final TeacherService teacherService;
     private final BookingUserService bookingUserService;
     private final SlotRepository slotRepository;
-    private final BookingUserRepository bookingUserRepository;
+    private final UserRepository userRepository;
     private final BookingCommentRepository bookingCommentRepository;
 
     public AdminService(TeacherService teacherService,
                         BookingUserService bookingUserService,
                         SlotRepository slotRepository,
-                        BookingUserRepository bookingUserRepository,
+                        UserRepository userRepository,
                         BookingCommentRepository bookingCommentRepository) {
         this.teacherService = teacherService;
         this.bookingUserService = bookingUserService;
         this.slotRepository = slotRepository;
-        this.bookingUserRepository = bookingUserRepository;
+        this.userRepository = userRepository;
         this.bookingCommentRepository = bookingCommentRepository;
     }
 
-    public Page<Teacher> getTeachers(int page, int size) {
+    public Page<User> getTeachers(int page, int size) {
         return teacherService.findAllTeachers(page, size);
     }
 
-    public Teacher setTeacherActive(java.util.UUID teacherId, boolean active) {
+    public User setTeacherActive(java.util.UUID teacherId, boolean active) {
         return teacherService.setTeacherActive(teacherId, active);
     }
 
-    public Teacher setTeacherAdmin(UUID teacherId, boolean admin) {
+    public User setTeacherAdmin(UUID teacherId, boolean admin) {
         return teacherService.setTeacherAdmin(teacherId, admin);
     }
 
@@ -67,19 +66,19 @@ public class AdminService {
     public AdminUsersView getUsers(int page, int size, boolean threePickupsOnly) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 100);
-        List<BookingUser> users = bookingUserRepository.findAllByActiveTrueOrderByCreatedAtDesc();
+        List<User> users = userRepository.findAllActiveBookingUsersOrderByCreatedAtDesc();
         Map<UUID, List<Slot>> bookingsByUser = groupBookings(users);
         Map<UUID, List<BookingComment>> commentsByUser = groupComments(users);
-        List<BookingUser> sortedUsers = users.stream()
+        List<User> sortedUsers = users.stream()
                 .filter(user -> !threePickupsOnly || bookingsByUser.getOrDefault(user.getId(), List.of()).size() >= 3)
                 .sorted(Comparator
-                        .comparing((BookingUser user) -> latestPickupAt(bookingsByUser.getOrDefault(user.getId(), List.of())),
+                        .comparing((User user) -> latestPickupAt(bookingsByUser.getOrDefault(user.getId(), List.of())),
                                 Comparator.nullsLast(Comparator.reverseOrder()))
-                        .thenComparing(BookingUser::getCreatedAt, Comparator.reverseOrder()))
+                        .thenComparing(User::getCreatedAt, Comparator.reverseOrder()))
                 .toList();
         int fromIndex = Math.min(safePage * safeSize, sortedUsers.size());
         int toIndex = Math.min(fromIndex + safeSize, sortedUsers.size());
-        Page<BookingUser> bookingUsers = new org.springframework.data.domain.PageImpl<>(
+        Page<User> bookingUsers = new org.springframework.data.domain.PageImpl<>(
                 sortedUsers.subList(fromIndex, toIndex),
                 org.springframework.data.domain.PageRequest.of(safePage, safeSize),
                 sortedUsers.size());
@@ -87,11 +86,11 @@ public class AdminService {
     }
 
     @Transactional
-    public BookingUser disableBookingUser(UUID bookingUserId) {
+    public User disableBookingUser(UUID bookingUserId) {
         return bookingUserService.disable(bookingUserId);
     }
 
-    private Map<UUID, List<Slot>> groupBookings(Collection<BookingUser> users) {
+    private Map<UUID, List<Slot>> groupBookings(Collection<User> users) {
         if (users.isEmpty()) {
             return Map.of();
         }
@@ -99,7 +98,7 @@ public class AdminService {
         return bookings.stream().collect(Collectors.groupingBy(slot -> slot.getBookingUser().getId()));
     }
 
-    private Map<UUID, List<BookingComment>> groupComments(Collection<BookingUser> users) {
+    private Map<UUID, List<BookingComment>> groupComments(Collection<User> users) {
         if (users.isEmpty()) {
             return Map.of();
         }
@@ -114,7 +113,7 @@ public class AdminService {
                 .orElse(null);
     }
 
-    public record AdminUsersView(Page<BookingUser> users,
+    public record AdminUsersView(Page<User> users,
                                  Map<UUID, List<Slot>> bookingsByUser,
                                  Map<UUID, List<BookingComment>> commentsByUser) {
     }

@@ -1,6 +1,6 @@
 package ch.it4user.foodsharing.service;
 
-import ch.it4user.foodsharing.domain.entity.BookingUser;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.entity.Slot;
 import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
 import ch.it4user.foodsharing.repository.SlotRepository;
@@ -24,14 +24,14 @@ public class UserService {
     }
 
     public Page<Slot> getBookingsByFoodsharingId(String foodsharingId, int page, int size) {
-        BookingUser bookingUser = bookingUserService.getByFoodsharingId(foodsharingId);
+        User bookingUser = bookingUserService.getByFoodsharingId(foodsharingId);
         return slotRepository.findAllByBookingUserAndStatuses(
                 bookingUser,
                 Set.of(SlotStatus.BOOKED, SlotStatus.DONE),
                 PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
     }
 
-    public BookingUser getProfileByFoodsharingId(String foodsharingId) {
+    public User getProfileByFoodsharingId(String foodsharingId) {
         return bookingUserService.getByFoodsharingId(foodsharingId);
     }
 

@@ -1,26 +1,24 @@
 package ch.it4user.foodsharing.domain.entity;
 
-import ch.it4user.foodsharing.domain.enumtype.FoodsharingPickupAutomationDecision;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "foodsharing_pickup_automation_audits")
+@Table(name = "foodsharing_store_pickups_cache", uniqueConstraints = @UniqueConstraint(name = "uk_foodsharing_store_pickups_cache_connection_store", columnNames = {"admin_connection_id", "store_id"}))
 @Getter
 @Setter
 @NoArgsConstructor
-public class FoodsharingPickupAutomationAudit extends BaseEntity {
+public class FoodsharingStorePickupsCache extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "admin_connection_id", nullable = false)
     private FoodsharingAdminConnection adminConnection;
@@ -28,22 +26,10 @@ public class FoodsharingPickupAutomationAudit extends BaseEntity {
     @Column(nullable = false)
     private long storeId;
 
-    @Column(nullable = false, length = 100)
-    private String foodsharingUserId;
-
     @Column(nullable = false)
-    private Instant pickupDate;
-
-    @Column(nullable = false)
-    private boolean dryRun;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 32)
-    private FoodsharingPickupAutomationDecision decision;
-
-    @Column(nullable = false, length = 4000)
-    private String reasons;
+    private Instant refreshedAt;
 
     @Lob
-    private String foodsharingError;
+    @Column(nullable = false)
+    private String payloadJson;
 }

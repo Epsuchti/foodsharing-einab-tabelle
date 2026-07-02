@@ -15,9 +15,6 @@ import java.time.Instant;
 @NoArgsConstructor
 public class LoginToken extends BaseEntity {
 
-    @Column(length = 255)
-    private String email;
-
     @Column(nullable = false, length = 100)
     private String foodsharingId;
 

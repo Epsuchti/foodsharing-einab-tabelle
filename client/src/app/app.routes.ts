@@ -3,6 +3,7 @@ import { Routes } from '@angular/router';
 import { UserRole } from './api';
 import { authGuard } from './core/auth.guard';
 import { AdminDashboardPageComponent } from './pages/admin-dashboard-page/admin-dashboard-page.component';
+import { AdminFoodsharingAutomationPageComponent } from './pages/admin-foodsharing-automation-page/admin-foodsharing-automation-page.component';
 import { ConfirmBookingPageComponent } from './pages/confirm-booking-page/confirm-booking-page.component';
 import { LoginPageComponent } from './pages/login-page/login-page.component';
 import { MyBookingsPageComponent } from './pages/my-bookings-page/my-bookings-page.component';
@@ -22,5 +23,6 @@ export const routes: Routes = [
   { path: 'teacher', component: TeacherDashboardPageComponent, canActivate: [authGuard], data: { roles: [UserRole.Teacher, UserRole.Admin] } },
   { path: 'teacher/bookings', component: TeacherBookingsPageComponent, canActivate: [authGuard], data: { roles: [UserRole.Teacher, UserRole.Admin] } },
   { path: 'admin', component: AdminDashboardPageComponent, canActivate: [authGuard], data: { roles: [UserRole.Admin] } },
+  { path: 'admin/foodsharing-automation', component: AdminFoodsharingAutomationPageComponent, canActivate: [authGuard], data: { roles: [UserRole.Admin] } },
   { path: '**', redirectTo: '' }
 ];

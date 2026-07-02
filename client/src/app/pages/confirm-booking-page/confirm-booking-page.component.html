@@ -5,6 +5,7 @@
   } @else if (error()) {
     <p class="empty-state">{{ error() }}</p>
   } @else if (booking()) {
+    <p class="empty-state">{{ i18n.t('book.confirmationWindowHint') }}</p>
     <div class="info-grid">
       <div><strong>{{ booking()?.bookingUser?.name }}</strong></div>
       <div>{{ booking()?.bookingUser?.foodsharingId }}</div>
@@ -14,8 +15,28 @@
     </p>
     <div class="stack-form">
       <div>
+        <span class="slot-card__label">{{ i18n.t('slots.teacher') }}</span>
+        <div>{{ booking()?.teacherName }}</div>
+      </div>
+      <div>
+        <span class="slot-card__label">{{ i18n.t('common.phoneNumber') }}</span>
+        <div>{{ booking()?.teacherPhoneNumber }}</div>
+      </div>
+      <div>
+        <span class="slot-card__label">{{ i18n.t('slots.category') }}</span>
+        <div>{{ i18n.categoryLabel(booking()!.category) }}</div>
+      </div>
+      <div>
+        <span class="slot-card__label">{{ i18n.t('slots.date') }}</span>
+        <div>{{ booking()!.startDateTime | zurichDateTime }}</div>
+      </div>
+      <div>
         <span class="slot-card__label">{{ i18n.t('common.location') }}</span>
         <div>{{ booking()?.location ?? '-' }}</div>
+      </div>
+      <div>
+        <span class="slot-card__label">{{ i18n.t('common.publicLocation') }}</span>
+        <div>{{ booking()?.publicLocation ?? '-' }}</div>
       </div>
       @if (booking()?.whatToBring) {
         <div>
@@ -29,6 +50,10 @@
           <div style="white-space: pre-wrap;">{{ booking()?.hint }}</div>
         </div>
       }
+      <div>
+        <span class="slot-card__label">{{ i18n.t('common.visitFairteiler') }}</span>
+        <div>{{ booking()?.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no') }}</div>
+      </div>
     </div>
   }
 </p-card>

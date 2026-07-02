@@ -1,0 +1,117 @@
+<section class="page-stack">
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('adminAutomation.title') }}</ng-template>
+
+    @if (!foodsharingStatus()?.connected) {
+      <div class="form-grid">
+        <label>
+          {{ i18n.t('common.email') }}
+          <input pInputText type="email" [ngModel]="foodsharingEmail()" (ngModelChange)="foodsharingEmail.set($event)">
+        </label>
+        <label>
+          {{ i18n.t('common.password') }}
+          <input pInputText type="password" [(ngModel)]="foodsharingPassword">
+        </label>
+        <button pButton type="button" [label]="i18n.t('adminAutomation.connect')" (click)="connectFoodsharing()"></button>
+      </div>
+    } @else {
+      <p>{{ i18n.t('adminAutomation.connectedAs') }} {{ foodsharingStatus()?.email }}.</p>
+      <div class="actions-cell">
+        <button pButton type="button" severity="secondary" [label]="i18n.t('adminAutomation.disconnect')" (click)="disconnectFoodsharing()"></button>
+        <button pButton type="button" [label]="i18n.t('adminAutomation.runDryRun')" (click)="runFoodsharingDryRun()"></button>
+      </div>
+
+      @if (foodsharingRunResult()) {
+        <p class="empty-state">
+          {{ i18n.t('adminAutomation.dryRunSummary') }}
+          {{ foodsharingRunResult()?.evaluated }},
+          {{ i18n.t('adminAutomation.dryRunWouldConfirm') }}
+          {{ foodsharingRunResult()?.confirmed }},
+          {{ i18n.t('adminAutomation.dryRunWouldDecline') }}
+          {{ foodsharingRunResult()?.declined }},
+          {{ i18n.t('adminAutomation.dryRunFailed') }}
+          {{ foodsharingRunResult()?.failed }}.
+        </p>
+      }
+
+      <h3>{{ i18n.t('adminAutomation.stores') }}</h3>
+      <p-table [value]="foodsharingStores()">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>{{ i18n.t('common.id') }}</th>
+            <th>{{ i18n.t('common.name') }}</th>
+            <th>{{ i18n.t('adminAutomation.enabled') }}</th>
+            <th>{{ i18n.t('adminAutomation.gapRule') }}</th>
+            <th>{{ i18n.t('adminAutomation.minimumGapDays') }}</th>
+            <th>{{ i18n.t('adminAutomation.cleaningRule') }}</th>
+            <th>{{ i18n.t('common.actions') }}</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-store>
+          <tr>
+            <td>{{ store.storeId }}</td>
+            <td>{{ store.storeName }}</td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="store.enabled"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="store.gapRuleEnabled"></p-checkbox></td>
+            <td><p-inputNumber [(ngModel)]="store.minimumGapDays" [min]="0" [showButtons]="true"></p-inputNumber></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="store.cleaningRuleEnabled"></p-checkbox></td>
+            <td><button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveFoodsharingStore(store)"></button></td>
+          </tr>
+        </ng-template>
+      </p-table>
+
+      <h3>{{ i18n.t('adminAutomation.futurePickupUsers') }}</h3>
+      <p-table [value]="foodsharingFuturePickupUsers()" [paginator]="true" [rows]="10" sortField="futurePickupCount" [sortOrder]="-1">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>{{ i18n.t('common.name') }}</th>
+            <th>{{ i18n.t('common.foodsharingId') }}</th>
+            <th pSortableColumn="futurePickupCount">{{ i18n.t('adminAutomation.futurePickupCount') }} <p-sortIcon field="futurePickupCount"></p-sortIcon></th>
+            <th>{{ i18n.t('adminAutomation.pickupDates') }}</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-user>
+          <tr>
+            <td>{{ user.name || '-' }}</td>
+            <td>{{ user.foodsharingUserId }}</td>
+            <td>{{ user.futurePickupCount }}</td>
+            <td>
+              @for (pickup of user.futurePickups; track pickup.storeId + '-' + pickup.pickupDate) {
+                <div>
+                  {{ pickup.pickupDate | date:'short' }} - {{ pickup.storeName }} ({{ pickup.storeId }})
+                  <p-tag [severity]="pickup.confirmed ? 'success' : 'warn'" [value]="pickup.confirmed ? i18n.t('adminAutomation.confirmed') : i18n.t('adminAutomation.pending')"></p-tag>
+                </div>
+              }
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+
+      <h3>{{ i18n.t('adminAutomation.audit') }}</h3>
+      <p-table [value]="foodsharingAudit()" [paginator]="true" [rows]="10">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>{{ i18n.t('adminAutomation.decision') }}</th>
+            <th>{{ i18n.t('adminAutomation.store') }}</th>
+            <th>{{ i18n.t('adminAutomation.user') }}</th>
+            <th>{{ i18n.t('adminAutomation.pickup') }}</th>
+            <th>{{ i18n.t('adminAutomation.dryRun') }}</th>
+            <th>{{ i18n.t('adminAutomation.reasons') }}</th>
+            <th>{{ i18n.t('common.error') }}</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-entry>
+          <tr>
+            <td><p-tag [value]="entry.decision"></p-tag></td>
+            <td>{{ entry.storeId }}</td>
+            <td>{{ entry.foodsharingUserId }}</td>
+            <td>{{ entry.pickupDate | date:'short' }}</td>
+            <td>{{ entry.dryRun ? i18n.t('common.yes') : i18n.t('common.no') }}</td>
+            <td>{{ entry.reasons }}</td>
+            <td>{{ entry.error || '-' }}</td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+  </p-card>
+</section>
