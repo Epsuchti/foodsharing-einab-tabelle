@@ -60,6 +60,7 @@ public class AppProperties {
         private String adminUser = "";
         private String adminPassword = "";
         private String tokenEncryptionKey = "";
+        private final Automation automation = new Automation();
 
         public String getBaseUrl() { return baseUrl; }
         public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
@@ -69,5 +70,22 @@ public class AppProperties {
         public void setAdminPassword(String adminPassword) { this.adminPassword = adminPassword; }
         public String getTokenEncryptionKey() { return tokenEncryptionKey; }
         public void setTokenEncryptionKey(String tokenEncryptionKey) { this.tokenEncryptionKey = tokenEncryptionKey; }
+        public Automation getAutomation() { return automation; }
+    }
+
+    public static class Automation {
+        private boolean enabled = true;
+        private boolean dryRun = true;
+        private long cleaningStoreId = 0;
+        private String pollInterval = "PT5M";
+
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        public boolean isDryRun() { return dryRun; }
+        public void setDryRun(boolean dryRun) { this.dryRun = dryRun; }
+        public long getCleaningStoreId() { return cleaningStoreId; }
+        public void setCleaningStoreId(long cleaningStoreId) { this.cleaningStoreId = cleaningStoreId; }
+        public String getPollInterval() { return pollInterval; }
+        public void setPollInterval(String pollInterval) { this.pollInterval = pollInterval; }
     }
 }
