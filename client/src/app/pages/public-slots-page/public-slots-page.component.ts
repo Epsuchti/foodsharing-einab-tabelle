@@ -12,7 +12,6 @@ import {
   BookingDetailResponse,
   BookingUserResponse,
   EinAbCategory,
-  NotificationSubscriptionRequest,
   PublicService,
   UserRole,
   UserService
@@ -70,7 +69,6 @@ export class PublicSlotsPageComponent implements OnInit {
   protected readonly slotsPage = signal<AvailableSlotListResponse | null>(null);
   protected readonly loading = signal(false);
   protected readonly bookingLoading = signal(false);
-  protected readonly subscribeLoading = signal(false);
   protected readonly bookingIdentityLocked = signal(false);
   protected readonly bookingProfile = signal<BookingUserResponse | null>(null);
   protected readonly bookingDetails = signal<BookingDetailResponse | null>(null);
@@ -83,14 +81,7 @@ export class PublicSlotsPageComponent implements OnInit {
   protected readonly pageSize = 20;
 
   protected readonly bookingForm = inject(FormBuilder).nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
-    name: ['', [Validators.required]],
-    foodsharingId: ['', [Validators.required]],
-    phoneNumber: ['', [Validators.required, Validators.minLength(3)]]
-  });
-
-  protected readonly subscriptionForm = inject(FormBuilder).nonNullable.group({
-    email: ['', [Validators.required, Validators.email]]
+    foodsharingId: ['', [Validators.required, Validators.pattern('^\\d+$')]]
   });
 
   private readonly publicApi = inject(PublicService);
@@ -167,7 +158,7 @@ export class PublicSlotsPageComponent implements OnInit {
     }
     this.bookingLoading.set(true);
     const bookSlotRequest: BookSlotRequest = {
-      ...this.bookingForm.getRawValue(),
+      foodsharingId: this.bookingForm.getRawValue().foodsharingId,
       language: this.i18n.apiLanguage()
     };
     this.publicApi.bookSlot({
@@ -176,32 +167,10 @@ export class PublicSlotsPageComponent implements OnInit {
     }).pipe(finalize(() => this.bookingLoading.set(false)))
       .subscribe({
         next: (response) => {
-          this.messageService.add({ severity: 'success', summary: this.i18n.t('book.success') });
+          this.messageService.add({ severity: 'success', summary: this.i18n.t('book.confirmationSent') });
           this.bookingVisible = false;
           this.bookingForm.reset();
-          this.bookingDetails.set(response);
-          this.bookingSuccessVisible = true;
           this.loadSlots();
-        },
-        error: (error) => this.toastError(resolveApiError(error, this.i18n))
-      });
-  }
-
-  subscribe(): void {
-    if (this.subscriptionForm.invalid) {
-      return;
-    }
-    this.subscribeLoading.set(true);
-    const notificationSubscriptionRequest: NotificationSubscriptionRequest = {
-      ...this.subscriptionForm.getRawValue(),
-      language: this.i18n.apiLanguage()
-    };
-    this.publicApi.subscribeNotifications({ notificationSubscriptionRequest })
-      .pipe(finalize(() => this.subscribeLoading.set(false)))
-      .subscribe({
-        next: () => {
-          this.messageService.add({ severity: 'success', summary: this.i18n.t('subscribe.success') });
-          this.subscriptionForm.reset();
         },
         error: (error) => this.toastError(resolveApiError(error, this.i18n))
       });
@@ -246,15 +215,9 @@ export class PublicSlotsPageComponent implements OnInit {
         this.bookingProfile.set(profile);
         this.bookingIdentityLocked.set(true);
         this.bookingForm.patchValue({
-          name: profile.name,
-          email: profile.email,
-          foodsharingId: profile.foodsharingId,
-          phoneNumber: profile.phoneNumber
+          foodsharingId: profile.foodsharingId
         });
-        this.bookingForm.controls.name.disable({ emitEvent: false });
-        this.bookingForm.controls.email.disable({ emitEvent: false });
         this.bookingForm.controls.foodsharingId.disable({ emitEvent: false });
-        this.bookingForm.controls.phoneNumber.disable({ emitEvent: false });
       }
     });
   }
@@ -262,13 +225,7 @@ export class PublicSlotsPageComponent implements OnInit {
   private applyLoggedOutBookingDefaults(): void {
     this.bookingProfile.set(null);
     this.bookingIdentityLocked.set(false);
-    this.bookingForm.controls.name.enable({ emitEvent: false });
-    this.bookingForm.controls.email.enable({ emitEvent: false });
     this.bookingForm.controls.foodsharingId.enable({ emitEvent: false });
-    this.bookingForm.controls.phoneNumber.enable({ emitEvent: false });
-    this.bookingForm.patchValue({
-      name: this.sessionService.session()?.displayName ?? '',
-      email: this.sessionService.session()?.email ?? ''
-    });
+    this.bookingForm.patchValue({ foodsharingId: this.sessionService.session()?.foodsharingId ?? '' });
   }
 }

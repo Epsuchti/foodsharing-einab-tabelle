@@ -9,13 +9,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TeacherRepository extends JpaRepository<Teacher, UUID> {
 
-    boolean existsByEmailIgnoreCase(String email);
-
     boolean existsByFoodsharingIdIgnoreCase(String foodsharingId);
-
-    Optional<Teacher> findByEmailIgnoreCase(String email);
 
     Optional<Teacher> findByFoodsharingIdIgnoreCase(String foodsharingId);
 
-    Page<Teacher> findAllByOrderByNameAsc(Pageable pageable);
+    Page<Teacher> findAllByTeacherTrueOrderByNameAsc(Pageable pageable);
 }

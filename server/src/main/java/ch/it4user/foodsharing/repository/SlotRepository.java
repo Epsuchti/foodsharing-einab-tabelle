@@ -115,4 +115,8 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
     boolean existsByEinAbAndStatusIn(EinAb einAb, Collection<SlotStatus> statuses);
 
     List<Slot> findAllByEinAbOrderByCreatedAtAsc(EinAb einAb);
+
+    Optional<Slot> findByPendingConfirmationTokenHash(String tokenHash);
+
+    List<Slot> findAllByStatusAndPendingConfirmationExpiresAtBefore(SlotStatus status, java.time.Instant expiresAt);
 }

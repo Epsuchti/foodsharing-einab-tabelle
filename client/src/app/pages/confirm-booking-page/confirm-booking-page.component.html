@@ -1,0 +1,34 @@
+<p-card>
+  <ng-template pTemplate="title">{{ i18n.t('book.confirmedTitle') }}</ng-template>
+  @if (loading()) {
+    <p-progressSpinner strokeWidth="4"></p-progressSpinner>
+  } @else if (error()) {
+    <p class="empty-state">{{ error() }}</p>
+  } @else if (booking()) {
+    <div class="info-grid">
+      <div><strong>{{ booking()?.bookingUser?.name }}</strong></div>
+      <div>{{ booking()?.bookingUser?.foodsharingId }}</div>
+    </div>
+    <p class="empty-state">
+      {{ i18n.categoryLabel(booking()!.category) }} - {{ booking()!.startDateTime | zurichDateTime }}
+    </p>
+    <div class="stack-form">
+      <div>
+        <span class="slot-card__label">{{ i18n.t('common.location') }}</span>
+        <div>{{ booking()?.location ?? '-' }}</div>
+      </div>
+      @if (booking()?.whatToBring) {
+        <div>
+          <span class="slot-card__label">{{ i18n.t('common.whatToBring') }}</span>
+          <div style="white-space: pre-wrap;">{{ booking()?.whatToBring }}</div>
+        </div>
+      }
+      @if (booking()?.hint) {
+        <div>
+          <span class="slot-card__label">{{ i18n.t('common.hint') }}</span>
+          <div style="white-space: pre-wrap;">{{ booking()?.hint }}</div>
+        </div>
+      }
+    </div>
+  }
+</p-card>

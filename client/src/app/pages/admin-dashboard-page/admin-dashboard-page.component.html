@@ -6,7 +6,6 @@
       <ng-template pTemplate="header">
         <tr>
           <th>{{ i18n.t('common.name') }}</th>
-          <th>{{ i18n.t('common.email') }}</th>
           <th>{{ i18n.t('common.phoneNumber') }}</th>
           <th>{{ i18n.t('common.status') }}</th>
           <th>{{ i18n.t('admin.adminFlag') }}</th>
@@ -16,7 +15,6 @@
       <ng-template pTemplate="body" let-teacher>
         <tr>
           <td>{{ teacher.name }}</td>
-          <td>{{ teacher.email }}</td>
           <td>{{ teacher.phoneNumber }}</td>
           <td><p-tag [severity]="teacher.active ? 'success' : 'warn'" [value]="teacher.active ? i18n.t('common.active') : i18n.t('common.inactive')"></p-tag></td>
           <td><p-tag [severity]="teacher.isAdmin ? 'contrast' : 'secondary'" [value]="teacher.isAdmin ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
@@ -135,7 +133,6 @@
               <div class="accordion-header">
                 <div class="accordion-header-main">
                   <strong>{{ user.user.name }}</strong>
-                  <span>{{ user.user.email }}</span>
                   <span>{{ user.user.foodsharingId }}</span>
                   <span>{{ user.user.phoneNumber }}</span>
                 </div>

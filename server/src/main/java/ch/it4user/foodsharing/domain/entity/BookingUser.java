@@ -11,13 +11,13 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "booking_users")
+@Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor
 public class BookingUser extends BaseEntity {
 
-    @Column(nullable = false, length = 255)
+    @Column(length = 255)
     private String email;
 
     @Column(nullable = false, length = 200)
@@ -26,11 +26,20 @@ public class BookingUser extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String foodsharingId;
 
-    @Column(nullable = false, length = 50)
+    @Column(length = 50)
     private String phoneNumber;
 
     @Column(nullable = false)
     private boolean active = true;
+
+    @Column(name = "is_admin", nullable = false)
+    private boolean admin = false;
+
+    @Column(name = "is_teacher", nullable = false)
+    private boolean teacher = false;
+
+    @Column(length = 2000)
+    private String icalLink;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)

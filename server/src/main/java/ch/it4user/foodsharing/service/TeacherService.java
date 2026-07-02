@@ -27,51 +27,43 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class TeacherService {
 
-    private static final Set<SlotStatus> BLOCKING_STATUSES = Set.of(SlotStatus.BOOKED, SlotStatus.DONE);
-    private static final String IMMUTABLE_ADMIN_EMAIL = "ez@it4user.ch";
+    private static final Set<SlotStatus> BLOCKING_STATUSES = Set.of(SlotStatus.PENDING_CONFIRMATION, SlotStatus.BOOKED, SlotStatus.DONE);
 
     private final TeacherRepository teacherRepository;
     private final EinAbRepository einAbRepository;
     private final SlotRepository slotRepository;
     private final BookingUserRepository bookingUserRepository;
     private final BookingCommentRepository bookingCommentRepository;
-    private final NotificationService notificationService;
     private final IcalImportService icalImportService;
+    private final FoodsharingClient foodsharingClient;
 
     public TeacherService(TeacherRepository teacherRepository,
                           EinAbRepository einAbRepository,
                           SlotRepository slotRepository,
                           BookingUserRepository bookingUserRepository,
                           BookingCommentRepository bookingCommentRepository,
-                          NotificationService notificationService,
-                          IcalImportService icalImportService) {
+                          IcalImportService icalImportService,
+                          FoodsharingClient foodsharingClient) {
         this.teacherRepository = teacherRepository;
         this.einAbRepository = einAbRepository;
         this.slotRepository = slotRepository;
         this.bookingUserRepository = bookingUserRepository;
         this.bookingCommentRepository = bookingCommentRepository;
-        this.notificationService = notificationService;
         this.icalImportService = icalImportService;
+        this.foodsharingClient = foodsharingClient;
     }
 
     @Transactional
-    public Teacher signup(String email, String foodsharingId, String name, String phoneNumber, String icalLink, LanguageCode language) {
-        if (teacherRepository.existsByEmailIgnoreCase(email.trim().toLowerCase())) {
-            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.TEACHER_EMAIL_ALREADY_EXISTS);
-        }
-        if (teacherRepository.existsByFoodsharingIdIgnoreCase(foodsharingId.trim())) {
-            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.TEACHER_FOODSHARING_ID_ALREADY_EXISTS);
-        }
-        Teacher teacher = new Teacher();
-        teacher.setEmail(email.trim().toLowerCase());
-        teacher.setFoodsharingId(foodsharingId.trim());
-        teacher.setName(name.trim());
-        teacher.setPhoneNumber(phoneNumber.trim());
+    public Teacher signup(String foodsharingId, String icalLink, LanguageCode language) {
+        String normalizedFoodsharingId = foodsharingId.trim();
+        FoodsharingUserInfo foodsharingUser = foodsharingClient.getUser(normalizedFoodsharingId);
+        Teacher teacher = teacherRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId).orElseGet(Teacher::new);
+        teacher.setFoodsharingId(foodsharingUser.foodsharingId());
+        teacher.setName(foodsharingUser.name());
+        teacher.setTeacher(true);
+        teacher.setActive(true);
         teacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
         teacher.setPreferredLanguage(language);
-        boolean immutableAdmin = IMMUTABLE_ADMIN_EMAIL.equalsIgnoreCase(teacher.getEmail());
-        teacher.setAdmin(immutableAdmin);
-        teacher.setActive(immutableAdmin);
         return teacherRepository.save(teacher);
     }
 
@@ -92,7 +84,7 @@ public class TeacherService {
     public Page<Slot> findTeacherBookings(Teacher teacher, int page, int size) {
         return slotRepository.findAllByTeacherAndStatuses(
                 teacher,
-                Set.of(SlotStatus.BOOKED, SlotStatus.DONE),
+                Set.of(SlotStatus.PENDING_CONFIRMATION, SlotStatus.BOOKED, SlotStatus.DONE),
                 PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
@@ -147,7 +139,6 @@ public class TeacherService {
         einAb.setMinimumPickupCount(normalizeMinimumPickupCount(minimumPickupCount));
         EinAb savedEinAb = einAbRepository.save(einAb);
         createSlots(savedEinAb, slotCount);
-        notificationService.notifyNewEinAb(savedEinAb);
         return savedEinAb;
     }
 
@@ -205,7 +196,7 @@ public class TeacherService {
     }
 
     public Page<Teacher> findAllTeachers(int page, int size) {
-        return teacherRepository.findAllByOrderByNameAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
+        return teacherRepository.findAllByTeacherTrueOrderByNameAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
     @Transactional
@@ -220,9 +211,6 @@ public class TeacherService {
     public Teacher setTeacherAdmin(UUID teacherId, boolean admin) {
         Teacher teacher = teacherRepository.findById(teacherId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
-        if (IMMUTABLE_ADMIN_EMAIL.equalsIgnoreCase(teacher.getEmail()) && !admin) {
-            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.DEFAULT_ADMIN_CANNOT_BE_CHANGED);
-        }
         teacher.setAdmin(admin);
         if (admin) {
             teacher.setActive(true);
@@ -240,7 +228,6 @@ public class TeacherService {
         if (slot.getStatus() != SlotStatus.BOOKED || slot.getBookingUser() == null) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.ONLY_BOOKED_APPOINTMENTS_CANCELLABLE);
         }
-        notificationService.notifyTeacherCancelledBooking(slot);
         slot.setStatus(SlotStatus.AVAILABLE);
         slot.setBookingUser(null);
         slot.setBookedAt(null);

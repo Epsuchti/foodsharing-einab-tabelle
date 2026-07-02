@@ -12,7 +12,6 @@
           <p-accordion-header>
             <div class="accordion-header">
               <strong>{{ group.name }}</strong>
-              <span>{{ group.email }}</span>
               <span>{{ group.foodsharingId }}</span>
               <span>{{ group.phoneNumber }}</span>
             </div>
@@ -80,7 +79,7 @@
   <form class="stack-form" [formGroup]="commentForm">
     <div>
       <strong>{{ commentTarget()?.name }}</strong>
-      <div>{{ commentTarget()?.email }} | {{ commentTarget()?.foodsharingId }} | {{ commentTarget()?.phoneNumber }}</div>
+      <div>{{ commentTarget()?.foodsharingId }}</div>
     </div>
 
     <label>

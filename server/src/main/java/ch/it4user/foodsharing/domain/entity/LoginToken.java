@@ -15,7 +15,7 @@ import java.time.Instant;
 @NoArgsConstructor
 public class LoginToken extends BaseEntity {
 
-    @Column(nullable = false, length = 255)
+    @Column(length = 255)
     private String email;
 
     @Column(nullable = false, length = 100)

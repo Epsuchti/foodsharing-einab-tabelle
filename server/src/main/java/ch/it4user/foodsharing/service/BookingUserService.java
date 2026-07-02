@@ -12,38 +12,31 @@ import org.springframework.transaction.annotation.Transactional;
 public class BookingUserService {
 
     private final BookingUserRepository bookingUserRepository;
+    private final FoodsharingClient foodsharingClient;
 
-    public BookingUserService(BookingUserRepository bookingUserRepository) {
+    public BookingUserService(BookingUserRepository bookingUserRepository, FoodsharingClient foodsharingClient) {
         this.bookingUserRepository = bookingUserRepository;
+        this.foodsharingClient = foodsharingClient;
     }
 
     @Transactional
-    public BookingUser getOrCreate(String email, String name, String foodsharingId, String phoneNumber, LanguageCode language) {
-        String normalizedEmail = email.trim().toLowerCase();
-        String normalizedName = name.trim();
-        String normalizedFoodsharingId = foodsharingId.trim();
-        String normalizedPhoneNumber = phoneNumber.trim();
-
-        bookingUserRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId)
-                .filter(user -> !user.isActive())
-                .ifPresent(user -> {
-                    throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.BOOKING_USER_DISABLED);
-                });
-
-        return bookingUserRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(normalizedFoodsharingId)
+    public BookingUser getOrCreate(String foodsharingId, LanguageCode language) {
+        String normalizedFoodsharingId = normalizeFoodsharingId(foodsharingId);
+        FoodsharingUserInfo foodsharingUser = foodsharingClient.getUser(normalizedFoodsharingId);
+        if (foodsharingUser.sleeping()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.BOOKING_USER_DISABLED);
+        }
+        return bookingUserRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId)
                 .map(existing -> {
-                    existing.setEmail(normalizedEmail);
-                    existing.setName(normalizedName);
-                    existing.setPhoneNumber(normalizedPhoneNumber);
+                    existing.setName(foodsharingUser.name());
+                    existing.setActive(true);
                     existing.setPreferredLanguage(language);
                     return existing;
                 })
                 .orElseGet(() -> {
                     BookingUser bookingUser = new BookingUser();
-                    bookingUser.setEmail(normalizedEmail);
-                    bookingUser.setName(normalizedName);
+                    bookingUser.setName(foodsharingUser.name());
                     bookingUser.setFoodsharingId(normalizedFoodsharingId);
-                    bookingUser.setPhoneNumber(normalizedPhoneNumber);
                     bookingUser.setActive(true);
                     bookingUser.setPreferredLanguage(language);
                     return bookingUserRepository.save(bookingUser);
@@ -51,7 +44,7 @@ public class BookingUserService {
     }
 
     public BookingUser getByFoodsharingId(String foodsharingId) {
-        return bookingUserRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(foodsharingId)
+        return bookingUserRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(normalizeFoodsharingId(foodsharingId))
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_USER_NOT_FOUND));
     }
 
@@ -60,6 +53,14 @@ public class BookingUserService {
         BookingUser bookingUser = bookingUserRepository.findById(bookingUserId)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_USER_NOT_FOUND));
         bookingUser.setActive(false);
-        return bookingUserRepository.save(bookingUser);
+        return bookingUser;
+    }
+
+    private String normalizeFoodsharingId(String foodsharingId) {
+        String normalized = foodsharingId == null ? "" : foodsharingId.trim();
+        if (!normalized.matches("\\d+")) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED);
+        }
+        return normalized;
     }
 }
