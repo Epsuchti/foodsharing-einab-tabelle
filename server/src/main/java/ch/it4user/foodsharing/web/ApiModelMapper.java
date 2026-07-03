@@ -4,6 +4,7 @@ import ch.it4user.foodsharing.domain.entity.BookingComment;
 import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.Slot;
 import ch.it4user.foodsharing.domain.entity.User;
+import ch.it4user.foodsharing.domain.entity.NotificationSubscription;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserResponse;
 import ch.it4user.foodsharing.openapi.model.AdminEinAbListResponse;
@@ -22,6 +23,7 @@ import ch.it4user.foodsharing.openapi.model.TeacherEinAbResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSelfResponse;
+import ch.it4user.foodsharing.openapi.model.NotificationSubscriptionResponse;
 import ch.it4user.foodsharing.service.AdminService;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -50,6 +52,13 @@ public class ApiModelMapper {
         response.setLanguage(ch.it4user.foodsharing.openapi.model.Language.fromValue(teacher.getPreferredLanguage().getCode()));
         response.setCreatedAt(toOffsetDateTime(teacher.getCreatedAt()));
         response.setUpdatedAt(toOffsetDateTime(teacher.getUpdatedAt()));
+        return response;
+    }
+
+    public NotificationSubscriptionResponse toNotificationSubscriptionResponse(NotificationSubscription subscription) {
+        NotificationSubscriptionResponse response = new NotificationSubscriptionResponse();
+        response.setEmail(subscription.getEmail());
+        response.setActive(subscription.isActive());
         return response;
     }
 

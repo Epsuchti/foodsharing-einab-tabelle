@@ -1,0 +1,12 @@
+<section class="page-stack">
+  <p-card>
+    <ng-template pTemplate="title">{{ title() }}</ng-template>
+    @if (loading()) {
+      <div class="loading-box">
+        <p-progressSpinner strokeWidth="4"></p-progressSpinner>
+      </div>
+    } @else {
+      <p>{{ message() }}</p>
+    }
+  </p-card>
+</section>

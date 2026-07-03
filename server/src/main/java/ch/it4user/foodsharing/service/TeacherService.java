@@ -9,6 +9,7 @@ import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
 import ch.it4user.foodsharing.repository.EinAbRepository;
 import ch.it4user.foodsharing.repository.BookingCommentRepository;
+import ch.it4user.foodsharing.service.EinAbCreatedEvent;
 import ch.it4user.foodsharing.repository.UserRepository;
 import ch.it4user.foodsharing.repository.SlotRepository;
 import java.time.Instant;
@@ -18,6 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,19 +35,22 @@ public class TeacherService {
     private final BookingCommentRepository bookingCommentRepository;
     private final IcalImportService icalImportService;
     private final FoodsharingClient foodsharingClient;
+    private final ApplicationEventPublisher eventPublisher;
 
     public TeacherService(UserRepository userRepository,
                           EinAbRepository einAbRepository,
                           SlotRepository slotRepository,
                           BookingCommentRepository bookingCommentRepository,
                           IcalImportService icalImportService,
-                          FoodsharingClient foodsharingClient) {
+                          FoodsharingClient foodsharingClient,
+                          ApplicationEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.einAbRepository = einAbRepository;
         this.slotRepository = slotRepository;
         this.bookingCommentRepository = bookingCommentRepository;
         this.icalImportService = icalImportService;
         this.foodsharingClient = foodsharingClient;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -136,7 +141,9 @@ public class TeacherService {
         einAb.setMinimumPickupCount(normalizeMinimumPickupCount(minimumPickupCount));
         EinAb savedEinAb = einAbRepository.save(einAb);
         createSlots(savedEinAb, slotCount);
-        return reloadEinAbWithTeacher(savedEinAb.getId());
+        EinAb reloadedEinAb = reloadEinAbWithTeacher(savedEinAb.getId());
+        eventPublisher.publishEvent(new EinAbCreatedEvent(reloadedEinAb.getId()));
+        return reloadedEinAb;
     }
 
     @Transactional

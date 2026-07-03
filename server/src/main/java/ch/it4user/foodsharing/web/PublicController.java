@@ -7,13 +7,18 @@ import ch.it4user.foodsharing.openapi.model.BookingDetailResponse;
 import ch.it4user.foodsharing.openapi.model.AuthResponse;
 import ch.it4user.foodsharing.openapi.model.EinAbCategory;
 import ch.it4user.foodsharing.openapi.model.Language;
+import ch.it4user.foodsharing.openapi.model.NotificationSubscriptionRequest;
+import ch.it4user.foodsharing.openapi.model.NotificationSubscriptionResponse;
+import ch.it4user.foodsharing.openapi.model.NotificationUnsubscribeRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSignupRequest;
 import ch.it4user.foodsharing.service.AuthService;
 import ch.it4user.foodsharing.service.PublicService;
+import ch.it4user.foodsharing.service.NewsletterService;
 import ch.it4user.foodsharing.service.TeacherService;
 import java.util.Optional;
 import org.springframework.http.ResponseEntity;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -23,15 +28,18 @@ public class PublicController implements PublicApi {
 
     private final PublicService publicService;
     private final TeacherService teacherService;
+    private final NewsletterService newsletterService;
     private final AuthService authService;
     private final ApiModelMapper mapper;
 
     public PublicController(PublicService publicService,
                             TeacherService teacherService,
+                            NewsletterService newsletterService,
                             AuthService authService,
                             ApiModelMapper mapper) {
         this.publicService = publicService;
         this.teacherService = teacherService;
+        this.newsletterService = newsletterService;
         this.authService = authService;
         this.mapper = mapper;
     }
@@ -79,6 +87,18 @@ public class PublicController implements PublicApi {
                 mapLanguage(teacherSignupRequest.getLanguage())
         ));
         return ResponseEntity.status(201).body(response);
+    }
+
+    @Override
+    public ResponseEntity<NotificationSubscriptionResponse> subscribeNotifications(@Valid NotificationSubscriptionRequest notificationSubscriptionRequest) {
+        return ResponseEntity.ok(mapper.toNotificationSubscriptionResponse(
+                newsletterService.subscribe(notificationSubscriptionRequest.getEmail(), mapLanguage(notificationSubscriptionRequest.getLanguage()))));
+    }
+
+    @Override
+    public ResponseEntity<NotificationSubscriptionResponse> unsubscribeNotifications(NotificationUnsubscribeRequest notificationUnsubscribeRequest) {
+        return ResponseEntity.ok(mapper.toNotificationSubscriptionResponse(
+                newsletterService.unsubscribe(notificationUnsubscribeRequest.getToken())));
     }
 
     private ch.it4user.foodsharing.domain.enumtype.EinAbCategory mapCategory(EinAbCategory category) {

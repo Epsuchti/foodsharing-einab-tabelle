@@ -1,8 +1,22 @@
 <p-card>
   <ng-template pTemplate="title">{{ i18n.t('login.title') }}</ng-template>
-  <p>{{ i18n.t('login.hint') }}</p>
+  <p>
+    {{ i18n.t('login.hintPrefix') }}
+    <a href="https://foodsharing.network" target="_blank" rel="noopener">foodsharing.network</a>
+    {{ i18n.t('login.hintSuffix') }}
+  </p>
   <form class="stack-form" [formGroup]="form" (ngSubmit)="submit()">
-    <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" [disabled]="loading()" />
+    <div class="foodsharing-id-field">
+      <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" [disabled]="loading()" />
+      <a
+        pButton
+        severity="secondary"
+        [text]="true"
+        icon="pi pi-question-circle"
+        [label]="i18n.t('common.foodsharingIdHelpLink')"
+        routerLink="/foodsharing-id"
+        class="foodsharing-id-help-link"></a>
+    </div>
     <button pButton type="submit" icon="pi pi-envelope" [label]="i18n.t('login.submit')" [disabled]="form.invalid || loading()" [loading]="loading()"></button>
   </form>
   @if (loading()) {

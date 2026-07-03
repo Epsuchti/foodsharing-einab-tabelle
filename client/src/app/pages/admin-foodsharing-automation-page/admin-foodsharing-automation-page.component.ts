@@ -136,7 +136,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
 
 interface FoodsharingConnectionStatus { connected: boolean; email?: string; foodsharingUserId?: string; authenticatedAt?: string; }
 interface FoodsharingStoreAutomation { storeId: number; storeName: string; enabled: boolean; gapRuleEnabled: boolean; minimumGapDays: number; cleaningRuleEnabled: boolean; }
-interface FoodsharingAutomationAudit { storeId: number; storeName: string; foodsharingUserId: string; pickupDate: string; dryRun: boolean; decision: string; reasons: string; userMessage?: string; error?: string; createdAt: string; }
+interface FoodsharingAutomationAudit { storeId: number; storeName: string; foodsharingUserId: string; foodsharingUserName?: string | null; pickupDate: string; dryRun: boolean; decision: string; reasons: string; userMessage?: string; error?: string; createdAt: string; }
 interface FoodsharingFuturePickupUser { foodsharingUserId: string; name: string; futurePickupCount: number; futurePickups: FoodsharingFuturePickup[]; }
 interface FoodsharingFuturePickup { storeId: number; storeName: string; pickupDate: string; confirmed: boolean; }
 interface FoodsharingRunResult { evaluated: number; confirmed: number; declined: number; failed: number; dryRun: boolean; messages: string[]; }

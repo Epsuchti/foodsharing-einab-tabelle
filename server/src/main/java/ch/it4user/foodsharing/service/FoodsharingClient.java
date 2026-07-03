@@ -3,6 +3,9 @@ package ch.it4user.foodsharing.service;
 import ch.it4user.foodsharing.domain.entity.FoodsharingApiSession;
 import ch.it4user.foodsharing.repository.FoodsharingApiSessionRepository;
 import java.time.Instant;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +54,7 @@ public class FoodsharingClient {
     private Map<?, ?> authenticatedGet(String path, Object uriVariable, boolean retried) {
         SessionData session = session();
         try {
-            logRequest("GET", path, uriVariable);
+            logRequest("GET", path, session, uriVariable);
             return restClient.get().uri(path, uriVariable).headers(h -> applySession(h, session)).retrieve().body(Map.class);
         } catch (HttpClientErrorException ex) {
             if (shouldReauthenticate(ex, retried)) { authenticate(); return authenticatedGet(path, uriVariable, true); }
@@ -63,7 +66,7 @@ public class FoodsharingClient {
     private Map<?, ?> authenticatedPost(String path, Object request, boolean retried, Object... uriVariables) {
         SessionData session = session();
         try {
-            logRequest("POST", path, uriVariables);
+            logRequest("POST", path, session, uriVariables);
             return restClient.post().uri(path, uriVariables).contentType(MediaType.APPLICATION_JSON)
                     .headers(h -> applySession(h, session)).body(request).retrieve().body(Map.class);
         } catch (HttpClientErrorException ex) {
@@ -97,11 +100,19 @@ public class FoodsharingClient {
 
     @Transactional
     public SessionData authenticate() {
-        log.info("Foodsharing request: POST /api/login");
+        if (appProperties.getFoodsharing().getAdminUser() == null || appProperties.getFoodsharing().getAdminUser().isBlank()
+                || appProperties.getFoodsharing().getAdminPassword() == null || appProperties.getFoodsharing().getAdminPassword().isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Foodsharing admin user and password are required."));
+        }
+        log.info("Foodsharing request: POST /api/login user={}", appProperties.getFoodsharing().getAdminUser());
         var response = restClient.post().uri("/api/login").contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("email", appProperties.getFoodsharing().getAdminUser(), "password", appProperties.getFoodsharing().getAdminPassword(), "rememberMe", true))
                 .retrieve().toEntity(Map.class);
         SessionData sessionData = extractSessionData(response.getHeaders().getOrEmpty(HttpHeaders.SET_COOKIE), response.getBody());
+        log.info("Foodsharing auth established user={} cookie={} csrf={}",
+                appProperties.getFoodsharing().getAdminUser(),
+                fingerprint(sessionData.cookie()),
+                fingerprint(sessionData.csrfToken()));
         sessionRepository.deleteAll();
         FoodsharingApiSession session = new FoodsharingApiSession();
         session.setSessionCookieCiphertext(cryptoService.encrypt(sessionData.cookie()));
@@ -111,12 +122,17 @@ public class FoodsharingClient {
         return sessionData;
     }
 
-    private void logRequest(String method, String path, Object... uriVariables) {
+    private void logRequest(String method, String path, SessionData session, Object... uriVariables) {
         String resolvedPath = path;
         for (Object uriVariable : uriVariables) {
             resolvedPath = resolvedPath.replaceFirst("\\{[^}]+\\}", String.valueOf(uriVariable));
         }
-        log.info("Foodsharing request: {} {}", method, resolvedPath);
+        log.info("Foodsharing request: {} {} user={} cookie={} csrf={}",
+                method,
+                resolvedPath,
+                appProperties.getFoodsharing().getAdminUser(),
+                fingerprint(session.cookie()),
+                fingerprint(session.csrfToken()));
     }
 
     private SessionData extractSessionData(List<String> setCookies, Map<?, ?> responseBody) {
@@ -133,6 +149,23 @@ public class FoodsharingClient {
             csrf = String.valueOf(responseBody.get("csrfToken"));
         }
         return new SessionData(String.join("; ", cookiePairs), csrf);
+    }
+
+    private static String fingerprint(String value) {
+        if (value == null || value.isBlank()) {
+            return "-";
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder builder = new StringBuilder();
+            for (int i = 0; i < 6 && i < hash.length; i++) {
+                builder.append(String.format("%02x", hash[i]));
+            }
+            return builder.toString();
+        } catch (NoSuchAlgorithmException ex) {
+            return Integer.toHexString(value.hashCode());
+        }
     }
 
     private record SessionData(String cookie, String csrfToken) {}

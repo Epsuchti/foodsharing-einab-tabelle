@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
+import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { catchError, of } from 'rxjs';
 
@@ -12,6 +13,7 @@ import {
   BookingDetailResponse,
   BookingUserResponse,
   EinAbCategory,
+  NotificationSubscriptionRequest,
   PublicService,
   UserRole,
   UserService
@@ -43,6 +45,7 @@ const FOODSHARING_BASE_URL = 'https://foodsharing.network';
     CommonModule,
     FormsModule,
     ReactiveFormsModule,
+    RouterLink,
     ZurichDateTimePipe,
     TableModule,
     CardModule,
@@ -71,6 +74,7 @@ export class PublicSlotsPageComponent implements OnInit {
   protected readonly slotsPage = signal<AvailableSlotListResponse | null>(null);
   protected readonly loading = signal(false);
   protected readonly bookingLoading = signal(false);
+  protected readonly subscribeLoading = signal(false);
   protected readonly bookingIdentityLocked = signal(false);
   protected readonly bookingProfile = signal<BookingUserResponse | null>(null);
   protected readonly bookingDetails = signal<BookingDetailResponse | null>(null);
@@ -81,6 +85,9 @@ export class PublicSlotsPageComponent implements OnInit {
   protected fairteilerOnly = false;
   protected selectedCategory?: EinAbCategory;
   protected readonly pageSize = 20;
+  protected readonly subscriptionForm = inject(FormBuilder).nonNullable.group({
+    email: ['', [Validators.required, Validators.email]]
+  });
 
   protected readonly bookingForm = inject(FormBuilder).nonNullable.group({
     foodsharingId: ['', [Validators.required, Validators.pattern('^\\d+$')]]
@@ -169,6 +176,26 @@ export class PublicSlotsPageComponent implements OnInit {
           this.bookingVisible = false;
           this.bookingForm.reset();
           this.loadSlots();
+        },
+        error: (error) => this.toastError(resolveApiError(error, this.i18n))
+      });
+  }
+
+  subscribe(): void {
+    if (this.subscriptionForm.invalid) {
+      return;
+    }
+    this.subscribeLoading.set(true);
+    const notificationSubscriptionRequest: NotificationSubscriptionRequest = {
+      email: this.subscriptionForm.getRawValue().email,
+      language: this.i18n.apiLanguage()
+    };
+    this.publicApi.subscribeNotifications({ notificationSubscriptionRequest })
+      .pipe(finalize(() => this.subscribeLoading.set(false)))
+      .subscribe({
+        next: () => {
+          this.messageService.add({ severity: 'success', summary: this.i18n.t('subscribe.success') });
+          this.subscriptionForm.reset({ email: '' });
         },
         error: (error) => this.toastError(resolveApiError(error, this.i18n))
       });

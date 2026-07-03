@@ -106,7 +106,7 @@
           <tr>
             <td><p-tag [value]="entry.decision"></p-tag></td>
             <td>{{ entry.storeName }}</td>
-            <td>{{ entry.foodsharingUserId }}</td>
+            <td>{{ entry.foodsharingUserName || entry.foodsharingUserId }}</td>
             <td>{{ entry.pickupDate | date:'dd.MM.yyyy HH:mm':'Europe/Zurich' }}</td>
             <td>{{ entry.dryRun ? i18n.t('common.yes') : i18n.t('common.no') }}</td>
             <td>{{ entry.reasons }}</td>

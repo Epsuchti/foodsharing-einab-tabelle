@@ -1,13 +1,19 @@
 package ch.it4user.foodsharing.service;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+
+@Validated
 @ConfigurationProperties(prefix = "app")
 public class AppProperties {
 
     private final Auth auth = new Auth();
     private final Frontend frontend = new Frontend();
     private final Foodsharing foodsharing = new Foodsharing();
+    private final Mail mail = new Mail();
 
     public Auth getAuth() {
         return auth;
@@ -17,8 +23,13 @@ public class AppProperties {
         return frontend;
     }
 
+    @Valid
     public Foodsharing getFoodsharing() {
         return foodsharing;
+    }
+
+    public Mail getMail() {
+        return mail;
     }
 
     public static class Auth {
@@ -66,7 +77,9 @@ public class AppProperties {
 
     public static class Foodsharing {
         private String baseUrl = "https://foodsharing.network";
+        @NotBlank
         private String adminUser = "";
+        @NotBlank
         private String adminPassword = "";
         private String tokenEncryptionKey = "";
         private final Automation automation = new Automation();
@@ -108,5 +121,17 @@ public class AppProperties {
         public void setStorePickupCacheTtl(String storePickupCacheTtl) { this.storePickupCacheTtl = storePickupCacheTtl; }
         public String getStoreMembersCacheTtl() { return storeMembersCacheTtl; }
         public void setStoreMembersCacheTtl(String storeMembersCacheTtl) { this.storeMembersCacheTtl = storeMembersCacheTtl; }
+    }
+
+    public static class Mail {
+        private String from = "noreply@foodsharing.network";
+
+        public String getFrom() {
+            return from;
+        }
+
+        public void setFrom(String from) {
+            this.from = from;
+        }
     }
 }

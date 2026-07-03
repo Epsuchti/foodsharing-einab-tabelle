@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 import { PublicService, TeacherSignupRequest } from '../../api';
 import { resolveApiError } from '../../core/api-error';
@@ -13,7 +14,7 @@ import { MessageService } from 'primeng/api';
 @Component({
   selector: 'app-teacher-signup-page',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, CardModule, ButtonModule, InputTextModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, CardModule, ButtonModule, InputTextModule],
   templateUrl: './teacher-signup-page.component.html'
 })
 export class TeacherSignupPageComponent {

@@ -1,0 +1,22 @@
+<section class="page-stack foodsharing-id-help">
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('foodsharingIdHelp.title') }}</ng-template>
+    <p>{{ i18n.t('foodsharingIdHelp.intro') }}</p>
+
+    <ol class="foodsharing-id-help__steps">
+      <li>
+        {{ i18n.t('foodsharingIdHelp.step1Prefix') }}
+        <a href="https://foodsharing.network" target="_blank" rel="noopener">foodsharing.network</a>
+        {{ i18n.t('foodsharingIdHelp.step1Suffix') }}
+      </li>
+      <li>{{ i18n.t('foodsharingIdHelp.step2') }}</li>
+      <li>{{ i18n.t('foodsharingIdHelp.step3') }}</li>
+      <li>{{ i18n.t('foodsharingIdHelp.step4') }}</li>
+    </ol>
+
+    <figure class="foodsharing-id-help__figure">
+      <img class="foodsharing-id-help__image" src="/images/foodsharing-id-guide.png" [alt]="i18n.t('foodsharingIdHelp.imageAlt')" />
+      <figcaption>{{ i18n.t('foodsharingIdHelp.imageCaption') }}</figcaption>
+    </figure>
+  </p-card>
+</section>

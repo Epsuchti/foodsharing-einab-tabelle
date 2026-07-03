@@ -31,6 +31,9 @@ public class FoodsharingPickupAutomationAudit extends BaseEntity {
     @Column(nullable = false, length = 100)
     private String foodsharingUserId;
 
+    @Column(length = 255)
+    private String foodsharingUserName;
+
     @Column(nullable = false)
     private Instant pickupDate;
 

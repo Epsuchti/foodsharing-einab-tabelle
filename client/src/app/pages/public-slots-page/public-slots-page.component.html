@@ -100,6 +100,17 @@
     }
   </p-card>
 
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('slots.subscribeTitle') }}</ng-template>
+    <p>{{ i18n.t('slots.subscribeHint') }}</p>
+    <form class="stack-form" [formGroup]="subscriptionForm" (ngSubmit)="subscribe()">
+      <input id="subscriptionEmail" pInputText type="email" formControlName="email" [placeholder]="i18n.t('slots.subscribeEmail')" />
+      <div class="dialog-actions">
+        <button pButton type="submit" icon="pi pi-bell" [label]="i18n.t('slots.subscribeButton')" [loading]="subscribeLoading()" [disabled]="subscriptionForm.invalid"></button>
+      </div>
+    </form>
+  </p-card>
+
 </section>
 
 <p-dialog [(visible)]="bookingVisible" [modal]="true" [header]="i18n.t('book.dialogTitle')" [style]="{ width: '32rem', maxWidth: '95vw' }">
@@ -113,7 +124,17 @@
         <div>{{ bookingProfile()?.foodsharingId }}</div>
       </div>
     } @else {
-      <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" />
+      <div class="foodsharing-id-field">
+        <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" />
+        <a
+          pButton
+          severity="secondary"
+          [text]="true"
+          icon="pi pi-question-circle"
+          [label]="i18n.t('common.foodsharingIdHelpLink')"
+          routerLink="/foodsharing-id"
+          class="foodsharing-id-help-link"></a>
+      </div>
     }
     <div class="dialog-actions">
       <button pButton type="button" severity="secondary" [label]="i18n.t('common.cancel')" (click)="bookingVisible = false"></button>

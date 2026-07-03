@@ -2,7 +2,17 @@
   <ng-template pTemplate="title">{{ i18n.t('teacherSignup.title') }}</ng-template>
   <p>{{ i18n.t('teacherSignup.hint') }}</p>
   <form class="stack-form" [formGroup]="form" (ngSubmit)="submit()">
-    <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" />
+    <div class="foodsharing-id-field">
+      <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" />
+      <a
+        pButton
+        severity="secondary"
+        [text]="true"
+        icon="pi pi-question-circle"
+        [label]="i18n.t('common.foodsharingIdHelpLink')"
+        routerLink="/foodsharing-id"
+        class="foodsharing-id-help-link"></a>
+    </div>
     <input pInputText formControlName="icalLink" [placeholder]="i18n.t('common.icalLink')" />
     <button pButton type="submit" [label]="i18n.t('common.save')" [disabled]="form.invalid"></button>
   </form>

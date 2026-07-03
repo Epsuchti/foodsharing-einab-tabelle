@@ -177,6 +177,17 @@ p {
   width: 100%;
 }
 
+.foodsharing-id-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.foodsharing-id-help-link {
+  justify-self: start;
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .stack-form textarea {
   resize: vertical;
 }
