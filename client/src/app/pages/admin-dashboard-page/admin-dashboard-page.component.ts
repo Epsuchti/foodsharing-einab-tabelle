@@ -53,6 +53,8 @@ export class AdminDashboardPageComponent implements OnInit {
 
   protected readonly teachers = signal<TeacherResponse[]>([]);
   protected readonly teachersPage = signal<TeacherListResponse | null>(null);
+  protected readonly admins = signal<TeacherResponse[]>([]);
+  protected readonly adminsPage = signal<TeacherListResponse | null>(null);
   protected readonly einAbs = signal<EinAbResponse[]>([]);
   protected readonly einAbsPage = signal<AdminEinAbListResponse | null>(null);
   protected readonly bookings = signal<BookingDetailResponse[]>([]);
@@ -76,6 +78,13 @@ export class AdminDashboardPageComponent implements OnInit {
       next: (response) => {
         this.teachers.set(response.teachers);
         this.teachersPage.set(response);
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+    this.adminApi.getAdminAdmins({ page: this.adminsPage()?.page ?? 0, size: this.pageSize }).subscribe({
+      next: (response) => {
+        this.admins.set(response.teachers);
+        this.adminsPage.set(response);
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
@@ -128,6 +137,35 @@ export class AdminDashboardPageComponent implements OnInit {
     });
   }
 
+  toggleAdminUserActive(adminUser: TeacherResponse, active: boolean): void {
+    this.confirmationService.confirm({
+      message: this.i18n.t(active ? 'confirm.enableTeacher' : 'confirm.disableTeacher'),
+      accept: () => {
+        this.confirmationService.close();
+        const request$ = active
+          ? this.adminApi.enableAdminUser({ adminUserId: adminUser.id })
+          : this.adminApi.disableAdminUser({ adminUserId: adminUser.id });
+        request$.subscribe({
+          next: () => this.reload(),
+          error: (error) => this.toastError(resolveApiError(error, this.i18n))
+        });
+      }
+    });
+  }
+
+  revokeAdminUser(adminUser: TeacherResponse): void {
+    this.confirmationService.confirm({
+      message: this.i18n.t('confirm.revokeAdmin'),
+      accept: () => {
+        this.confirmationService.close();
+        this.adminApi.revokeAdminUser({ adminUserId: adminUser.id }).subscribe({
+          next: () => this.reload(),
+          error: (error) => this.toastError(resolveApiError(error, this.i18n))
+        });
+      }
+    });
+  }
+
   loadUsersPage(page: number): void {
     this.usersLoading.set(true);
     this.adminApi.getAdminUsers({
@@ -148,6 +186,11 @@ export class AdminDashboardPageComponent implements OnInit {
 
   onTeachersPageChange(event: { page?: number }): void {
     this.teachersPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
+    this.reload();
+  }
+
+  onAdminsPageChange(event: { page?: number }): void {
+    this.adminsPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
     this.reload();
   }
 
@@ -176,6 +219,19 @@ export class AdminDashboardPageComponent implements OnInit {
       accept: () => {
         this.confirmationService.close();
         this.adminApi.disableAdminBookingUser({ bookingUserId: user.user.id }).subscribe({
+          next: () => this.reload(),
+          error: (error) => this.toastError(resolveApiError(error, this.i18n))
+        });
+      }
+    });
+  }
+
+  makeBookingUserAdmin(user: AdminBookingUserResponse): void {
+    this.confirmationService.confirm({
+      message: this.i18n.t('confirm.grantAdmin'),
+      accept: () => {
+        this.confirmationService.close();
+        this.adminApi.grantAdminBookingUser({ bookingUserId: user.user.id }).subscribe({
           next: () => this.reload(),
           error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });

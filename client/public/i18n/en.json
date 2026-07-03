@@ -113,6 +113,7 @@
   "teacher.useCandidate": "Use candidate",
   "teacher.cancelBookedSlot": "Cancel booking",
   "admin.title": "Admin dashboard",
+  "admin.admins": "Admins",
   "admin.teachers": "EinAb givers",
   "admin.einabs": "EinAbs",
   "admin.bookings": "Bookings",

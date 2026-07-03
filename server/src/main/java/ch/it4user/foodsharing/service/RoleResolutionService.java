@@ -22,11 +22,11 @@ public class RoleResolutionService {
             if (user.isActive()) {
                 roles.add(UserRole.USER);
             }
+            if (user.isAdmin()) {
+                roles.add(UserRole.ADMIN);
+            }
             if (user.isTeacher()) {
                 roles.add(UserRole.TEACHER);
-                if (user.isAdmin()) {
-                    roles.add(UserRole.ADMIN);
-                }
             }
         });
         return roles;

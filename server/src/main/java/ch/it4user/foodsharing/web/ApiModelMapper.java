@@ -84,6 +84,7 @@ public class ApiModelMapper {
         response.setFoodsharingId(bookingUser.getFoodsharingId());
         response.setPhoneNumber(bookingUser.getPhoneNumber());
         response.setLanguage(ch.it4user.foodsharing.openapi.model.Language.fromValue(bookingUser.getPreferredLanguage().getCode()));
+        response.setIsAdmin(bookingUser.isAdmin());
         response.setCreatedAt(toOffsetDateTime(bookingUser.getCreatedAt()));
         response.setUpdatedAt(toOffsetDateTime(bookingUser.getUpdatedAt()));
         return response;

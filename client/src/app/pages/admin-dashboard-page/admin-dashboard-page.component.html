@@ -1,6 +1,50 @@
 <section class="page-stack">
   <p-card>
     <ng-template pTemplate="title">{{ i18n.t('admin.title') }}</ng-template>
+    <h3>{{ i18n.t('admin.admins') }}</h3>
+    <p-table [value]="admins()">
+      <ng-template pTemplate="header">
+        <tr>
+          <th>{{ i18n.t('common.name') }}</th>
+          <th>{{ i18n.t('common.phoneNumber') }}</th>
+          <th>{{ i18n.t('common.status') }}</th>
+          <th>{{ i18n.t('admin.requested') }}</th>
+          <th>{{ i18n.t('admin.adminFlag') }}</th>
+          <th>{{ i18n.t('common.actions') }}</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-admin>
+        <tr>
+          <td>{{ admin.name }}</td>
+          <td>{{ admin.phoneNumber }}</td>
+          <td><p-tag [severity]="admin.active ? 'success' : 'warn'" [value]="admin.active ? i18n.t('common.active') : i18n.t('common.inactive')"></p-tag></td>
+          <td><p-tag [severity]="admin.wantsToBeTeacher ? 'warn' : 'secondary'" [value]="admin.wantsToBeTeacher ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
+          <td><p-tag [severity]="admin.isAdmin ? 'contrast' : 'secondary'" [value]="admin.isAdmin ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
+          <td class="actions-cell">
+            @if (admin.active) {
+              <button pButton size="small" severity="danger" [label]="i18n.t('admin.disable')" (click)="toggleAdminUserActive(admin, false)"></button>
+            } @else {
+              <button pButton size="small" [label]="i18n.t('admin.enable')" (click)="toggleAdminUserActive(admin, true)"></button>
+            }
+            @if (admin.isAdmin) {
+              <button pButton size="small" severity="secondary" [label]="i18n.t('admin.revokeAdmin')" (click)="revokeAdminUser(admin)"></button>
+            }
+          </td>
+        </tr>
+      </ng-template>
+    </p-table>
+    <p-paginator
+      [rows]="pageSize"
+      [totalRecords]="adminsPage()?.totalElements ?? 0"
+      [first]="(adminsPage()?.page ?? 0) * pageSize"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="{first} - {last} / {totalRecords}"
+      (onPageChange)="onAdminsPageChange($event)">
+    </p-paginator>
+  </p-card>
+
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('admin.title') }}</ng-template>
     <h3>{{ i18n.t('admin.teachers') }}</h3>
     <p-table [value]="teachers()">
       <ng-template pTemplate="header">
@@ -144,6 +188,9 @@
             <p-accordion-content>
               <div class="accordion-actions">
                 <button pButton type="button" icon="pi pi-ban" severity="danger" [label]="i18n.t('admin.disableBookingUser')" (click)="disableBookingUser(user)"></button>
+                @if (!user.user.isAdmin) {
+                  <button pButton type="button" icon="pi pi-shield" severity="contrast" [label]="i18n.t('admin.makeAdmin')" (click)="makeBookingUserAdmin(user)"></button>
+                }
               </div>
 
               <h4>{{ i18n.t('admin.userPickups') }}</h4>

@@ -45,6 +45,11 @@ public class AdminService {
         return teacherService.findAllTeachers(page, size);
     }
 
+    public Page<User> getAdmins(int page, int size) {
+        return userRepository.findAllByAdminTrueOrderByNameAsc(
+                org.springframework.data.domain.PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
+    }
+
     public User setTeacherActive(java.util.UUID teacherId, boolean active) {
         return teacherService.setTeacherActive(teacherId, active);
     }
@@ -88,6 +93,41 @@ public class AdminService {
     @Transactional
     public User disableBookingUser(UUID bookingUserId) {
         return bookingUserService.disable(bookingUserId);
+    }
+
+    @Transactional
+    public User grantBookingUserAdmin(UUID bookingUserId) {
+        User bookingUser = userRepository.findById(bookingUserId)
+                .filter(User::isActive)
+                .filter(user -> !user.isTeacher())
+                .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_USER_NOT_FOUND));
+        bookingUser.setAdmin(true);
+        bookingUser.setActive(true);
+        return bookingUser;
+    }
+
+    @Transactional
+    public User setAdminActive(UUID adminUserId, boolean active) {
+        User adminUser = userRepository.findById(adminUserId)
+                .filter(User::isAdmin)
+                .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND));
+        if (adminUser.isTeacher() || adminUser.isWantsToBeTeacher()) {
+            return teacherService.setTeacherActive(adminUserId, active);
+        }
+        adminUser.setActive(active);
+        return adminUser;
+    }
+
+    @Transactional
+    public User setAdminAdmin(UUID adminUserId, boolean admin) {
+        User adminUser = userRepository.findById(adminUserId)
+                .filter(User::isAdmin)
+                .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND));
+        adminUser.setAdmin(admin);
+        if (admin) {
+            adminUser.setActive(true);
+        }
+        return adminUser;
     }
 
     private Map<UUID, List<Slot>> groupBookings(Collection<User> users) {

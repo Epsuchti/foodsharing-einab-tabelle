@@ -549,6 +549,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TeacherResponse'
+  /api/admin/admins:
+    get:
+      tags: [admin]
+      operationId: getAdminAdmins
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: All admins
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherListResponse'
   /api/admin/einabs:
     get:
       tags: [admin]
@@ -638,6 +660,81 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BookingUserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/users/{bookingUserId}/grant-admin:
+    put:
+      tags: [admin]
+      operationId: grantAdminBookingUser
+      parameters:
+        - $ref: '#/components/parameters/BookingUserId'
+      responses:
+        '200':
+          description: Granted admin to user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingUserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/admins/{adminUserId}/enable:
+    put:
+      tags: [admin]
+      operationId: enableAdminUser
+      parameters:
+        - name: adminUserId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Enabled admin user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/admins/{adminUserId}/disable:
+    put:
+      tags: [admin]
+      operationId: disableAdminUser
+      parameters:
+        - name: adminUserId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Disabled admin user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/admins/{adminUserId}/revoke-admin:
+    put:
+      tags: [admin]
+      operationId: revokeAdminUser
+      parameters:
+        - name: adminUserId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Admin revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherResponse'
         '404':
           $ref: '#/components/responses/NotFound'
 components:
@@ -899,7 +996,7 @@ components:
           $ref: '#/components/schemas/Language'
     BookingUserResponse:
       type: object
-      required: [id, name, foodsharingId, language, createdAt, updatedAt]
+      required: [id, name, foodsharingId, language, isAdmin, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -915,6 +1012,8 @@ components:
           type: string
         language:
           $ref: '#/components/schemas/Language'
+        isAdmin:
+          type: boolean
         createdAt:
           type: string
           format: date-time

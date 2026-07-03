@@ -38,6 +38,11 @@ public class AdminController implements AdminApi {
     }
 
     @Override
+    public ResponseEntity<TeacherListResponse> getAdminAdmins(Integer page, Integer size) {
+        return ResponseEntity.ok(mapper.toTeacherListResponse(adminService.getAdmins(page == null ? 0 : page, size == null ? 20 : size)));
+    }
+
+    @Override
     public ResponseEntity<TeacherResponse> enableAdminTeacher(UUID teacherId) {
         return ResponseEntity.ok(mapper.toTeacherResponse(adminService.setTeacherActive(teacherId, true)));
     }
@@ -78,6 +83,26 @@ public class AdminController implements AdminApi {
     @Override
     public ResponseEntity<BookingUserResponse> disableAdminBookingUser(UUID bookingUserId) {
         return ResponseEntity.ok(mapper.toBookingUserResponse(adminService.disableBookingUser(bookingUserId)));
+    }
+
+    @Override
+    public ResponseEntity<BookingUserResponse> grantAdminBookingUser(UUID bookingUserId) {
+        return ResponseEntity.ok(mapper.toBookingUserResponse(adminService.grantBookingUserAdmin(bookingUserId)));
+    }
+
+    @Override
+    public ResponseEntity<TeacherResponse> enableAdminUser(UUID adminUserId) {
+        return ResponseEntity.ok(mapper.toTeacherResponse(adminService.setAdminActive(adminUserId, true)));
+    }
+
+    @Override
+    public ResponseEntity<TeacherResponse> disableAdminUser(UUID adminUserId) {
+        return ResponseEntity.ok(mapper.toTeacherResponse(adminService.setAdminActive(adminUserId, false)));
+    }
+
+    @Override
+    public ResponseEntity<TeacherResponse> revokeAdminUser(UUID adminUserId) {
+        return ResponseEntity.ok(mapper.toTeacherResponse(adminService.setAdminAdmin(adminUserId, false)));
     }
 
     @PostMapping("/api/admin/foodsharing/connect")
