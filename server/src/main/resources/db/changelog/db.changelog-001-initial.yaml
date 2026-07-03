@@ -162,7 +162,7 @@ databaseChangeLog:
               - column: {name: admin_user_id, type: UUID, constraints: {nullable: false, unique: true}}
               - column: {name: foodsharing_user_id, type: VARCHAR(100)}
               - column: {name: foodsharing_email, type: VARCHAR(255), constraints: {nullable: false}}
-              - column: {name: foodsharing_password_ciphertext, type: TEXT}
+              - column: {name: foodsharing_password_ciphertext, type: VARCHAR(32600)}
               - column: {name: session_cookie_ciphertext, type: TEXT}
               - column: {name: csrf_token_ciphertext, type: TEXT}
               - column: {name: authenticated_at, type: TIMESTAMP WITH TIME ZONE}
