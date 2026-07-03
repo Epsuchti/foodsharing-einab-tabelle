@@ -31,6 +31,9 @@ public class FoodsharingAdminConnection extends BaseEntity {
     private String foodsharingEmail;
 
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)
+    private String foodsharingPasswordCiphertext;
+
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     private String sessionCookieCiphertext;
 
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)

@@ -1,6 +1,7 @@
 package ch.it4user.foodsharing.service;
 
 import ch.it4user.foodsharing.domain.entity.FoodsharingAdminConnection;
+import ch.it4user.foodsharing.repository.FoodsharingAdminConnectionRepository;
 import java.time.Instant;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 @Service
@@ -21,9 +23,11 @@ public class FoodsharingPickupApiClient {
     private static final Logger log = LoggerFactory.getLogger(FoodsharingPickupApiClient.class);
     private final RestClient restClient;
     private final CryptoService cryptoService;
+    private final FoodsharingAdminConnectionRepository connectionRepository;
 
-    public FoodsharingPickupApiClient(AppProperties appProperties, CryptoService cryptoService) {
+    public FoodsharingPickupApiClient(AppProperties appProperties, CryptoService cryptoService, FoodsharingAdminConnectionRepository connectionRepository) {
         this.cryptoService = cryptoService;
+        this.connectionRepository = connectionRepository;
         this.restClient = RestClient.builder().baseUrl(appProperties.getFoodsharing().getBaseUrl()).build();
     }
 
@@ -49,7 +53,7 @@ public class FoodsharingPickupApiClient {
 
     @SuppressWarnings("unchecked")
     public List<FoodsharingPickupModels.Store> stores(FoodsharingAdminConnection connection) {
-        Object body = get(connection, "GET", "/api/users/current/stores?excludeInactive=true", Object.class);
+        Object body = get(connection, "GET", "/api/users/current/stores?excludeInactive=true", Object.class, false);
         return asList(body).stream()
                 .map(v -> (Map<?, ?>) v)
                 .map(m -> new FoodsharingPickupModels.Store(
@@ -61,7 +65,7 @@ public class FoodsharingPickupApiClient {
 
     @SuppressWarnings("unchecked")
     public List<FoodsharingPickupModels.Pickup> pickups(FoodsharingAdminConnection connection, long storeId) {
-        Object body = get(connection, "GET", "/api/stores/{storeId}/pickups", Object.class, storeId);
+        Object body = get(connection, "GET", "/api/stores/{storeId}/pickups", Object.class, false, storeId);
         List<FoodsharingPickupModels.Pickup> result = new ArrayList<>();
         for (Object item : asList(body)) {
             Map<?, ?> pickup = (Map<?, ?>) item;
@@ -79,7 +83,7 @@ public class FoodsharingPickupApiClient {
 
     @SuppressWarnings("unchecked")
     public List<FoodsharingPickupModels.StoreMember> members(FoodsharingAdminConnection connection, long storeId) {
-        Object body = get(connection, "GET", "/api/stores/{storeId}/members", Object.class, storeId);
+        Object body = get(connection, "GET", "/api/stores/{storeId}/members", Object.class, false, storeId);
         List<FoodsharingPickupModels.StoreMember> result = new ArrayList<>();
         for (Object item : asList(body)) {
             Map<?, ?> member = (Map<?, ?>) item;
@@ -93,32 +97,79 @@ public class FoodsharingPickupApiClient {
     }
 
     public void confirm(FoodsharingAdminConnection connection, long storeId, Instant pickupDate, String userId) {
-        log.info("Foodsharing request: PATCH /api/stores/{}/pickups/{}/users/{} user={} cookie={} csrf={}",
-                storeId, format(pickupDate), userId, connection.getFoodsharingEmail(),
-                fingerprint(cookie(connection)),
-                fingerprint(csrfToken(connection)));
-        restClient.patch().uri("/api/stores/{storeId}/pickups/{pickupDate}/users/{userId}", storeId, format(pickupDate), userId)
-                .headers(h -> apply(h, connection)).retrieve().toBodilessEntity();
+        runWithSessionRetry(connection, false, () -> {
+            log.info("Foodsharing request: PATCH /api/stores/{}/pickups/{}/users/{} user={} cookie={} csrf={}",
+                    storeId, format(pickupDate), userId, connection.getFoodsharingEmail(),
+                    fingerprint(cookie(connection)),
+                    fingerprint(csrfToken(connection)));
+            restClient.patch().uri("/api/stores/{storeId}/pickups/{pickupDate}/users/{userId}", storeId, format(pickupDate), userId)
+                    .headers(h -> apply(h, connection)).retrieve().toBodilessEntity();
+            return null;
+        });
     }
 
     public void decline(FoodsharingAdminConnection connection, long storeId, Instant pickupDate, String userId, String message) {
-        log.info("Foodsharing request: DELETE /api/stores/{}/pickups/{}/users/{} user={} cookie={} csrf={}",
-                storeId, format(pickupDate), userId, connection.getFoodsharingEmail(),
-                fingerprint(cookie(connection)),
-                fingerprint(csrfToken(connection)));
-        restClient.method(org.springframework.http.HttpMethod.DELETE).uri("/api/stores/{storeId}/pickups/{pickupDate}/users/{userId}", storeId, format(pickupDate), userId)
-                .contentType(MediaType.APPLICATION_JSON).headers(h -> apply(h, connection))
-                .body(Map.of("message", message, "sendKickMessage", true)).retrieve().toBodilessEntity();
+        runWithSessionRetry(connection, false, () -> {
+            log.info("Foodsharing request: DELETE /api/stores/{}/pickups/{}/users/{} user={} cookie={} csrf={}",
+                    storeId, format(pickupDate), userId, connection.getFoodsharingEmail(),
+                    fingerprint(cookie(connection)),
+                    fingerprint(csrfToken(connection)));
+            restClient.method(org.springframework.http.HttpMethod.DELETE).uri("/api/stores/{storeId}/pickups/{pickupDate}/users/{userId}", storeId, format(pickupDate), userId)
+                    .contentType(MediaType.APPLICATION_JSON).headers(h -> apply(h, connection))
+                    .body(Map.of("message", message, "sendKickMessage", true)).retrieve().toBodilessEntity();
+            return null;
+        });
     }
 
-    private <T> T get(FoodsharingAdminConnection c, String method, String uri, Class<T> type, Object... vars) {
-        log.info("Foodsharing request: {} {} user={} cookie={} csrf={}",
-                method,
-                String.format(uri.replace("{storeId}", "%s").replace("{pickupDate}", "%s").replace("{userId}", "%s"), vars),
-                c.getFoodsharingEmail(),
-                fingerprint(cookie(c)),
-                fingerprint(csrfToken(c)));
-        return restClient.get().uri(uri, vars).headers(h -> apply(h, c)).retrieve().body(type);
+    private <T> T get(FoodsharingAdminConnection c, String method, String uri, Class<T> type, boolean retried, Object... vars) {
+        return runWithSessionRetry(c, retried, () -> {
+            log.info("Foodsharing request: {} {} user={} cookie={} csrf={}",
+                    method,
+                    String.format(uri.replace("{storeId}", "%s").replace("{pickupDate}", "%s").replace("{userId}", "%s"), vars),
+                    c.getFoodsharingEmail(),
+                    fingerprint(cookie(c)),
+                    fingerprint(csrfToken(c)));
+            return restClient.get().uri(uri, vars).headers(h -> apply(h, c)).retrieve().body(type);
+        });
+    }
+
+    private <T> T runWithSessionRetry(FoodsharingAdminConnection connection, boolean retried, RequestAction<T> action) {
+        try {
+            return action.run();
+        } catch (HttpClientErrorException ex) {
+            if (shouldReauthenticate(ex, retried)) {
+                reauthenticate(connection);
+                return runWithSessionRetry(connection, true, action);
+            }
+            throw ex;
+        }
+    }
+
+    private boolean shouldReauthenticate(HttpClientErrorException ex, boolean retried) {
+        if (retried) {
+            return false;
+        }
+        if (ex.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+            return true;
+        }
+        return ex.getStatusCode() == HttpStatus.BAD_REQUEST
+                && ex.getResponseBodyAsString() != null
+                && ex.getResponseBodyAsString().contains("CSRF Failed");
+    }
+
+    private void reauthenticate(FoodsharingAdminConnection connection) {
+        String password = cryptoService.decrypt(connection.getFoodsharingPasswordCiphertext());
+        if (password == null || password.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Foodsharing connection expired and cannot be refreshed. Reconnect Foodsharing."));
+        }
+        log.info("Foodsharing automation session expired, re-authenticating admin={} foodsharingUserId={} email={}",
+                connection.getAdminUser().getId(), connection.getFoodsharingUserId(), connection.getFoodsharingEmail());
+        Session session = login(connection.getFoodsharingEmail(), password);
+        connection.setFoodsharingUserId(session.foodsharingUserId());
+        connection.setSessionCookieCiphertext(cryptoService.encrypt(session.cookie()));
+        connection.setCsrfTokenCiphertext(cryptoService.encrypt(session.csrf()));
+        connection.setAuthenticatedAt(Instant.now());
+        connectionRepository.save(connection);
     }
     private void apply(HttpHeaders h, FoodsharingAdminConnection c) {
         String cookie = cookie(c);
@@ -135,6 +186,11 @@ public class FoodsharingPickupApiClient {
             return csrf;
         }
         return cookieValue(cookie(c), "FS_CSRF_TOKEN");
+    }
+
+    @FunctionalInterface
+    private interface RequestAction<T> {
+        T run();
     }
     private String format(Instant i) { return i.toString().replaceAll("Z$", ".000Z").replaceAll("\\.([0-9]{3})[0-9]*Z$", ".$1Z"); }
     private static List<?> asList(Object o) { return o instanceof List<?> l ? l : List.of(); }
