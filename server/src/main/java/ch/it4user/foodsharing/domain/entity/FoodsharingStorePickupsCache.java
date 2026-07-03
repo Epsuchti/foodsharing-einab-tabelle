@@ -4,7 +4,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -12,6 +11,8 @@ import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "foodsharing_store_pickups_cache", uniqueConstraints = @UniqueConstraint(name = "uk_foodsharing_store_pickups_cache_connection_store", columnNames = {"admin_connection_id", "store_id"}))
@@ -29,7 +30,7 @@ public class FoodsharingStorePickupsCache extends BaseEntity {
     @Column(nullable = false)
     private Instant refreshedAt;
 
-    @Lob
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     @Column(nullable = false)
     private String payloadJson;
 }

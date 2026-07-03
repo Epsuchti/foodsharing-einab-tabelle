@@ -7,13 +7,14 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "foodsharing_pickup_automation_audits")
@@ -47,9 +48,9 @@ public class FoodsharingPickupAutomationAudit extends BaseEntity {
     @Column(nullable = false, length = 4000)
     private String reasons;
 
-    @Lob
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     private String userMessage;
 
-    @Lob
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     private String foodsharingError;
 }

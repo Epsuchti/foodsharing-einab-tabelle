@@ -303,3 +303,44 @@ databaseChangeLog:
               - column:
                   name: foodsharing_user_name
                   type: VARCHAR(255)
+  - changeSet:
+      id: 002-fix-h2-long-text-columns
+      author: codex
+      dbms: h2
+      changes:
+        - modifyDataType:
+            tableName: foodsharing_api_sessions
+            columnName: session_cookie_ciphertext
+            newDataType: VARCHAR(32600)
+        - modifyDataType:
+            tableName: foodsharing_api_sessions
+            columnName: csrf_token_ciphertext
+            newDataType: VARCHAR(32600)
+        - modifyDataType:
+            tableName: foodsharing_admin_connections
+            columnName: session_cookie_ciphertext
+            newDataType: VARCHAR(32600)
+        - modifyDataType:
+            tableName: foodsharing_admin_connections
+            columnName: csrf_token_ciphertext
+            newDataType: VARCHAR(32600)
+        - modifyDataType:
+            tableName: foodsharing_future_pickup_users_cache
+            columnName: payload_json
+            newDataType: VARCHAR(32600)
+        - modifyDataType:
+            tableName: foodsharing_store_pickups_cache
+            columnName: payload_json
+            newDataType: VARCHAR(32600)
+        - modifyDataType:
+            tableName: foodsharing_store_members_cache
+            columnName: payload_json
+            newDataType: VARCHAR(32600)
+        - modifyDataType:
+            tableName: foodsharing_pickup_automation_audits
+            columnName: user_message
+            newDataType: VARCHAR(32600)
+        - modifyDataType:
+            tableName: foodsharing_pickup_automation_audits
+            columnName: foodsharing_error
+            newDataType: VARCHAR(32600)
