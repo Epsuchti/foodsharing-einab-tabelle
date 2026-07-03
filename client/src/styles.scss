@@ -94,6 +94,17 @@ p {
   text-align: center;
 }
 
+.success-state {
+  display: grid;
+  place-items: center;
+  padding: 1rem 1.25rem;
+  text-align: center;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #14532d;
+}
+
 .toolbar-row,
 .dialog-actions,
 .actions-cell,

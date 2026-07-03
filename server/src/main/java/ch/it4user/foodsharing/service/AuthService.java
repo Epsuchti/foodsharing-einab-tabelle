@@ -15,6 +15,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
@@ -84,23 +85,45 @@ public class AuthService {
             throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.LOGIN_TOKEN_EXPIRED_OR_USED);
         }
 
-        Set<UserRole> roles = roleResolutionService.resolveRoles(loginToken.getFoodsharingId());
+        loginToken.setUsedAt(Instant.now());
+        return createAuthResponse(loginToken.getFoodsharingId());
+    }
+
+    public Optional<AuthResponse> authenticateFoodsharingIdIfPossible(String foodsharingId) {
+        try {
+            return Optional.of(createAuthResponse(foodsharingId));
+        } catch (ApiException exception) {
+            if (exception.getCode() == ApiErrorCode.ACCOUNT_NOT_FOUND) {
+                return Optional.empty();
+            }
+            throw exception;
+        }
+    }
+
+    private LoginTarget resolveLoginTarget(String foodsharingId) {
+        String normalizedFoodsharingId = foodsharingId.trim();
+        User user = userRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(normalizedFoodsharingId)
+                .orElseGet(() -> bookingUserService.getOrCreate(normalizedFoodsharingId, LanguageCode.DE));
+        return new LoginTarget(user.getFoodsharingId(), user.getPreferredLanguage());
+    }
+
+    private AuthResponse createAuthResponse(String foodsharingId) {
+        Set<UserRole> roles = roleResolutionService.resolveRoles(foodsharingId);
         if (roles.isEmpty()) {
             throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ACCOUNT_NOT_FOUND);
         }
 
-        loginToken.setUsedAt(Instant.now());
         String rawAuthToken = tokenService.generateToken();
         AuthSession authSession = new AuthSession();
-        authSession.setFoodsharingId(loginToken.getFoodsharingId());
+        authSession.setFoodsharingId(foodsharingId);
         authSession.setTokenHash(tokenService.hash(rawAuthToken));
         authSession.setRoles(roles.stream().map(Enum::name).sorted().collect(Collectors.joining(",")));
         authSession.setExpiresAt(Instant.now().plus(appProperties.getAuth().getTokenValidityDays(), ChronoUnit.DAYS));
         authSessionRepository.save(authSession);
 
-        String displayName = userRepository.findByFoodsharingIdIgnoreCase(loginToken.getFoodsharingId())
+        String displayName = userRepository.findByFoodsharingIdIgnoreCase(foodsharingId)
                 .map(User::getName)
-                .orElse(loginToken.getFoodsharingId());
+                .orElse(foodsharingId);
 
         AuthResponse response = new AuthResponse();
         response.setAuthToken(rawAuthToken);
@@ -113,13 +136,6 @@ public class AuthService {
                 .map(role -> ch.it4user.foodsharing.openapi.model.UserRole.fromValue(role.name()))
                 .toList());
         return response;
-    }
-
-    private LoginTarget resolveLoginTarget(String foodsharingId) {
-        String normalizedFoodsharingId = foodsharingId.trim();
-        User user = userRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(normalizedFoodsharingId)
-                .orElseGet(() -> bookingUserService.getOrCreate(normalizedFoodsharingId, LanguageCode.DE));
-        return new LoginTarget(user.getFoodsharingId(), user.getPreferredLanguage());
     }
 
     private record LoginTarget(String foodsharingId, LanguageCode language) {

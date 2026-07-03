@@ -65,7 +65,7 @@ public class AppProperties {
     }
 
     public static class Foodsharing {
-        private String baseUrl = "https://foodsharing.de";
+        private String baseUrl = "https://foodsharing.network";
         private String adminUser = "";
         private String adminPassword = "";
         private String tokenEncryptionKey = "";
@@ -86,6 +86,7 @@ public class AppProperties {
         private boolean enabled = true;
         private boolean dryRun = true;
         private long cleaningStoreId = 0;
+        private int cleaningBackCheckMonths = 6;
         private String pollInterval = "PT5M";
         private String futurePickupCacheTtl = "PT15M";
         private String storePickupCacheTtl = "PT1M";
@@ -97,6 +98,8 @@ public class AppProperties {
         public void setDryRun(boolean dryRun) { this.dryRun = dryRun; }
         public long getCleaningStoreId() { return cleaningStoreId; }
         public void setCleaningStoreId(long cleaningStoreId) { this.cleaningStoreId = cleaningStoreId; }
+        public int getCleaningBackCheckMonths() { return cleaningBackCheckMonths; }
+        public void setCleaningBackCheckMonths(int cleaningBackCheckMonths) { this.cleaningBackCheckMonths = cleaningBackCheckMonths; }
         public String getPollInterval() { return pollInterval; }
         public void setPollInterval(String pollInterval) { this.pollInterval = pollInterval; }
         public String getFuturePickupCacheTtl() { return futurePickupCacheTtl; }

@@ -34,6 +34,8 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { ConfirmationService, MessageService } from 'primeng/api';
 
+const FOODSHARING_BASE_URL = 'https://foodsharing.network';
+
 @Component({
   selector: 'app-public-slots-page',
   standalone: true,
@@ -130,26 +132,22 @@ export class PublicSlotsPageComponent implements OnInit {
     if (!this.selectedSlot || this.bookingForm.invalid) {
       return;
     }
-    if (!this.sessionService.isAuthenticated()) {
-      this.bookingVisible = false;
-      this.confirmationService.confirm({
-        header: this.i18n.t('book.guestConfirmTitle'),
-        message: this.i18n.t('book.guestConfirmMessage'),
-        acceptLabel: this.i18n.t('common.yes'),
-        rejectLabel: this.i18n.t('common.no'),
-        accept: () => {
-          this.confirmationService.close();
-          this.performBooking();
-        },
-        reject: () => {
-          this.confirmationService.close();
-          this.bookingVisible = true;
-        }
-      });
-      return;
-    }
-
-    this.performBooking();
+    this.bookingVisible = false;
+    this.confirmationService.confirm({
+      header: this.i18n.t('book.guestConfirmTitle'),
+      message: this.i18n.t('book.guestConfirmMessage'),
+      acceptLabel: this.i18n.t('common.yes'),
+      rejectLabel: this.i18n.t('common.no'),
+      accept: () => {
+        this.confirmationService.close();
+        window.open(FOODSHARING_BASE_URL, '_blank', 'noopener');
+        this.performBooking();
+      },
+      reject: () => {
+        this.confirmationService.close();
+        this.bookingVisible = true;
+      }
+    });
   }
 
   private performBooking(): void {

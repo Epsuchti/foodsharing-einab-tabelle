@@ -5,7 +5,11 @@
   } @else if (error()) {
     <p class="empty-state">{{ error() }}</p>
   } @else if (booking()) {
-    <p class="empty-state">{{ i18n.t('book.confirmationWindowHint') }}</p>
+    @if (sessionService.isAuthenticated()) {
+      <div class="success-state">{{ i18n.t('book.confirmedLoggedIn') }}</div>
+    } @else {
+      <p class="empty-state">{{ i18n.t('book.loginLater') }}</p>
+    }
     <div class="info-grid">
       <div><strong>{{ booking()?.bookingUser?.name }}</strong></div>
       <div>{{ booking()?.bookingUser?.foodsharingId }}</div>

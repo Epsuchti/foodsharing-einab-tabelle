@@ -1,4 +1,4 @@
-<p-toast></p-toast>
+<p-toast [life]="15000"></p-toast>
 <p-confirmdialog></p-confirmdialog>
 
 <header class="app-header">
@@ -26,11 +26,11 @@
         <a routerLink="/my-bookings" routerLinkActive="active">{{ i18n.t('nav.bookings') }}</a>
       }
       @if (sessionService.hasRole(UserRole.Teacher)) {
-        <a routerLink="/teacher" routerLinkActive="active">{{ i18n.t('nav.teacher') }}</a>
+        <a routerLink="/teacher" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.teacher') }}</a>
         <a routerLink="/teacher/bookings" routerLinkActive="active">{{ i18n.t('nav.teacherBookings') }}</a>
       }
       @if (sessionService.hasRole(UserRole.Admin)) {
-        <a routerLink="/admin" routerLinkActive="active">{{ i18n.t('nav.admin') }}</a>
+        <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.admin') }}</a>
         <a routerLink="/admin/foodsharing-automation" routerLinkActive="active">{{ i18n.t('nav.adminAutomation') }}</a>
       }
     </nav>
@@ -56,11 +56,11 @@
           <a routerLink="/my-bookings" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.bookings') }}</a>
         }
         @if (sessionService.hasRole(UserRole.Teacher)) {
-          <a routerLink="/teacher" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.teacher') }}</a>
+          <a routerLink="/teacher" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">{{ i18n.t('nav.teacher') }}</a>
           <a routerLink="/teacher/bookings" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.teacherBookings') }}</a>
         }
         @if (sessionService.hasRole(UserRole.Admin)) {
-          <a routerLink="/admin" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.admin') }}</a>
+          <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">{{ i18n.t('nav.admin') }}</a>
           <a routerLink="/admin/foodsharing-automation" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.adminAutomation') }}</a>
         }
       </nav>

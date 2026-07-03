@@ -13,6 +13,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 
 @Component({
   selector: 'app-admin-foodsharing-automation-page',
@@ -25,6 +26,7 @@ import { TagModule } from 'primeng/tag';
     CheckboxModule,
     InputNumberModule,
     InputTextModule,
+    ZurichDateTimePipe,
     TableModule,
     TagModule
   ],
@@ -134,7 +136,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
 
 interface FoodsharingConnectionStatus { connected: boolean; email?: string; foodsharingUserId?: string; authenticatedAt?: string; }
 interface FoodsharingStoreAutomation { storeId: number; storeName: string; enabled: boolean; gapRuleEnabled: boolean; minimumGapDays: number; cleaningRuleEnabled: boolean; }
-interface FoodsharingAutomationAudit { storeId: number; foodsharingUserId: string; pickupDate: string; dryRun: boolean; decision: string; reasons: string; error?: string; createdAt: string; }
+interface FoodsharingAutomationAudit { storeId: number; storeName: string; foodsharingUserId: string; pickupDate: string; dryRun: boolean; decision: string; reasons: string; userMessage?: string; error?: string; createdAt: string; }
 interface FoodsharingFuturePickupUser { foodsharingUserId: string; name: string; futurePickupCount: number; futurePickups: FoodsharingFuturePickup[]; }
 interface FoodsharingFuturePickup { storeId: number; storeName: string; pickupDate: string; confirmed: boolean; }
 interface FoodsharingRunResult { evaluated: number; confirmed: number; declined: number; failed: number; dryRun: boolean; messages: string[]; }

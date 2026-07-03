@@ -41,6 +41,9 @@ public class User extends BaseEntity {
     @Column(name = "is_teacher", nullable = false)
     private boolean teacher = false;
 
+    @Column(name = "wants_to_be_teacher", nullable = false)
+    private boolean wantsToBeTeacher = false;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)
     private LanguageCode preferredLanguage = LanguageCode.DE;

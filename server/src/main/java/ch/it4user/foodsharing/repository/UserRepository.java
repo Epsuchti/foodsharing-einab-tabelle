@@ -27,7 +27,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         """)
     List<User> findAllActiveBookingUsersOrderByCreatedAtDesc();
 
-    Page<User> findAllByTeacherTrueOrderByNameAsc(Pageable pageable);
+    Page<User> findAllByTeacherTrueOrWantsToBeTeacherTrueOrderByNameAsc(Pageable pageable);
 
     boolean existsByFoodsharingIdIgnoreCaseAndActiveTrue(String foodsharingId);
 

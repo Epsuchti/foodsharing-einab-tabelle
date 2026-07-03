@@ -24,6 +24,7 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
     @Query("""
         select s from Slot s
         where s.status = ch.it4user.foodsharing.domain.enumtype.SlotStatus.AVAILABLE
+          and s.einAb.startDateTime > current_timestamp
           and (:category is null or s.einAb.category = :category)
           and (:visitFairteiler is null or s.einAb.visitFairteiler = :visitFairteiler)
           and (

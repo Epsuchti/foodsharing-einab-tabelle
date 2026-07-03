@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -17,6 +19,7 @@ import org.springframework.web.client.RestClient;
 
 @Service
 public class FoodsharingClient {
+    private static final Logger log = LoggerFactory.getLogger(FoodsharingClient.class);
     private final RestClient restClient;
     private final AppProperties appProperties;
     private final FoodsharingApiSessionRepository sessionRepository;
@@ -48,6 +51,7 @@ public class FoodsharingClient {
     private Map<?, ?> authenticatedGet(String path, Object uriVariable, boolean retried) {
         SessionData session = session();
         try {
+            logRequest("GET", path, uriVariable);
             return restClient.get().uri(path, uriVariable).headers(h -> applySession(h, session)).retrieve().body(Map.class);
         } catch (HttpClientErrorException ex) {
             if (shouldReauthenticate(ex, retried)) { authenticate(); return authenticatedGet(path, uriVariable, true); }
@@ -59,6 +63,7 @@ public class FoodsharingClient {
     private Map<?, ?> authenticatedPost(String path, Object request, boolean retried, Object... uriVariables) {
         SessionData session = session();
         try {
+            logRequest("POST", path, uriVariables);
             return restClient.post().uri(path, uriVariables).contentType(MediaType.APPLICATION_JSON)
                     .headers(h -> applySession(h, session)).body(request).retrieve().body(Map.class);
         } catch (HttpClientErrorException ex) {
@@ -92,6 +97,7 @@ public class FoodsharingClient {
 
     @Transactional
     public SessionData authenticate() {
+        log.info("Foodsharing request: POST /api/login");
         var response = restClient.post().uri("/api/login").contentType(MediaType.APPLICATION_JSON)
                 .body(Map.of("email", appProperties.getFoodsharing().getAdminUser(), "password", appProperties.getFoodsharing().getAdminPassword(), "rememberMe", true))
                 .retrieve().toEntity(Map.class);
@@ -103,6 +109,14 @@ public class FoodsharingClient {
         session.setAuthenticatedAt(Instant.now());
         sessionRepository.save(session);
         return sessionData;
+    }
+
+    private void logRequest(String method, String path, Object... uriVariables) {
+        String resolvedPath = path;
+        for (Object uriVariable : uriVariables) {
+            resolvedPath = resolvedPath.replaceFirst("\\{[^}]+\\}", String.valueOf(uriVariable));
+        }
+        log.info("Foodsharing request: {} {}", method, resolvedPath);
     }
 
     private SessionData extractSessionData(List<String> setCookies, Map<?, ?> responseBody) {

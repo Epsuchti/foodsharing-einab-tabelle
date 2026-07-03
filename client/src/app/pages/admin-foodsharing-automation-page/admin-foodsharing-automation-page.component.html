@@ -78,7 +78,7 @@
             <td>
               @for (pickup of user.futurePickups; track pickup.storeId + '-' + pickup.pickupDate) {
                 <div>
-                  {{ pickup.pickupDate | date:'short' }} - {{ pickup.storeName }} ({{ pickup.storeId }})
+                  {{ pickup.pickupDate | date:'dd.MM.yyyy HH:mm':'Europe/Zurich' }} - {{ pickup.storeName }} ({{ pickup.storeId }})
                   <p-tag [severity]="pickup.confirmed ? 'success' : 'warn'" [value]="pickup.confirmed ? i18n.t('adminAutomation.confirmed') : i18n.t('adminAutomation.pending')"></p-tag>
                 </div>
               }
@@ -97,18 +97,22 @@
             <th>{{ i18n.t('adminAutomation.pickup') }}</th>
             <th>{{ i18n.t('adminAutomation.dryRun') }}</th>
             <th>{{ i18n.t('adminAutomation.reasons') }}</th>
+            <th>{{ i18n.t('adminAutomation.message') }}</th>
             <th>{{ i18n.t('common.error') }}</th>
+            <th>{{ i18n.t('common.createdAt') }}</th>
           </tr>
         </ng-template>
         <ng-template pTemplate="body" let-entry>
           <tr>
             <td><p-tag [value]="entry.decision"></p-tag></td>
-            <td>{{ entry.storeId }}</td>
+            <td>{{ entry.storeName }}</td>
             <td>{{ entry.foodsharingUserId }}</td>
-            <td>{{ entry.pickupDate | date:'short' }}</td>
+            <td>{{ entry.pickupDate | date:'dd.MM.yyyy HH:mm':'Europe/Zurich' }}</td>
             <td>{{ entry.dryRun ? i18n.t('common.yes') : i18n.t('common.no') }}</td>
             <td>{{ entry.reasons }}</td>
+            <td>{{ entry.userMessage || '-' }}</td>
             <td>{{ entry.error || '-' }}</td>
+            <td>{{ entry.createdAt | zurichDateTime: 'short' }}</td>
           </tr>
         </ng-template>
       </p-table>

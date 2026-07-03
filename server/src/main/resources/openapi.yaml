@@ -758,7 +758,7 @@ components:
             $ref: '#/components/schemas/UserRole'
     TeacherResponse:
       type: object
-      required: [id, foodsharingId, name, active, isAdmin, language, createdAt, updatedAt]
+      required: [id, foodsharingId, name, active, isTeacher, isAdmin, language, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -776,7 +776,11 @@ components:
           type: string
         active:
           type: boolean
+        isTeacher:
+          type: boolean
         isAdmin:
+          type: boolean
+        wantsToBeTeacher:
           type: boolean
         language:
           $ref: '#/components/schemas/Language'

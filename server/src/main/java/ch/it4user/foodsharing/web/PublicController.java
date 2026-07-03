@@ -4,12 +4,15 @@ import ch.it4user.foodsharing.openapi.api.PublicApi;
 import ch.it4user.foodsharing.openapi.model.AvailableSlotListResponse;
 import ch.it4user.foodsharing.openapi.model.BookSlotRequest;
 import ch.it4user.foodsharing.openapi.model.BookingDetailResponse;
+import ch.it4user.foodsharing.openapi.model.AuthResponse;
 import ch.it4user.foodsharing.openapi.model.EinAbCategory;
 import ch.it4user.foodsharing.openapi.model.Language;
 import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSignupRequest;
+import ch.it4user.foodsharing.service.AuthService;
 import ch.it4user.foodsharing.service.PublicService;
 import ch.it4user.foodsharing.service.TeacherService;
+import java.util.Optional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,13 +23,16 @@ public class PublicController implements PublicApi {
 
     private final PublicService publicService;
     private final TeacherService teacherService;
+    private final AuthService authService;
     private final ApiModelMapper mapper;
 
     public PublicController(PublicService publicService,
                             TeacherService teacherService,
+                            AuthService authService,
                             ApiModelMapper mapper) {
         this.publicService = publicService;
         this.teacherService = teacherService;
+        this.authService = authService;
         this.mapper = mapper;
     }
 
@@ -53,7 +59,16 @@ public class PublicController implements PublicApi {
 
     @Override
     public ResponseEntity<BookingDetailResponse> confirmBooking(ch.it4user.foodsharing.openapi.model.VerifyTokenRequest verifyTokenRequest) {
-        return ResponseEntity.ok(mapper.toBookingDetailResponse(publicService.confirmBooking(verifyTokenRequest.getToken())));
+        var slot = publicService.confirmBooking(verifyTokenRequest.getToken());
+        var response = ResponseEntity.ok();
+        Optional<AuthResponse> authResponse = authService.authenticateFoodsharingIdIfPossible(slot.getBookingUser().getFoodsharingId());
+        authResponse.ifPresent(auth -> response
+                .header("X-Auth-Token", auth.getAuthToken())
+                .header("X-Auth-Expires-At", auth.getExpiresAt().toString())
+                .header("X-Auth-Foodsharing-Id", auth.getFoodsharingId())
+                .header("X-Auth-Roles", String.join(",", auth.getRoles().stream().map(Enum::name).toList()))
+                .header("X-Auth-Display-Name", auth.getDisplayName() == null ? "" : auth.getDisplayName()));
+        return response.body(mapper.toBookingDetailResponse(slot));
     }
     @Override
     public ResponseEntity<TeacherResponse> signupTeacher(TeacherSignupRequest teacherSignupRequest) {

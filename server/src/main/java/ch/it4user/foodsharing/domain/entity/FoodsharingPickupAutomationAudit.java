@@ -45,5 +45,8 @@ public class FoodsharingPickupAutomationAudit extends BaseEntity {
     private String reasons;
 
     @Lob
+    private String userMessage;
+
+    @Lob
     private String foodsharingError;
 }

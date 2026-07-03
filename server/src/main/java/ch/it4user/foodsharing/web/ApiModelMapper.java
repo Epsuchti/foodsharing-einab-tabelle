@@ -44,7 +44,9 @@ public class ApiModelMapper {
         response.setPhoneNumber(teacher.getPhoneNumber());
         response.setIcalLink(teacher.getIcalLink());
         response.setActive(teacher.isActive());
+        response.setIsTeacher(teacher.isTeacher());
         response.setIsAdmin(teacher.isAdmin());
+        response.setWantsToBeTeacher(teacher.isWantsToBeTeacher());
         response.setLanguage(ch.it4user.foodsharing.openapi.model.Language.fromValue(teacher.getPreferredLanguage().getCode()));
         response.setCreatedAt(toOffsetDateTime(teacher.getCreatedAt()));
         response.setUpdatedAt(toOffsetDateTime(teacher.getUpdatedAt()));
@@ -302,6 +304,7 @@ public class ApiModelMapper {
         target.setIcalLink(source.getIcalLink());
         target.setActive(source.getActive());
         target.setIsAdmin(source.getIsAdmin());
+        target.setWantsToBeTeacher(source.getWantsToBeTeacher());
         target.setLanguage(source.getLanguage());
         target.setCreatedAt(source.getCreatedAt());
         target.setUpdatedAt(source.getUpdatedAt());

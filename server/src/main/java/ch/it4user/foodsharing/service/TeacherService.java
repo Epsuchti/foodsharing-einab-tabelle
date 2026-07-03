@@ -55,7 +55,7 @@ public class TeacherService {
         User teacher = userRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId).orElseGet(User::new);
         teacher.setFoodsharingId(foodsharingUser.foodsharingId());
         teacher.setName(foodsharingUser.name());
-        teacher.setTeacher(true);
+        teacher.setWantsToBeTeacher(true);
         teacher.setActive(true);
         teacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
         teacher.setPreferredLanguage(language);
@@ -193,26 +193,32 @@ public class TeacherService {
     }
 
     public Page<User> findAllTeachers(int page, int size) {
-        return userRepository.findAllByTeacherTrueOrderByNameAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
+        return userRepository.findAllByTeacherTrueOrWantsToBeTeacherTrueOrderByNameAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
     @Transactional
     public User setTeacherActive(UUID teacherId, boolean active) {
         User teacher = userRepository.findById(teacherId)
-                .filter(User::isTeacher)
+                .filter(user -> user.isTeacher() || user.isWantsToBeTeacher())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
-        teacher.setActive(active);
+        teacher.setTeacher(active);
+        teacher.setWantsToBeTeacher(false);
+        if (active) {
+            teacher.setActive(true);
+        }
         return teacher;
     }
 
     @Transactional
     public User setTeacherAdmin(UUID teacherId, boolean admin) {
         User teacher = userRepository.findById(teacherId)
-                .filter(User::isTeacher)
+                .filter(user -> user.isTeacher() || user.isWantsToBeTeacher())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
         teacher.setAdmin(admin);
         if (admin) {
             teacher.setActive(true);
+            teacher.setTeacher(true);
+            teacher.setWantsToBeTeacher(false);
         }
         return teacher;
     }
