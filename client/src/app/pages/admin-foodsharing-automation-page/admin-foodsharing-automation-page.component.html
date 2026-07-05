@@ -44,6 +44,7 @@
             <th>{{ i18n.t('adminAutomation.gapRule') }}</th>
             <th>{{ i18n.t('adminAutomation.minimumGapDays') }}</th>
             <th>{{ i18n.t('adminAutomation.cleaningRule') }}</th>
+            <th>{{ i18n.t('adminAutomation.experienceRule') }}</th>
             <th>{{ i18n.t('common.actions') }}</th>
           </tr>
         </ng-template>
@@ -55,6 +56,7 @@
             <td><p-checkbox [binary]="true" [(ngModel)]="store.gapRuleEnabled"></p-checkbox></td>
             <td><p-inputNumber [(ngModel)]="store.minimumGapDays" [min]="0" [showButtons]="true"></p-inputNumber></td>
             <td><p-checkbox [binary]="true" [(ngModel)]="store.cleaningRuleEnabled"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="store.experienceRuleEnabled"></p-checkbox></td>
             <td><button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveFoodsharingStore(store)"></button></td>
           </tr>
         </ng-template>
