@@ -337,7 +337,9 @@ public class FoodsharingPickupAutomationService {
                         .orElse(null);
                 boolean past = lastCleaning != null && !lastCleaning.isBefore(cleaningThreshold);
                 List<FoodsharingPickupModels.Pickup> cleaningPickups = pickups(initialPickupsCache, a.getAdminConnection(), cleaningStoreId);
-                boolean future = cleaningPickups.stream().filter(p -> p.users().stream().anyMatch(u -> u.id().equals(userId))).anyMatch(p -> !p.date().isBefore(now) && !p.date().isAfter(now.plus(Duration.ofDays(14))));
+                boolean future = cleaningPickups.stream()
+                        .filter(p -> p.users().stream().anyMatch(u -> u.id().equals(userId)))
+                        .anyMatch(p -> !p.date().isBefore(now));
                 if (!past && !future) {
                     String historyText;
                     if (lastCleaning == null) {
@@ -346,7 +348,7 @@ public class FoodsharingPickupAutomationService {
                         long lastCleaningMonths = monthsAgo(lastCleaning, now);
                         historyText = "Deine letzte Reinigung ist " + lastCleaningMonths + monthSuffix(lastCleaningMonths) + " her.";
                     }
-                    reasons.add("Du hast in den letzten " + backCheckMonths + monthSuffix(backCheckMonths) + " keinen Fairteiler geputzt. " + historyText + " Zudem hast du in den nächsten zwei Wochen keine Reinigung geplant. Bitte trage dich für eine Reinigung ein, damit weitere Abholungen geplant werden können.");
+                    reasons.add("Du hast in den letzten " + backCheckMonths + monthSuffix(backCheckMonths) + " keinen Fairteiler geputzt. " + historyText + " Zudem hast du keine zukünftige Reinigung geplant. Bitte trage dich für eine Reinigung ein, damit weitere Abholungen geplant werden können.");
                 }
             }
         }
