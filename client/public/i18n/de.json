@@ -146,6 +146,7 @@
   "adminAutomation.gapRule": "Abstandsregel",
   "adminAutomation.minimumGapDays": "Min. Tage Abstand",
   "adminAutomation.cleaningRule": "Reinigungsregel",
+  "adminAutomation.experienceRule": "Erfahrungsregel",
   "adminAutomation.futurePickupUsers": "Nutzer mit zukünftigen Abholungen in deinen Betrieben",
   "adminAutomation.futurePickupCount": "Zukünftige Abholungen",
   "adminAutomation.pickupDates": "Abholdaten",

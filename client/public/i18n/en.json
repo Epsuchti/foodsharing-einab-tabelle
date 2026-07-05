@@ -146,6 +146,7 @@
   "adminAutomation.gapRule": "Gap rule",
   "adminAutomation.minimumGapDays": "Min days",
   "adminAutomation.cleaningRule": "Cleaning rule",
+  "adminAutomation.experienceRule": "Experience rule",
   "adminAutomation.futurePickupUsers": "Users with future pickups in your stores",
   "adminAutomation.futurePickupCount": "Future pickups",
   "adminAutomation.pickupDates": "Pickup dates",
