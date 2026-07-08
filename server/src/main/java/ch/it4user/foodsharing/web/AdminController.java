@@ -5,18 +5,25 @@ import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
 import ch.it4user.foodsharing.openapi.model.AdminEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.BookingListResponse;
 import ch.it4user.foodsharing.openapi.model.BookingUserResponse;
+import ch.it4user.foodsharing.openapi.model.FoodsharingAutomationAudit;
+import ch.it4user.foodsharing.openapi.model.FoodsharingConnectRequest;
+import ch.it4user.foodsharing.openapi.model.FoodsharingConnectionStatus;
+import ch.it4user.foodsharing.openapi.model.FoodsharingFuturePickup;
+import ch.it4user.foodsharing.openapi.model.FoodsharingFuturePickupUser;
+import ch.it4user.foodsharing.openapi.model.FoodsharingRunRequest;
+import ch.it4user.foodsharing.openapi.model.FoodsharingRunResult;
+import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomation;
+import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomationRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.service.AdminService;
 import ch.it4user.foodsharing.service.FoodsharingPickupAutomationService;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -105,48 +112,134 @@ public class AdminController implements AdminApi {
         return ResponseEntity.ok(mapper.toTeacherResponse(adminService.setAdminAdmin(adminUserId, false)));
     }
 
-    @PostMapping("/api/admin/foodsharing/connect")
-    public FoodsharingPickupAutomationService.ConnectionStatus connectFoodsharing(@RequestBody FoodsharingConnectRequest request) {
-        return foodsharingPickupAutomationService.connect(request.email(), request.password());
+    @Override
+    public ResponseEntity<FoodsharingConnectionStatus> connectFoodsharing(FoodsharingConnectRequest request) {
+        return ResponseEntity.ok(toFoodsharingConnectionStatus(
+                foodsharingPickupAutomationService.connect(request.getEmail(), request.getPassword())));
     }
 
-    @DeleteMapping("/api/admin/foodsharing/connect")
+    @Override
     public ResponseEntity<Void> disconnectFoodsharing() {
         foodsharingPickupAutomationService.disconnect();
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/api/admin/foodsharing/status")
-    public FoodsharingPickupAutomationService.ConnectionStatus getFoodsharingStatus() {
-        return foodsharingPickupAutomationService.status();
+    @Override
+    public ResponseEntity<FoodsharingConnectionStatus> getFoodsharingStatus() {
+        return ResponseEntity.ok(toFoodsharingConnectionStatus(foodsharingPickupAutomationService.status()));
     }
 
-    @GetMapping("/api/admin/foodsharing/stores")
-    public java.util.List<FoodsharingPickupAutomationService.StoreAutomationView> getFoodsharingStores() {
-        return foodsharingPickupAutomationService.stores();
+    @Override
+    public ResponseEntity<List<FoodsharingStoreAutomation>> getFoodsharingStores() {
+        return ResponseEntity.ok(foodsharingPickupAutomationService.stores().stream()
+                .map(this::toFoodsharingStoreAutomation)
+                .toList());
     }
 
-    @PutMapping("/api/admin/foodsharing/stores/{storeId}/automation")
-    public FoodsharingPickupAutomationService.StoreAutomationView saveFoodsharingStoreAutomation(@PathVariable long storeId, @RequestBody FoodsharingPickupAutomationService.StoreAutomationRequest request) {
-        return foodsharingPickupAutomationService.save(storeId, request);
+    @Override
+    public ResponseEntity<FoodsharingStoreAutomation> saveFoodsharingStoreAutomation(Long storeId, FoodsharingStoreAutomationRequest request) {
+        FoodsharingPickupAutomationService.StoreAutomationRequest serviceRequest =
+                new FoodsharingPickupAutomationService.StoreAutomationRequest(
+                        request.getStoreName(),
+                        Boolean.TRUE.equals(request.getEnabled()),
+                        Boolean.TRUE.equals(request.getGapRuleEnabled()),
+                        request.getMinimumGapDays() == null ? 0 : request.getMinimumGapDays(),
+                        Boolean.TRUE.equals(request.getCleaningRuleEnabled()),
+                        Boolean.TRUE.equals(request.getExperienceRuleEnabled()));
+        return ResponseEntity.ok(toFoodsharingStoreAutomation(
+                foodsharingPickupAutomationService.save(storeId, serviceRequest)));
     }
 
-    @PostMapping("/api/admin/foodsharing/automation/run")
-    public ch.it4user.foodsharing.service.FoodsharingPickupModels.RunResult runFoodsharingAutomation(@RequestBody FoodsharingRunRequest request) {
-        return foodsharingPickupAutomationService.run(request.dryRun());
+    @Override
+    public ResponseEntity<FoodsharingRunResult> runFoodsharingAutomation(FoodsharingRunRequest request) {
+        return ResponseEntity.ok(toFoodsharingRunResult(
+                foodsharingPickupAutomationService.run(Boolean.TRUE.equals(request.getDryRun()))));
     }
 
-    @GetMapping("/api/admin/foodsharing/automation/audit")
-    public java.util.List<FoodsharingPickupAutomationService.AuditView> getFoodsharingAutomationAudit() {
-        return foodsharingPickupAutomationService.audit();
+    @Override
+    public ResponseEntity<List<FoodsharingAutomationAudit>> getFoodsharingAutomationAudit() {
+        return ResponseEntity.ok(foodsharingPickupAutomationService.audit().stream()
+                .map(this::toFoodsharingAutomationAudit)
+                .toList());
     }
 
-    @GetMapping("/api/admin/foodsharing/future-pickup-users")
-    public java.util.List<FoodsharingPickupAutomationService.StorePickupUserView> getFoodsharingFuturePickupUsers() {
-        return foodsharingPickupAutomationService.futurePickupUsers();
+    @Override
+    public ResponseEntity<List<FoodsharingFuturePickupUser>> getFoodsharingFuturePickupUsers() {
+        return ResponseEntity.ok(foodsharingPickupAutomationService.futurePickupUsers().stream()
+                .map(this::toFoodsharingFuturePickupUser)
+                .toList());
     }
 
-    public record FoodsharingConnectRequest(String email, String password) {}
-    public record FoodsharingRunRequest(boolean dryRun) {}
+    private FoodsharingConnectionStatus toFoodsharingConnectionStatus(FoodsharingPickupAutomationService.ConnectionStatus status) {
+        FoodsharingConnectionStatus response = new FoodsharingConnectionStatus();
+        response.setConnected(status.connected());
+        response.setEmail(status.email());
+        response.setFoodsharingUserId(status.foodsharingUserId());
+        response.setAuthenticatedAt(toOffsetDateTime(status.authenticatedAt()));
+        return response;
+    }
+
+    private FoodsharingStoreAutomation toFoodsharingStoreAutomation(FoodsharingPickupAutomationService.StoreAutomationView store) {
+        FoodsharingStoreAutomation response = new FoodsharingStoreAutomation();
+        response.setStoreId(store.storeId());
+        response.setStoreName(store.storeName());
+        response.setEnabled(store.enabled());
+        response.setGapRuleEnabled(store.gapRuleEnabled());
+        response.setMinimumGapDays(store.minimumGapDays());
+        response.setCleaningRuleEnabled(store.cleaningRuleEnabled());
+        response.setExperienceRuleEnabled(store.experienceRuleEnabled());
+        return response;
+    }
+
+    private FoodsharingRunResult toFoodsharingRunResult(ch.it4user.foodsharing.service.FoodsharingPickupModels.RunResult result) {
+        FoodsharingRunResult response = new FoodsharingRunResult();
+        response.setEvaluated(result.evaluated());
+        response.setConfirmed(result.confirmed());
+        response.setDeclined(result.declined());
+        response.setFailed(result.failed());
+        response.setDryRun(result.dryRun());
+        response.setMessages(result.messages());
+        return response;
+    }
+
+    private FoodsharingAutomationAudit toFoodsharingAutomationAudit(FoodsharingPickupAutomationService.AuditView audit) {
+        FoodsharingAutomationAudit response = new FoodsharingAutomationAudit();
+        response.setStoreId(audit.storeId());
+        response.setStoreName(audit.storeName());
+        response.setFoodsharingUserId(audit.foodsharingUserId());
+        response.setFoodsharingUserName(audit.foodsharingUserName());
+        response.setPickupDate(toOffsetDateTime(audit.pickupDate()));
+        response.setDryRun(audit.dryRun());
+        response.setDecision(audit.decision());
+        response.setReasons(audit.reasons());
+        response.setUserMessage(audit.userMessage());
+        response.setError(audit.error());
+        response.setCreatedAt(toOffsetDateTime(audit.createdAt()));
+        return response;
+    }
+
+    private FoodsharingFuturePickupUser toFoodsharingFuturePickupUser(FoodsharingPickupAutomationService.StorePickupUserView user) {
+        FoodsharingFuturePickupUser response = new FoodsharingFuturePickupUser();
+        response.setFoodsharingUserId(user.foodsharingUserId());
+        response.setName(user.name());
+        response.setFuturePickupCount(user.futurePickupCount());
+        response.setFuturePickups(user.futurePickups().stream()
+                .map(this::toFoodsharingFuturePickup)
+                .toList());
+        return response;
+    }
+
+    private FoodsharingFuturePickup toFoodsharingFuturePickup(FoodsharingPickupAutomationService.StorePickupView pickup) {
+        FoodsharingFuturePickup response = new FoodsharingFuturePickup();
+        response.setStoreId(pickup.storeId());
+        response.setStoreName(pickup.storeName());
+        response.setPickupDate(toOffsetDateTime(pickup.pickupDate()));
+        response.setConfirmed(pickup.confirmed());
+        return response;
+    }
+
+    private OffsetDateTime toOffsetDateTime(Instant value) {
+        return value == null ? null : OffsetDateTime.ofInstant(value, ZoneOffset.UTC);
+    }
 
 }

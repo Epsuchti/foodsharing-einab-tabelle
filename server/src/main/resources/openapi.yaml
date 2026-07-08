@@ -737,6 +737,148 @@ paths:
                 $ref: '#/components/schemas/TeacherResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/admin/foodsharing/connect:
+    post:
+      tags: [admin]
+      operationId: connectFoodsharing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsharingConnectRequest'
+      responses:
+        '200':
+          description: Foodsharing automation connection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingConnectionStatus'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [admin]
+      operationId: disconnectFoodsharing
+      responses:
+        '204':
+          description: Foodsharing automation connection removed
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/status:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingStatus
+      responses:
+        '200':
+          description: Foodsharing automation connection status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingConnectionStatus'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/stores:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingStores
+      responses:
+        '200':
+          description: Foodsharing stores managed by the connected account
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodsharingStoreAutomation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/stores/{storeId}/automation:
+    put:
+      tags: [admin]
+      operationId: saveFoodsharingStoreAutomation
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsharingStoreAutomationRequest'
+      responses:
+        '200':
+          description: Foodsharing store automation settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingStoreAutomation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/automation/run:
+    post:
+      tags: [admin]
+      operationId: runFoodsharingAutomation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsharingRunRequest'
+      responses:
+        '200':
+          description: Foodsharing automation run result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingRunResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/automation/audit:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingAutomationAudit
+      responses:
+        '200':
+          description: Recent foodsharing automation decisions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodsharingAutomationAudit'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/future-pickup-users:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingFuturePickupUsers
+      responses:
+        '200':
+          description: Foodsharing users with future pickups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodsharingFuturePickupUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 components:
   parameters:
     SlotId:
@@ -916,6 +1058,148 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UserRole'
+    FoodsharingConnectRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+    FoodsharingConnectionStatus:
+      type: object
+      required: [connected]
+      properties:
+        connected:
+          type: boolean
+        email:
+          type: string
+          format: email
+        foodsharingUserId:
+          type: string
+        authenticatedAt:
+          type: string
+          format: date-time
+    FoodsharingStoreAutomationRequest:
+      type: object
+      required: [enabled, gapRuleEnabled, minimumGapDays, cleaningRuleEnabled, experienceRuleEnabled]
+      properties:
+        storeName:
+          type: string
+        enabled:
+          type: boolean
+        gapRuleEnabled:
+          type: boolean
+        minimumGapDays:
+          type: integer
+          format: int32
+          minimum: 0
+        cleaningRuleEnabled:
+          type: boolean
+        experienceRuleEnabled:
+          type: boolean
+    FoodsharingStoreAutomation:
+      allOf:
+        - $ref: '#/components/schemas/FoodsharingStoreAutomationRequest'
+        - type: object
+          required: [storeId, storeName]
+          properties:
+            storeId:
+              type: integer
+              format: int64
+            storeName:
+              type: string
+    FoodsharingRunRequest:
+      type: object
+      required: [dryRun]
+      properties:
+        dryRun:
+          type: boolean
+    FoodsharingRunResult:
+      type: object
+      required: [evaluated, confirmed, declined, failed, dryRun, messages]
+      properties:
+        evaluated:
+          type: integer
+          format: int32
+        confirmed:
+          type: integer
+          format: int32
+        declined:
+          type: integer
+          format: int32
+        failed:
+          type: integer
+          format: int32
+        dryRun:
+          type: boolean
+        messages:
+          type: array
+          items:
+            type: string
+    FoodsharingAutomationAudit:
+      type: object
+      required: [storeId, storeName, foodsharingUserId, pickupDate, dryRun, decision, reasons, createdAt]
+      properties:
+        storeId:
+          type: integer
+          format: int64
+        storeName:
+          type: string
+        foodsharingUserId:
+          type: string
+        foodsharingUserName:
+          type: string
+          nullable: true
+        pickupDate:
+          type: string
+          format: date-time
+        dryRun:
+          type: boolean
+        decision:
+          type: string
+        reasons:
+          type: string
+        userMessage:
+          type: string
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    FoodsharingFuturePickup:
+      type: object
+      required: [storeId, storeName, pickupDate, confirmed]
+      properties:
+        storeId:
+          type: integer
+          format: int64
+        storeName:
+          type: string
+        pickupDate:
+          type: string
+          format: date-time
+        confirmed:
+          type: boolean
+    FoodsharingFuturePickupUser:
+      type: object
+      required: [foodsharingUserId, name, futurePickupCount, futurePickups]
+      properties:
+        foodsharingUserId:
+          type: string
+        name:
+          type: string
+        futurePickupCount:
+          type: integer
+          format: int32
+        futurePickups:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodsharingFuturePickup'
     TeacherResponse:
       type: object
       required: [id, foodsharingId, name, active, isTeacher, isAdmin, language, createdAt, updatedAt]

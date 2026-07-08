@@ -52,6 +52,12 @@ public class CurrentActorService {
                 .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.TEACHER_ACCOUNT_REQUIRED));
     }
 
+    public User requireAdmin() {
+        return userRepository.findByFoodsharingIdIgnoreCase(requireFoodsharingId())
+                .filter(User::isAdmin)
+                .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ACCESS_DENIED));
+    }
+
     public boolean isAdmin() {
         return currentRoles().contains(UserRole.ADMIN);
     }

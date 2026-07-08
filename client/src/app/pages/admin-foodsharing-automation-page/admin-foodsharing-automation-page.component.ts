@@ -1,8 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import {
+  AdminService,
+  FoodsharingAutomationAudit,
+  FoodsharingConnectionStatus,
+  FoodsharingFuturePickupUser,
+  FoodsharingRunResult,
+  FoodsharingStoreAutomation
+} from '../../api';
 import { resolveApiError } from '../../core/api-error';
 import { I18nService } from '../../core/i18n.service';
 import { ButtonModule } from 'primeng/button';
@@ -43,7 +50,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly foodsharingRunResult = signal<FoodsharingRunResult | null>(null);
   protected foodsharingPassword = '';
 
-  private readonly http = inject(HttpClient);
+  private readonly adminApi = inject(AdminService);
   private readonly messageService = inject(MessageService);
 
   ngOnInit(): void {
@@ -51,9 +58,11 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   connectFoodsharing(): void {
-    this.http.post<FoodsharingConnectionStatus>('/api/admin/foodsharing/connect', {
-      email: this.foodsharingEmail(),
-      password: this.foodsharingPassword
+    this.adminApi.connectFoodsharing({
+      foodsharingConnectRequest: {
+        email: this.foodsharingEmail(),
+        password: this.foodsharingPassword
+      }
     }).subscribe({
       next: (status) => {
         this.foodsharingStatus.set(status);
@@ -65,7 +74,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   disconnectFoodsharing(): void {
-    this.http.delete<void>('/api/admin/foodsharing/connect').subscribe({
+    this.adminApi.disconnectFoodsharing().subscribe({
       next: () => {
         this.foodsharingStatus.set({ connected: false });
         this.foodsharingStores.set([]);
@@ -78,14 +87,17 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   saveFoodsharingStore(store: FoodsharingStoreAutomation): void {
-    this.http.put<FoodsharingStoreAutomation>(`/api/admin/foodsharing/stores/${store.storeId}/automation`, store).subscribe({
+    this.adminApi.saveFoodsharingStoreAutomation({
+      storeId: store.storeId,
+      foodsharingStoreAutomationRequest: store
+    }).subscribe({
       next: () => this.loadFoodsharingAutomation(),
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
   }
 
   runFoodsharingDryRun(): void {
-    this.http.post<FoodsharingRunResult>('/api/admin/foodsharing/automation/run', { dryRun: true }).subscribe({
+    this.adminApi.runFoodsharingAutomation({ foodsharingRunRequest: { dryRun: true } }).subscribe({
       next: (result) => {
         this.foodsharingRunResult.set(result);
         this.loadFoodsharingAudit();
@@ -95,11 +107,11 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   private loadFoodsharingAutomation(): void {
-    this.http.get<FoodsharingConnectionStatus>('/api/admin/foodsharing/status').subscribe({
+    this.adminApi.getFoodsharingStatus().subscribe({
       next: (status) => {
         this.foodsharingStatus.set(status);
         if (status.connected) {
-          this.http.get<FoodsharingStoreAutomation[]>('/api/admin/foodsharing/stores').subscribe({
+          this.adminApi.getFoodsharingStores().subscribe({
             next: (stores) => this.foodsharingStores.set(stores),
             error: () => undefined
           });
@@ -116,14 +128,14 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   private loadFoodsharingFuturePickupUsers(): void {
-    this.http.get<FoodsharingFuturePickupUser[]>('/api/admin/foodsharing/future-pickup-users').subscribe({
+    this.adminApi.getFoodsharingFuturePickupUsers().subscribe({
       next: (users) => this.foodsharingFuturePickupUsers.set(users),
       error: () => undefined
     });
   }
 
   private loadFoodsharingAudit(): void {
-    this.http.get<FoodsharingAutomationAudit[]>('/api/admin/foodsharing/automation/audit').subscribe({
+    this.adminApi.getFoodsharingAutomationAudit().subscribe({
       next: (audit) => this.foodsharingAudit.set(audit),
       error: () => undefined
     });
@@ -133,10 +145,3 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     this.messageService.add({ severity: 'error', summary: this.i18n.t('common.error'), detail });
   }
 }
-
-interface FoodsharingConnectionStatus { connected: boolean; email?: string; foodsharingUserId?: string; authenticatedAt?: string; }
-interface FoodsharingStoreAutomation { storeId: number; storeName: string; enabled: boolean; gapRuleEnabled: boolean; minimumGapDays: number; cleaningRuleEnabled: boolean; experienceRuleEnabled: boolean; }
-interface FoodsharingAutomationAudit { storeId: number; storeName: string; foodsharingUserId: string; foodsharingUserName?: string | null; pickupDate: string; dryRun: boolean; decision: string; reasons: string; userMessage?: string; error?: string; createdAt: string; }
-interface FoodsharingFuturePickupUser { foodsharingUserId: string; name: string; futurePickupCount: number; futurePickups: FoodsharingFuturePickup[]; }
-interface FoodsharingFuturePickup { storeId: number; storeName: string; pickupDate: string; confirmed: boolean; }
-interface FoodsharingRunResult { evaluated: number; confirmed: number; declined: number; failed: number; dryRun: boolean; messages: string[]; }
