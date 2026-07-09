@@ -74,7 +74,7 @@ public class PublicController implements PublicApi {
                 .header("X-Auth-Token", auth.getAuthToken())
                 .header("X-Auth-Expires-At", auth.getExpiresAt().toString())
                 .header("X-Auth-Foodsharing-Id", auth.getFoodsharingId())
-                .header("X-Auth-Roles", String.join(",", auth.getRoles().stream().map(Enum::name).toList()))
+                .header("X-Auth-Permissions", String.join(",", auth.getPermissions().stream().map(Enum::name).toList()))
                 .header("X-Auth-Display-Name", auth.getDisplayName() == null ? "" : auth.getDisplayName()));
         return response.body(mapper.toBookingDetailResponse(slot));
     }

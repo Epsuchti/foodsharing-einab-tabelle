@@ -8,4 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FoodsharingPickupAutomationAuditRepository extends JpaRepository<FoodsharingPickupAutomationAudit, UUID> {
     List<FoodsharingPickupAutomationAudit> findTop100ByAdminConnectionOrderByCreatedAtDesc(FoodsharingAdminConnection adminConnection);
+    List<FoodsharingPickupAutomationAudit> findTop100ByOrderByCreatedAtDesc();
 }

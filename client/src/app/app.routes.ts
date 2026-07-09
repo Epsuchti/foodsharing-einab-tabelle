@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 
-import { UserRole } from './api';
+import { UserPermission } from './api';
 import { authGuard } from './core/auth.guard';
 import { AdminDashboardPageComponent } from './pages/admin-dashboard-page/admin-dashboard-page.component';
 import { AdminFoodsharingAutomationPageComponent } from './pages/admin-foodsharing-automation-page/admin-foodsharing-automation-page.component';
@@ -23,10 +23,10 @@ export const routes: Routes = [
   { path: 'verify-login', component: VerifyLoginPageComponent },
   { path: 'confirm-booking', component: ConfirmBookingPageComponent },
   { path: 'unsubscribe', component: UnsubscribePageComponent },
-  { path: 'my-bookings', component: MyBookingsPageComponent, canActivate: [authGuard], data: { roles: [UserRole.User, UserRole.Teacher, UserRole.Admin] } },
-  { path: 'teacher', component: TeacherDashboardPageComponent, canActivate: [authGuard], data: { roles: [UserRole.Teacher, UserRole.Admin] } },
-  { path: 'teacher/bookings', component: TeacherBookingsPageComponent, canActivate: [authGuard], data: { roles: [UserRole.Teacher, UserRole.Admin] } },
-  { path: 'admin', component: AdminDashboardPageComponent, canActivate: [authGuard], data: { roles: [UserRole.Admin] } },
-  { path: 'admin/foodsharing-automation', component: AdminFoodsharingAutomationPageComponent, canActivate: [authGuard], data: { roles: [UserRole.Admin] } },
+  { path: 'my-bookings', component: MyBookingsPageComponent, canActivate: [authGuard] },
+  { path: 'teacher', component: TeacherDashboardPageComponent, canActivate: [authGuard], data: { permissions: [UserPermission.CanGiveEinAbs] } },
+  { path: 'teacher/bookings', component: TeacherBookingsPageComponent, canActivate: [authGuard], data: { permissions: [UserPermission.CanGiveEinAbs] } },
+  { path: 'admin', component: AdminDashboardPageComponent, canActivate: [authGuard], data: { permissions: [UserPermission.CanManageUsers] } },
+  { path: 'admin/foodsharing-automation', component: AdminFoodsharingAutomationPageComponent, canActivate: [authGuard], data: { permissions: [UserPermission.CanUseAutomations, UserPermission.CanUseAutomationSlotApproval] } },
   { path: '**', redirectTo: '' }
 ];

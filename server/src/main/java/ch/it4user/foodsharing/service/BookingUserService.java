@@ -29,6 +29,9 @@ public class BookingUserService {
         return bookingUserRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId)
                 .map(existing -> {
                     existing.setName(foodsharingUser.name());
+                    if (foodsharingUser.phoneNumber() != null) {
+                        existing.setPhoneNumber(foodsharingUser.phoneNumber());
+                    }
                     existing.setActive(true);
                     existing.setPreferredLanguage(language);
                     return existing;
@@ -36,6 +39,7 @@ public class BookingUserService {
                 .orElseGet(() -> {
                     User bookingUser = new User();
                     bookingUser.setName(foodsharingUser.name());
+                    bookingUser.setPhoneNumber(foodsharingUser.phoneNumber());
                     bookingUser.setFoodsharingId(normalizedFoodsharingId);
                     bookingUser.setActive(true);
                     bookingUser.setPreferredLanguage(language);

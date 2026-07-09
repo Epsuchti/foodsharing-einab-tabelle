@@ -12,7 +12,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "foodsharing_store_automations", uniqueConstraints = @UniqueConstraint(name = "uk_foodsharing_store_automations_connection_store", columnNames = {"admin_connection_id", "store_id"}))
+@Table(name = "foodsharing_store_automations", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_foodsharing_store_automations_connection_store", columnNames = {"admin_connection_id", "store_id"}),
+        @UniqueConstraint(name = "uk_foodsharing_store_automations_store", columnNames = {"store_id"})
+})
 @Getter
 @Setter
 @NoArgsConstructor

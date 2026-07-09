@@ -19,14 +19,14 @@
           <td>{{ admin.phoneNumber }}</td>
           <td><p-tag [severity]="admin.active ? 'success' : 'warn'" [value]="admin.active ? i18n.t('common.active') : i18n.t('common.inactive')"></p-tag></td>
           <td><p-tag [severity]="admin.wantsToBeTeacher ? 'warn' : 'secondary'" [value]="admin.wantsToBeTeacher ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
-          <td><p-tag [severity]="admin.isAdmin ? 'contrast' : 'secondary'" [value]="admin.isAdmin ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
+          <td><p-tag [severity]="admin.canManageUsers ? 'contrast' : 'secondary'" [value]="admin.canManageUsers ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
           <td class="actions-cell">
             @if (admin.active) {
               <button pButton size="small" severity="danger" [label]="i18n.t('admin.disable')" (click)="toggleAdminUserActive(admin, false)"></button>
             } @else {
               <button pButton size="small" [label]="i18n.t('admin.enable')" (click)="toggleAdminUserActive(admin, true)"></button>
             }
-            @if (admin.isAdmin) {
+            @if (admin.canManageUsers) {
               <button pButton size="small" severity="secondary" [label]="i18n.t('admin.revokeAdmin')" (click)="revokeAdminUser(admin)"></button>
             }
           </td>
@@ -63,14 +63,14 @@
           <td>{{ teacher.phoneNumber }}</td>
           <td><p-tag [severity]="teacher.active ? 'success' : 'warn'" [value]="teacher.active ? i18n.t('common.active') : i18n.t('common.inactive')"></p-tag></td>
           <td><p-tag [severity]="teacher.wantsToBeTeacher ? 'warn' : 'secondary'" [value]="teacher.wantsToBeTeacher ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
-          <td><p-tag [severity]="teacher.isAdmin ? 'contrast' : 'secondary'" [value]="teacher.isAdmin ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
+          <td><p-tag [severity]="teacher.canManageUsers ? 'contrast' : 'secondary'" [value]="teacher.canManageUsers ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
           <td class="actions-cell">
-            @if (teacher.isTeacher) {
+            @if (teacher.canGiveEinAbs) {
               <button pButton size="small" severity="danger" [label]="i18n.t('admin.disable')" (click)="toggleTeacher(teacher, false)"></button>
             } @else {
               <button pButton size="small" [label]="i18n.t('admin.enable')" (click)="toggleTeacher(teacher, true)"></button>
             }
-            @if (teacher.isAdmin) {
+            @if (teacher.canManageUsers) {
               <button pButton size="small" severity="secondary" [label]="i18n.t('admin.revokeAdmin')" (click)="toggleAdmin(teacher, false)"></button>
             } @else {
               <button pButton size="small" severity="contrast" [label]="i18n.t('admin.makeAdmin')" (click)="toggleAdmin(teacher, true)"></button>
@@ -188,9 +188,20 @@
             <p-accordion-content>
               <div class="accordion-actions">
                 <button pButton type="button" icon="pi pi-ban" severity="danger" [label]="i18n.t('admin.disableBookingUser')" (click)="disableBookingUser(user)"></button>
-                @if (!user.user.isAdmin) {
+                @if (!user.user.canManageUsers) {
                   <button pButton type="button" icon="pi pi-shield" severity="contrast" [label]="i18n.t('admin.makeAdmin')" (click)="makeBookingUserAdmin(user)"></button>
                 }
+              </div>
+
+              <h4>{{ i18n.t('admin.permissions') }}</h4>
+              <div class="form-grid">
+                <label><p-checkbox [binary]="true" [(ngModel)]="user.user.canGiveEinAbs"></p-checkbox> {{ i18n.t('permission.canGiveEinAbs') }}</label>
+                <label><p-checkbox [binary]="true" [(ngModel)]="user.user.canManageUsers"></p-checkbox> {{ i18n.t('permission.canManageUsers') }}</label>
+                <label><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomations"></p-checkbox> {{ i18n.t('permission.canUseAutomations') }}</label>
+                <label><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeUserPickupCountGrouping"></p-checkbox> {{ i18n.t('permission.canSeeUserPickupCountGrouping') }}</label>
+                <label><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationSlotApproval"></p-checkbox> {{ i18n.t('permission.canUseAutomationSlotApproval') }}</label>
+                <label><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeAllAutomationDecisions"></p-checkbox> {{ i18n.t('permission.canSeeAllAutomationDecisions') }}</label>
+                <button pButton type="button" [label]="i18n.t('common.save')" (click)="saveUserPermissions(user)"></button>
               </div>
 
               <h4>{{ i18n.t('admin.userPickups') }}</h4>

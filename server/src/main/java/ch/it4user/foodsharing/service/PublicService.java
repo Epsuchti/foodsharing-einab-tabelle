@@ -65,9 +65,6 @@ public class PublicService {
                 bookingUser, ACTIVE_BOOKING_STATUSES, slot.getEinAb().getCategory())) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_ALREADY_BOOKED_IN_CATEGORY);
         }
-        if (slotRepository.countByBookingUserAndStatusIn(bookingUser, ACTIVE_BOOKING_STATUSES) >= 3) {
-            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_BOOKING_LIMIT_REACHED);
-        }
         Integer minimumPickupCount = slot.getEinAb().getMinimumPickupCount();
         if (minimumPickupCount != null
                 && slotRepository.countByBookingUserAndStatus(bookingUser, SlotStatus.DONE) < minimumPickupCount) {

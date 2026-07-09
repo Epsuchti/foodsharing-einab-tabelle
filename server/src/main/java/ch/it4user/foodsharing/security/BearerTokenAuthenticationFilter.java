@@ -43,9 +43,9 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private void authenticate(AuthSession session) {
-        var authorities = Arrays.stream(session.getRoles().split(","))
-                .filter(role -> !role.isBlank())
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+        var authorities = Arrays.stream(session.getPermissions().split(","))
+                .filter(permission -> !permission.isBlank())
+                .map(SimpleGrantedAuthority::new)
                 .collect(Collectors.toList());
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(session.getFoodsharingId(), session.getTokenHash(), authorities));

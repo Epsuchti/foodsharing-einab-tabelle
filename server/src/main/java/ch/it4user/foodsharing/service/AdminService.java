@@ -46,7 +46,7 @@ public class AdminService {
     }
 
     public Page<User> getAdmins(int page, int size) {
-        return userRepository.findAllByAdminTrueOrderByNameAsc(
+        return userRepository.findAllByCanManageUsersTrueOrderByNameAsc(
                 org.springframework.data.domain.PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
     }
 
@@ -99,9 +99,9 @@ public class AdminService {
     public User grantBookingUserAdmin(UUID bookingUserId) {
         User bookingUser = userRepository.findById(bookingUserId)
                 .filter(User::isActive)
-                .filter(user -> !user.isTeacher())
+                .filter(user -> !user.isCanGiveEinAbs())
                 .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_USER_NOT_FOUND));
-        bookingUser.setAdmin(true);
+        bookingUser.setCanManageUsers(true);
         bookingUser.setActive(true);
         return bookingUser;
     }
@@ -109,9 +109,9 @@ public class AdminService {
     @Transactional
     public User setAdminActive(UUID adminUserId, boolean active) {
         User adminUser = userRepository.findById(adminUserId)
-                .filter(User::isAdmin)
+                .filter(User::isCanManageUsers)
                 .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND));
-        if (adminUser.isTeacher() || adminUser.isWantsToBeTeacher()) {
+        if (adminUser.isCanGiveEinAbs() || adminUser.isWantsToBeTeacher()) {
             return teacherService.setTeacherActive(adminUserId, active);
         }
         adminUser.setActive(active);
@@ -119,11 +119,27 @@ public class AdminService {
     }
 
     @Transactional
+    public User setUserPermissions(UUID userId, UserPermissions permissions) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND));
+        user.setCanGiveEinAbs(permissions.canGiveEinAbs());
+        user.setCanManageUsers(permissions.canManageUsers());
+        user.setCanUseAutomations(permissions.canUseAutomations());
+        user.setCanSeeUserPickupCountGrouping(permissions.canSeeUserPickupCountGrouping());
+        user.setCanUseAutomationSlotApproval(permissions.canUseAutomationSlotApproval());
+        user.setCanSeeAllAutomationDecisions(permissions.canSeeAllAutomationDecisions());
+        if (permissions.canManageUsers()) {
+            user.setActive(true);
+        }
+        return user;
+    }
+
+    @Transactional
     public User setAdminAdmin(UUID adminUserId, boolean admin) {
         User adminUser = userRepository.findById(adminUserId)
-                .filter(User::isAdmin)
+                .filter(User::isCanManageUsers)
                 .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND));
-        adminUser.setAdmin(admin);
+        adminUser.setCanManageUsers(admin);
         if (admin) {
             adminUser.setActive(true);
         }
@@ -151,6 +167,11 @@ public class AdminService {
                 .map(slot -> slot.getEinAb().getStartDateTime())
                 .max(Comparator.naturalOrder())
                 .orElse(null);
+    }
+
+    public record UserPermissions(boolean canGiveEinAbs, boolean canManageUsers, boolean canUseAutomations,
+                                  boolean canSeeUserPickupCountGrouping, boolean canUseAutomationSlotApproval,
+                                  boolean canSeeAllAutomationDecisions) {
     }
 
     public record AdminUsersView(Page<User> users,

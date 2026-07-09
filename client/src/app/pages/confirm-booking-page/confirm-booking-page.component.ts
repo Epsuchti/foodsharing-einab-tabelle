@@ -3,7 +3,7 @@ import { HttpHeaders } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
-import { AuthResponse, BookingDetailResponse, PublicService, UserRole } from '../../api';
+import { AuthResponse, BookingDetailResponse, PublicService, UserPermission } from '../../api';
 import { resolveApiError } from '../../core/api-error';
 import { I18nService } from '../../core/i18n.service';
 import { SessionService } from '../../core/session.service';
@@ -53,8 +53,8 @@ export class ConfirmBookingPageComponent implements OnInit {
     const authToken = headers.get('X-Auth-Token');
     const expiresAt = headers.get('X-Auth-Expires-At');
     const foodsharingId = headers.get('X-Auth-Foodsharing-Id');
-    const roles = headers.get('X-Auth-Roles');
-    if (!authToken || !expiresAt || !foodsharingId || !roles) {
+    const permissions = headers.get('X-Auth-Permissions');
+    if (!authToken || !expiresAt || !foodsharingId || !permissions) {
       return;
     }
     const displayName = headers.get('X-Auth-Display-Name') || undefined;
@@ -64,7 +64,7 @@ export class ConfirmBookingPageComponent implements OnInit {
       email: undefined,
       foodsharingId,
       displayName,
-      roles: roles.split(',').filter(Boolean).map((role) => role.trim() as UserRole)
+      permissions: permissions.split(',').filter(Boolean).map((permission) => permission.trim() as UserPermission)
     };
     this.sessionService.setSession(authResponse);
   }

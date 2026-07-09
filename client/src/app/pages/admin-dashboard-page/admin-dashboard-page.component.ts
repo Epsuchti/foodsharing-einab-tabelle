@@ -213,6 +213,24 @@ export class AdminDashboardPageComponent implements OnInit {
     this.loadUsersPage(0);
   }
 
+
+  saveUserPermissions(user: AdminBookingUserResponse): void {
+    this.adminApi.setAdminUserPermissions({
+      userId: user.user.id,
+      userPermissionsRequest: {
+        canGiveEinAbs: user.user.canGiveEinAbs,
+        canManageUsers: user.user.canManageUsers,
+        canUseAutomations: user.user.canUseAutomations,
+        canSeeUserPickupCountGrouping: user.user.canSeeUserPickupCountGrouping,
+        canUseAutomationSlotApproval: user.user.canUseAutomationSlotApproval,
+        canSeeAllAutomationDecisions: user.user.canSeeAllAutomationDecisions
+      }
+    }).subscribe({
+      next: () => this.loadUsersPage(this.usersPage()?.page ?? 0),
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
   disableBookingUser(user: AdminBookingUserResponse): void {
     this.confirmationService.confirm({
       message: this.i18n.t('confirm.disableBookingUser'),

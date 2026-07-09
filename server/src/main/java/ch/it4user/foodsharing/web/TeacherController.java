@@ -101,14 +101,14 @@ public class TeacherController implements TeacherApi {
                 upsertEinAbRequest.getVisitFairteiler(),
                 upsertEinAbRequest.getSlotCount(),
                 upsertEinAbRequest.getMinimumPickupCount(),
-                currentActorService.isAdmin()
+                currentActorService.canManageUsers()
         );
         return ResponseEntity.ok(mapTeacherEinAb(einAb));
     }
 
     @Override
     public ResponseEntity<Void> deleteTeacherEinAb(UUID einAbId) {
-        teacherService.deleteEinAb(currentActorService.requireTeacher(), einAbId, currentActorService.isAdmin());
+        teacherService.deleteEinAb(currentActorService.requireTeacher(), einAbId, currentActorService.canManageUsers());
         return ResponseEntity.noContent().build();
     }
 
@@ -155,7 +155,7 @@ public class TeacherController implements TeacherApi {
     @Override
     public ResponseEntity<SlotResponse> cancelTeacherSlotBooking(UUID slotId) {
         return ResponseEntity.ok(mapper.toSlotResponse(
-                teacherService.cancelBookedSlot(currentActorService.requireTeacher(), slotId, currentActorService.isAdmin())));
+                teacherService.cancelBookedSlot(currentActorService.requireTeacher(), slotId, currentActorService.canManageUsers())));
     }
 
     private TeacherEinAbListResponse mapTeacherEinAbs(org.springframework.data.domain.Page<EinAb> einAbs) {

@@ -737,6 +737,35 @@ paths:
                 $ref: '#/components/schemas/TeacherResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /api/admin/users/{userId}/permissions:
+    put:
+      tags: [admin]
+      operationId: setAdminUserPermissions
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPermissionsRequest'
+      responses:
+        '200':
+          description: User permissions updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/foodsharing/connect:
     post:
       tags: [admin]
@@ -845,6 +874,62 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  /api/admin/foodsharing/cleaning-rule-exemptions:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingCleaningRuleExemptions
+      responses:
+        '200':
+          description: Foodsharing IDs excluded from the cleaning rule
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodsharingCleaningRuleExemption'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      tags: [admin]
+      operationId: saveFoodsharingCleaningRuleExemption
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsharingCleaningRuleExemptionRequest'
+      responses:
+        '200':
+          description: Foodsharing cleaning-rule exemption saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingCleaningRuleExemption'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/admin/foodsharing/cleaning-rule-exemptions/{exemptionId}:
+    delete:
+      tags: [admin]
+      operationId: deleteFoodsharingCleaningRuleExemption
+      parameters:
+        - name: exemptionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Foodsharing cleaning-rule exemption deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/admin/foodsharing/automation/audit:
     get:
       tags: [admin]
@@ -975,9 +1060,9 @@ components:
     SlotStatus:
       type: string
       enum: [AVAILABLE, PENDING_CONFIRMATION, BOOKED, DONE, CANCELLED]
-    UserRole:
+    UserPermission:
       type: string
-      enum: [USER, TEACHER, ADMIN]
+      enum: [CAN_GIVE_EIN_ABS, CAN_MANAGE_USERS, CAN_USE_AUTOMATIONS, CAN_SEE_USER_PICKUP_COUNT_GROUPING, CAN_USE_AUTOMATION_SLOT_APPROVAL, CAN_SEE_ALL_AUTOMATION_DECISIONS]
     BookSlotRequest:
       type: object
       required: [foodsharingId, language]
@@ -1040,7 +1125,7 @@ components:
           minLength: 1
     AuthResponse:
       type: object
-      required: [authToken, expiresAt, roles, foodsharingId]
+      required: [authToken, expiresAt, permissions, foodsharingId]
       properties:
         authToken:
           type: string
@@ -1054,10 +1139,26 @@ components:
           type: string
         displayName:
           type: string
-        roles:
+        permissions:
           type: array
           items:
-            $ref: '#/components/schemas/UserRole'
+            $ref: '#/components/schemas/UserPermission'
+    UserPermissionsRequest:
+      type: object
+      required: [canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canSeeAllAutomationDecisions]
+      properties:
+        canGiveEinAbs:
+          type: boolean
+        canManageUsers:
+          type: boolean
+        canUseAutomations:
+          type: boolean
+        canSeeUserPickupCountGrouping:
+          type: boolean
+        canUseAutomationSlotApproval:
+          type: boolean
+        canSeeAllAutomationDecisions:
+          type: boolean
     FoodsharingConnectRequest:
       type: object
       required: [email, password]
@@ -1104,13 +1205,15 @@ components:
       allOf:
         - $ref: '#/components/schemas/FoodsharingStoreAutomationRequest'
         - type: object
-          required: [storeId, storeName]
+          required: [storeId, storeName, editable]
           properties:
             storeId:
               type: integer
               format: int64
             storeName:
               type: string
+            editable:
+              type: boolean
     FoodsharingRunRequest:
       type: object
       required: [dryRun]
@@ -1139,6 +1242,26 @@ components:
           type: array
           items:
             type: string
+    FoodsharingCleaningRuleExemptionRequest:
+      type: object
+      required: [foodsharingId, reason]
+      properties:
+        foodsharingId:
+          type: string
+          minLength: 1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    FoodsharingCleaningRuleExemption:
+      allOf:
+        - $ref: '#/components/schemas/FoodsharingCleaningRuleExemptionRequest'
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+              format: uuid
     FoodsharingAutomationAudit:
       type: object
       required: [storeId, storeName, foodsharingUserId, pickupDate, dryRun, decision, reasons, createdAt]
@@ -1202,7 +1325,7 @@ components:
             $ref: '#/components/schemas/FoodsharingFuturePickup'
     TeacherResponse:
       type: object
-      required: [id, foodsharingId, name, active, isTeacher, isAdmin, language, createdAt, updatedAt]
+      required: [id, foodsharingId, name, active, language, createdAt, updatedAt, canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canSeeAllAutomationDecisions]
       properties:
         id:
           type: string
@@ -1220,9 +1343,17 @@ components:
           type: string
         active:
           type: boolean
-        isTeacher:
+        canGiveEinAbs:
           type: boolean
-        isAdmin:
+        canManageUsers:
+          type: boolean
+        canUseAutomations:
+          type: boolean
+        canSeeUserPickupCountGrouping:
+          type: boolean
+        canUseAutomationSlotApproval:
+          type: boolean
+        canSeeAllAutomationDecisions:
           type: boolean
         wantsToBeTeacher:
           type: boolean
@@ -1280,7 +1411,7 @@ components:
           $ref: '#/components/schemas/Language'
     BookingUserResponse:
       type: object
-      required: [id, name, foodsharingId, language, isAdmin, createdAt, updatedAt]
+      required: [id, name, foodsharingId, language, createdAt, updatedAt, canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canSeeAllAutomationDecisions]
       properties:
         id:
           type: string
@@ -1296,7 +1427,17 @@ components:
           type: string
         language:
           $ref: '#/components/schemas/Language'
-        isAdmin:
+        canGiveEinAbs:
+          type: boolean
+        canManageUsers:
+          type: boolean
+        canUseAutomations:
+          type: boolean
+        canSeeUserPickupCountGrouping:
+          type: boolean
+        canUseAutomationSlotApproval:
+          type: boolean
+        canSeeAllAutomationDecisions:
           type: boolean
         createdAt:
           type: string

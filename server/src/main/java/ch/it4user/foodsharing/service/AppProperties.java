@@ -82,6 +82,8 @@ public class AppProperties {
         @NotBlank
         private String adminPassword = "";
         private String tokenEncryptionKey = "";
+        private String phoneNumberApiBaseUrl = "https://www.vserverli.de/fs";
+        private String phoneNumberApiToken = "";
         private final Automation automation = new Automation();
 
         public String getBaseUrl() { return baseUrl; }
@@ -92,6 +94,10 @@ public class AppProperties {
         public void setAdminPassword(String adminPassword) { this.adminPassword = adminPassword; }
         public String getTokenEncryptionKey() { return tokenEncryptionKey; }
         public void setTokenEncryptionKey(String tokenEncryptionKey) { this.tokenEncryptionKey = tokenEncryptionKey; }
+        public String getPhoneNumberApiBaseUrl() { return phoneNumberApiBaseUrl; }
+        public void setPhoneNumberApiBaseUrl(String phoneNumberApiBaseUrl) { this.phoneNumberApiBaseUrl = phoneNumberApiBaseUrl; }
+        public String getPhoneNumberApiToken() { return phoneNumberApiToken; }
+        public void setPhoneNumberApiToken(String phoneNumberApiToken) { this.phoneNumberApiToken = phoneNumberApiToken; }
         public Automation getAutomation() { return automation; }
     }
 

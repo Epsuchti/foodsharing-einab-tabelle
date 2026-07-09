@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 
-import { UserRole } from '../api';
+import { UserPermission } from '../api';
 import { SessionService } from './session.service';
 
 export const authGuard: CanActivateFn = (route) => {
@@ -11,8 +11,8 @@ export const authGuard: CanActivateFn = (route) => {
     return router.createUrlTree(['/login']);
   }
 
-  const requiredRoles = route.data['roles'] as UserRole[] | undefined;
-  if (!requiredRoles || requiredRoles.some((role) => sessionService.hasRole(role))) {
+  const requiredPermissions = route.data['permissions'] as UserPermission[] | undefined;
+  if (!requiredPermissions || requiredPermissions.some((permission) => sessionService.hasPermission(permission))) {
     return true;
   }
   return router.createUrlTree([sessionService.primaryRoute()]);

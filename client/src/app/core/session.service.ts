@@ -1,7 +1,7 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { AuthResponse, UserRole } from '../api';
+import { AuthResponse, UserPermission } from '../api';
 
 type SessionState = AuthResponse | null;
 
@@ -31,22 +31,26 @@ export class SessionService {
     return this.isAuthenticated() ? this.session()?.authToken ?? null : null;
   }
 
-  roles(): UserRole[] {
-    return this.session()?.roles ?? [];
+
+  permissions(): UserPermission[] {
+    return this.session()?.permissions ?? [];
   }
 
-  hasRole(role: UserRole): boolean {
-    return this.roles().includes(role);
+  hasPermission(permission: UserPermission): boolean {
+    return this.permissions().includes(permission);
   }
 
   primaryRoute(): string {
-    if (this.hasRole(UserRole.Admin)) {
+    if (this.hasPermission(UserPermission.CanManageUsers)) {
       return '/admin';
     }
-    if (this.hasRole(UserRole.Teacher)) {
+    if (this.hasPermission(UserPermission.CanUseAutomations) || this.hasPermission(UserPermission.CanUseAutomationSlotApproval)) {
+      return '/admin/foodsharing-automation';
+    }
+    if (this.hasPermission(UserPermission.CanGiveEinAbs)) {
       return '/teacher';
     }
-    if (this.hasRole(UserRole.User)) {
+    if (this.isAuthenticated()) {
       return '/my-bookings';
     }
     return '/';
