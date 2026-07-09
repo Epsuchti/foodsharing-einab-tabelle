@@ -21,15 +21,15 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query("""
         select u from User u
         where u.active = true
-          and u.teacher = false
-          and u.admin = false
+          and u.canGiveEinAbs = false
+          and u.canManageUsers = false
         order by u.createdAt desc
         """)
     List<User> findAllActiveBookingUsersOrderByCreatedAtDesc();
 
-    Page<User> findAllByAdminTrueOrderByNameAsc(Pageable pageable);
+    Page<User> findAllByCanManageUsersTrueOrderByNameAsc(Pageable pageable);
 
-    Page<User> findAllByTeacherTrueOrWantsToBeTeacherTrueOrderByNameAsc(Pageable pageable);
+    Page<User> findAllByCanGiveEinAbsTrueOrWantsToBeTeacherTrueOrderByNameAsc(Pageable pageable);
 
     boolean existsByFoodsharingIdIgnoreCaseAndActiveTrue(String foodsharingId);
 

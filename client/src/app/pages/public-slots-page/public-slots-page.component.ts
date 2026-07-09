@@ -15,7 +15,6 @@ import {
   EinAbCategory,
   NotificationSubscriptionRequest,
   PublicService,
-  UserRole,
   UserService
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
@@ -219,7 +218,7 @@ export class PublicSlotsPageComponent implements OnInit {
   }
 
   private loadBookingProfile(): void {
-    if (!this.sessionService.isAuthenticated() || !this.sessionService.hasRole(UserRole.User)) {
+    if (!this.sessionService.isAuthenticated()) {
       return;
     }
 

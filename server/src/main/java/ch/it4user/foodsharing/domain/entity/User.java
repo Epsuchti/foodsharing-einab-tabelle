@@ -35,14 +35,27 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private boolean active = false;
 
-    @Column(name = "is_admin", nullable = false)
-    private boolean admin = false;
-
-    @Column(name = "is_teacher", nullable = false)
-    private boolean teacher = false;
 
     @Column(name = "wants_to_be_teacher", nullable = false)
     private boolean wantsToBeTeacher = false;
+
+    @Column(nullable = false)
+    private boolean canGiveEinAbs = false;
+
+    @Column(nullable = false)
+    private boolean canManageUsers = false;
+
+    @Column(nullable = false)
+    private boolean canUseAutomations = false;
+
+    @Column(nullable = false)
+    private boolean canSeeUserPickupCountGrouping = false;
+
+    @Column(nullable = false)
+    private boolean canUseAutomationSlotApproval = false;
+
+    @Column(nullable = false)
+    private boolean canSeeAllAutomationDecisions = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 10)

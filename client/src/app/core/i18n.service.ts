@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
-import { EinAbCategory, ErrorCode, Language, SlotStatus, UserRole } from '../api';
+import { EinAbCategory, ErrorCode, Language, SlotStatus } from '../api';
 
 type UiLanguage = 'de' | 'en' | 'gws';
 
@@ -56,16 +56,6 @@ export class I18nService {
       [SlotStatus.Booked]: this.t('status.booked'),
       [SlotStatus.Done]: this.t('status.done'),
       [SlotStatus.Cancelled]: this.t('status.cancelled')
-    };
-    return labels[key] ?? key;
-  }
-
-  roleLabel(role: UserRole | string | undefined): string {
-    const key = role ?? '';
-    const labels: Record<string, string> = {
-      [UserRole.User]: this.t('role.user'),
-      [UserRole.Teacher]: this.t('role.teacher'),
-      [UserRole.Admin]: this.t('role.admin')
     };
     return labels[key] ?? key;
   }

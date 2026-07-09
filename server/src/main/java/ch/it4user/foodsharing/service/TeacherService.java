@@ -60,6 +60,9 @@ public class TeacherService {
         User teacher = userRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId).orElseGet(User::new);
         teacher.setFoodsharingId(foodsharingUser.foodsharingId());
         teacher.setName(foodsharingUser.name());
+        if (foodsharingUser.phoneNumber() != null) {
+            teacher.setPhoneNumber(foodsharingUser.phoneNumber());
+        }
         teacher.setWantsToBeTeacher(true);
         teacher.setActive(true);
         teacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
@@ -200,15 +203,15 @@ public class TeacherService {
     }
 
     public Page<User> findAllTeachers(int page, int size) {
-        return userRepository.findAllByTeacherTrueOrWantsToBeTeacherTrueOrderByNameAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
+        return userRepository.findAllByCanGiveEinAbsTrueOrWantsToBeTeacherTrueOrderByNameAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
     @Transactional
     public User setTeacherActive(UUID teacherId, boolean active) {
         User teacher = userRepository.findById(teacherId)
-                .filter(user -> user.isTeacher() || user.isWantsToBeTeacher())
+                .filter(user -> user.isCanGiveEinAbs() || user.isWantsToBeTeacher())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
-        teacher.setTeacher(active);
+        teacher.setCanGiveEinAbs(active);
         teacher.setWantsToBeTeacher(false);
         if (active) {
             teacher.setActive(true);
@@ -219,12 +222,12 @@ public class TeacherService {
     @Transactional
     public User setTeacherAdmin(UUID teacherId, boolean admin) {
         User teacher = userRepository.findById(teacherId)
-                .filter(user -> user.isTeacher() || user.isWantsToBeTeacher())
+                .filter(user -> user.isCanGiveEinAbs() || user.isWantsToBeTeacher())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
-        teacher.setAdmin(admin);
+        teacher.setCanManageUsers(admin);
         if (admin) {
             teacher.setActive(true);
-            teacher.setTeacher(true);
+            teacher.setCanGiveEinAbs(true);
             teacher.setWantsToBeTeacher(false);
         }
         return teacher;

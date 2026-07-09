@@ -5,3 +5,6 @@ databaseChangeLog:
   - include:
       file: db.changelog-002-add-experience-rule.yaml
       relativeToChangelogFile: true
+  - include:
+      file: db.changelog-003-add-user-permissions.yaml
+      relativeToChangelogFile: true

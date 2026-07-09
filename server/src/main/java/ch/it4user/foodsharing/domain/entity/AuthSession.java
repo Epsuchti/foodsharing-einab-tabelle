@@ -15,8 +15,8 @@ public class AuthSession extends BaseEntity {
     @Column(nullable = false, unique = true, length = 64)
     private String tokenHash;
 
-    @Column(nullable = false, length = 128)
-    private String roles;
+    @Column(nullable = false, length = 512)
+    private String permissions = "";
 
     @Column(nullable = false)
     private Instant expiresAt;
@@ -37,12 +37,12 @@ public class AuthSession extends BaseEntity {
         this.tokenHash = tokenHash;
     }
 
-    public String getRoles() {
-        return roles;
+    public String getPermissions() {
+        return permissions;
     }
 
-    public void setRoles(String roles) {
-        this.roles = roles;
+    public void setPermissions(String permissions) {
+        this.permissions = permissions;
     }
 
     public Instant getExpiresAt() {

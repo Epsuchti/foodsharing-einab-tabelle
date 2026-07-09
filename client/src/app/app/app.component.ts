@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
-import { UserRole } from '../api';
+import { UserPermission } from '../api';
 import { I18nService } from '../core/i18n.service';
 import { SessionService } from '../core/session.service';
 import { ButtonModule } from 'primeng/button';
@@ -19,8 +19,7 @@ import { ToastModule } from 'primeng/toast';
 export class App {
   readonly i18n = inject(I18nService);
   readonly sessionService = inject(SessionService);
-  readonly roles = computed(() => this.sessionService.roles());
-  readonly UserRole = UserRole;
+  readonly UserPermission = UserPermission;
   readonly mobileMenuOpen = signal(false);
 
   setLanguage(language: 'de' | 'en' | 'gws'): void {

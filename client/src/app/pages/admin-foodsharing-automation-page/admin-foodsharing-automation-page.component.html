@@ -52,16 +52,48 @@
           <tr>
             <td>{{ store.storeId }}</td>
             <td>{{ store.storeName }}</td>
-            <td><p-checkbox [binary]="true" [(ngModel)]="store.enabled"></p-checkbox></td>
-            <td><p-checkbox [binary]="true" [(ngModel)]="store.gapRuleEnabled"></p-checkbox></td>
-            <td><p-inputNumber [(ngModel)]="store.minimumGapDays" [min]="0" [showButtons]="true"></p-inputNumber></td>
-            <td><p-checkbox [binary]="true" [(ngModel)]="store.cleaningRuleEnabled"></p-checkbox></td>
-            <td><p-checkbox [binary]="true" [(ngModel)]="store.experienceRuleEnabled"></p-checkbox></td>
-            <td><button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveFoodsharingStore(store)"></button></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="store.enabled" [disabled]="!store.editable"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="store.gapRuleEnabled" [disabled]="!store.editable"></p-checkbox></td>
+            <td><p-inputNumber [(ngModel)]="store.minimumGapDays" [min]="0" [showButtons]="true" [disabled]="!store.editable"></p-inputNumber></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="store.cleaningRuleEnabled" [disabled]="!store.editable"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="store.experienceRuleEnabled" [disabled]="!store.editable"></p-checkbox></td>
+            <td><button pButton type="button" size="small" [label]="i18n.t('common.save')" [disabled]="!store.editable" (click)="saveFoodsharingStore(store)"></button></td>
           </tr>
         </ng-template>
       </p-table>
 
+      @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)) {
+      <h3>{{ i18n.t('adminAutomation.cleaningRuleExemptions') }}</h3>
+      <div class="form-grid">
+        <label>
+          {{ i18n.t('common.foodsharingId') }}
+          <input pInputText type="text" [ngModel]="cleaningExemptionFoodsharingId()" (ngModelChange)="cleaningExemptionFoodsharingId.set($event)">
+        </label>
+        <label>
+          {{ i18n.t('adminAutomation.exemptionReason') }}
+          <input pInputText type="text" [ngModel]="cleaningExemptionReason()" (ngModelChange)="cleaningExemptionReason.set($event)">
+        </label>
+        <button pButton type="button" [label]="i18n.t('common.save')" (click)="saveCleaningRuleExemption()"></button>
+      </div>
+      <p-table [value]="cleaningRuleExemptions()">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>{{ i18n.t('common.foodsharingId') }}</th>
+            <th>{{ i18n.t('adminAutomation.exemptionReason') }}</th>
+            <th>{{ i18n.t('common.actions') }}</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-exemption>
+          <tr>
+            <td>{{ exemption.foodsharingId }}</td>
+            <td>{{ exemption.reason }}</td>
+            <td><button pButton type="button" size="small" severity="danger" [label]="i18n.t('common.delete')" (click)="deleteCleaningRuleExemption(exemption)"></button></td>
+          </tr>
+        </ng-template>
+      </p-table>
+      }
+
+      @if (sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
       <h3>{{ i18n.t('adminAutomation.futurePickupUsers') }}</h3>
       <p-table [value]="foodsharingFuturePickupUsers()" [paginator]="true" [rows]="10" sortField="futurePickupCount" [sortOrder]="-1">
         <ng-template pTemplate="header">
@@ -88,7 +120,9 @@
           </tr>
         </ng-template>
       </p-table>
+      }
 
+      @if (sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) {
       <h3>{{ i18n.t('adminAutomation.audit') }}</h3>
       <p-table [value]="foodsharingAudit()" [paginator]="true" [rows]="10">
         <ng-template pTemplate="header">
@@ -118,6 +152,7 @@
           </tr>
         </ng-template>
       </p-table>
+      }
     }
   </p-card>
 </section>

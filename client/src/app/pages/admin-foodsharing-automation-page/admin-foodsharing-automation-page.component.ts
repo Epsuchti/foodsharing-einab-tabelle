@@ -5,13 +5,16 @@ import { FormsModule } from '@angular/forms';
 import {
   AdminService,
   FoodsharingAutomationAudit,
+  FoodsharingCleaningRuleExemption,
   FoodsharingConnectionStatus,
   FoodsharingFuturePickupUser,
   FoodsharingRunResult,
-  FoodsharingStoreAutomation
+  FoodsharingStoreAutomation,
+  UserPermission
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
 import { I18nService } from '../../core/i18n.service';
+import { SessionService } from '../../core/session.service';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -41,20 +44,26 @@ import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 })
 export class AdminFoodsharingAutomationPageComponent implements OnInit {
   readonly i18n = inject(I18nService);
+  protected readonly UserPermission = UserPermission;
 
   protected readonly foodsharingStatus = signal<FoodsharingConnectionStatus | null>(null);
   protected readonly foodsharingStores = signal<FoodsharingStoreAutomation[]>([]);
   protected readonly foodsharingAudit = signal<FoodsharingAutomationAudit[]>([]);
   protected readonly foodsharingFuturePickupUsers = signal<FoodsharingFuturePickupUser[]>([]);
+  protected readonly cleaningRuleExemptions = signal<FoodsharingCleaningRuleExemption[]>([]);
   protected readonly foodsharingEmail = signal('');
+  protected readonly cleaningExemptionFoodsharingId = signal('');
+  protected readonly cleaningExemptionReason = signal('');
   protected readonly foodsharingRunResult = signal<FoodsharingRunResult | null>(null);
   protected foodsharingPassword = '';
 
   private readonly adminApi = inject(AdminService);
+  protected readonly sessionService = inject(SessionService);
   private readonly messageService = inject(MessageService);
 
   ngOnInit(): void {
     this.loadFoodsharingAutomation();
+    this.loadCleaningRuleExemptions();
   }
 
   connectFoodsharing(): void {
@@ -106,6 +115,30 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     });
   }
 
+
+  saveCleaningRuleExemption(): void {
+    this.adminApi.saveFoodsharingCleaningRuleExemption({
+      foodsharingCleaningRuleExemptionRequest: {
+        foodsharingId: this.cleaningExemptionFoodsharingId(),
+        reason: this.cleaningExemptionReason()
+      }
+    }).subscribe({
+      next: () => {
+        this.cleaningExemptionFoodsharingId.set('');
+        this.cleaningExemptionReason.set('');
+        this.loadCleaningRuleExemptions();
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  deleteCleaningRuleExemption(exemption: FoodsharingCleaningRuleExemption): void {
+    this.adminApi.deleteFoodsharingCleaningRuleExemption({ exemptionId: exemption.id }).subscribe({
+      next: () => this.loadCleaningRuleExemptions(),
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
   private loadFoodsharingAutomation(): void {
     this.adminApi.getFoodsharingStatus().subscribe({
       next: (status) => {
@@ -130,6 +163,17 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   private loadFoodsharingFuturePickupUsers(): void {
     this.adminApi.getFoodsharingFuturePickupUsers().subscribe({
       next: (users) => this.foodsharingFuturePickupUsers.set(users),
+      error: () => undefined
+    });
+  }
+
+  private loadCleaningRuleExemptions(): void {
+    if (!this.sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)) {
+      this.cleaningRuleExemptions.set([]);
+      return;
+    }
+    this.adminApi.getFoodsharingCleaningRuleExemptions().subscribe({
+      next: (exemptions) => this.cleaningRuleExemptions.set(exemptions),
       error: () => undefined
     });
   }

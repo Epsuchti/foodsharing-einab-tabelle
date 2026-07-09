@@ -24,6 +24,7 @@ import org.springframework.web.client.RestClient;
 public class FoodsharingClient {
     private static final Logger log = LoggerFactory.getLogger(FoodsharingClient.class);
     private final RestClient restClient;
+    private final RestClient phoneNumberRestClient;
     private final AppProperties appProperties;
     private final FoodsharingApiSessionRepository sessionRepository;
     private final CryptoService cryptoService;
@@ -33,6 +34,7 @@ public class FoodsharingClient {
         this.sessionRepository = sessionRepository;
         this.cryptoService = cryptoService;
         this.restClient = RestClient.builder().baseUrl(appProperties.getFoodsharing().getBaseUrl()).build();
+        this.phoneNumberRestClient = RestClient.builder().baseUrl(appProperties.getFoodsharing().getPhoneNumberApiBaseUrl()).build();
     }
 
     public FoodsharingUserInfo getUser(String foodsharingId) {
@@ -40,7 +42,49 @@ public class FoodsharingClient {
         Object id = body.get("id");
         Object name = body.get("name");
         Object sleeping = body.get("isSleeping");
-        return new FoodsharingUserInfo(String.valueOf(id == null ? foodsharingId : id), String.valueOf(name == null ? foodsharingId : name), Boolean.TRUE.equals(sleeping));
+        String resolvedFoodsharingId = String.valueOf(id == null ? foodsharingId : id);
+        return new FoodsharingUserInfo(resolvedFoodsharingId, String.valueOf(name == null ? foodsharingId : name), fetchPhoneNumber(resolvedFoodsharingId), Boolean.TRUE.equals(sleeping));
+    }
+
+    public String fetchPhoneNumber(String foodsharingId) {
+        String token = appProperties.getFoodsharing().getPhoneNumberApiToken();
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        try {
+            log.info("Foodsharing phone-number request: GET /{}/nbr", foodsharingId);
+            String response = phoneNumberRestClient.get()
+                    .uri("/{foodsharingId}/nbr", foodsharingId)
+                    .header("X-API-Token", token)
+                    .retrieve()
+                    .body(String.class);
+            return normalizePhoneNumberResponse(response);
+        } catch (RuntimeException ex) {
+            log.warn("Could not fetch foodsharing phone number for user={}: {}", foodsharingId, ex.getMessage());
+            return null;
+        }
+    }
+
+    private String normalizePhoneNumberResponse(String response) {
+        if (response == null || response.isBlank()) {
+            return null;
+        }
+        String normalized = response.trim();
+        if (normalized.startsWith("{") && normalized.endsWith("}")) {
+            for (String key : List.of("phoneNumber", "phone", "number", "nbr")) {
+                java.util.regex.Matcher matcher = java.util.regex.Pattern
+                        .compile("\\\"" + key + "\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"")
+                        .matcher(normalized);
+                if (matcher.find()) {
+                    normalized = matcher.group(1).trim();
+                    break;
+                }
+            }
+        }
+        if (normalized.equalsIgnoreCase("null") || normalized.isBlank()) {
+            return null;
+        }
+        return normalized;
     }
 
     public void sendMessage(String foodsharingId, String body) {

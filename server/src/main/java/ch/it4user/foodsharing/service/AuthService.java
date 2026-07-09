@@ -4,7 +4,7 @@ import ch.it4user.foodsharing.domain.entity.AuthSession;
 import ch.it4user.foodsharing.domain.entity.LoginToken;
 import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
-import ch.it4user.foodsharing.domain.enumtype.UserRole;
+import ch.it4user.foodsharing.domain.enumtype.UserPermission;
 import ch.it4user.foodsharing.openapi.model.AuthResponse;
 import ch.it4user.foodsharing.openapi.model.MessageResponse;
 import ch.it4user.foodsharing.repository.AuthSessionRepository;
@@ -27,32 +27,35 @@ public class AuthService {
 
     private final LoginTokenRepository loginTokenRepository;
     private final AuthSessionRepository authSessionRepository;
-    private final RoleResolutionService roleResolutionService;
+    private final PermissionResolutionService permissionResolutionService;
     private final TokenService tokenService;
     private final FoodsharingMessageService messageService;
     private final MessageTemplateService messageTemplateService;
     private final AppProperties appProperties;
     private final UserRepository userRepository;
     private final BookingUserService bookingUserService;
+    private final FoodsharingClient foodsharingClient;
 
     public AuthService(LoginTokenRepository loginTokenRepository,
                        AuthSessionRepository authSessionRepository,
-                       RoleResolutionService roleResolutionService,
+                       PermissionResolutionService permissionResolutionService,
                        TokenService tokenService,
                        FoodsharingMessageService messageService,
                        MessageTemplateService messageTemplateService,
                        AppProperties appProperties,
                        UserRepository userRepository,
-                       BookingUserService bookingUserService) {
+                       BookingUserService bookingUserService,
+                       FoodsharingClient foodsharingClient) {
         this.loginTokenRepository = loginTokenRepository;
         this.authSessionRepository = authSessionRepository;
-        this.roleResolutionService = roleResolutionService;
+        this.permissionResolutionService = permissionResolutionService;
         this.tokenService = tokenService;
         this.messageService = messageService;
         this.messageTemplateService = messageTemplateService;
         this.appProperties = appProperties;
         this.userRepository = userRepository;
         this.bookingUserService = bookingUserService;
+        this.foodsharingClient = foodsharingClient;
     }
 
     @Transactional
@@ -103,13 +106,24 @@ public class AuthService {
     private LoginTarget resolveLoginTarget(String foodsharingId) {
         String normalizedFoodsharingId = foodsharingId.trim();
         User user = userRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(normalizedFoodsharingId)
+                .map(this::refreshPhoneNumber)
                 .orElseGet(() -> bookingUserService.getOrCreate(normalizedFoodsharingId, LanguageCode.DE));
         return new LoginTarget(user.getFoodsharingId(), user.getPreferredLanguage());
     }
 
+    private User refreshPhoneNumber(User user) {
+        String phoneNumber = foodsharingClient.fetchPhoneNumber(user.getFoodsharingId());
+        if (phoneNumber != null) {
+            user.setPhoneNumber(phoneNumber);
+        }
+        return user;
+    }
+
     private AuthResponse createAuthResponse(String foodsharingId) {
-        Set<UserRole> roles = roleResolutionService.resolveRoles(foodsharingId);
-        if (roles.isEmpty()) {
+        Set<UserPermission> permissions = permissionResolutionService.resolvePermissions(foodsharingId);
+        User loginUser = userRepository.findByFoodsharingIdIgnoreCase(foodsharingId)
+                .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ACCOUNT_NOT_FOUND));
+        if (!loginUser.isActive() && permissions.isEmpty()) {
             throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ACCOUNT_NOT_FOUND);
         }
 
@@ -117,7 +131,7 @@ public class AuthService {
         AuthSession authSession = new AuthSession();
         authSession.setFoodsharingId(foodsharingId);
         authSession.setTokenHash(tokenService.hash(rawAuthToken));
-        authSession.setRoles(roles.stream().map(Enum::name).sorted().collect(Collectors.joining(",")));
+        authSession.setPermissions(permissions.stream().map(Enum::name).sorted().collect(Collectors.joining(",")));
         authSession.setExpiresAt(Instant.now().plus(appProperties.getAuth().getTokenValidityDays(), ChronoUnit.DAYS));
         authSessionRepository.save(authSession);
 
@@ -131,9 +145,9 @@ public class AuthService {
         response.setEmail(null);
         response.setFoodsharingId(authSession.getFoodsharingId());
         response.setDisplayName(displayName);
-        response.setRoles(roles.stream()
+        response.setPermissions(permissions.stream()
                 .sorted(Comparator.comparing(Enum::name))
-                .map(role -> ch.it4user.foodsharing.openapi.model.UserRole.fromValue(role.name()))
+                .map(permission -> ch.it4user.foodsharing.openapi.model.UserPermission.fromValue(permission.name()))
                 .toList());
         return response;
     }
