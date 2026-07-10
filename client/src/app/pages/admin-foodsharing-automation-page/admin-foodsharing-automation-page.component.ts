@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import {
@@ -8,8 +8,10 @@ import {
   FoodsharingCleaningRuleExemption,
   FoodsharingConnectionStatus,
   FoodsharingFuturePickupUser,
+  FoodsharingManagedStore,
   FoodsharingRunResult,
   FoodsharingStoreAutomation,
+  FoodsharingStoreAutomationOverview,
   UserPermission
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
@@ -21,8 +23,10 @@ import { CheckboxModule } from 'primeng/checkbox';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
+import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { TabsModule } from 'primeng/tabs';
 import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 
 @Component({
@@ -36,11 +40,14 @@ import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
     CheckboxModule,
     InputNumberModule,
     InputTextModule,
+    SelectModule,
     ZurichDateTimePipe,
     TableModule,
-    TagModule
+    TagModule,
+    TabsModule
   ],
-  templateUrl: './admin-foodsharing-automation-page.component.html'
+  templateUrl: './admin-foodsharing-automation-page.component.html',
+  styleUrl: './admin-foodsharing-automation-page.component.scss'
 })
 export class AdminFoodsharingAutomationPageComponent implements OnInit {
   readonly i18n = inject(I18nService);
@@ -48,6 +55,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
 
   protected readonly foodsharingStatus = signal<FoodsharingConnectionStatus | null>(null);
   protected readonly foodsharingStores = signal<FoodsharingStoreAutomation[]>([]);
+  protected readonly availableStores = signal<FoodsharingManagedStore[]>([]);
   protected readonly foodsharingAudit = signal<FoodsharingAutomationAudit[]>([]);
   protected readonly foodsharingFuturePickupUsers = signal<FoodsharingFuturePickupUser[]>([]);
   protected readonly cleaningRuleExemptions = signal<FoodsharingCleaningRuleExemption[]>([]);
@@ -55,6 +63,15 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly cleaningExemptionFoodsharingId = signal('');
   protected readonly cleaningExemptionReason = signal('');
   protected readonly foodsharingRunResult = signal<FoodsharingRunResult | null>(null);
+  protected readonly onlyMyAutomations = signal(true);
+  protected readonly selectedStoreId = signal<number | null>(null);
+  protected readonly visibleFoodsharingStores = computed(() => this.onlyMyAutomations()
+    ? this.foodsharingStores().filter((store) => store.editable)
+    : this.foodsharingStores());
+  protected readonly availableStoreOptions = computed(() => this.availableStores().map((store) => ({
+    label: `${store.storeName} (${store.storeId})`,
+    value: store.storeId
+  })));
   protected foodsharingPassword = '';
 
   private readonly adminApi = inject(AdminService);
@@ -87,6 +104,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       next: () => {
         this.foodsharingStatus.set({ connected: false });
         this.foodsharingStores.set([]);
+        this.availableStores.set([]);
         this.foodsharingFuturePickupUsers.set([]);
         this.foodsharingAudit.set([]);
         this.foodsharingRunResult.set(null);
@@ -103,6 +121,66 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       next: () => this.loadFoodsharingAutomation(),
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
+  }
+
+  addFoodsharingStore(): void {
+    const storeId = this.selectedStoreId();
+    const store = this.availableStores().find((entry) => entry.storeId === storeId);
+    if (!store) {
+      return;
+    }
+    this.adminApi.saveFoodsharingStoreAutomation({
+      storeId: store.storeId,
+      foodsharingStoreAutomationRequest: {
+        storeName: store.storeName,
+        enabled: false,
+        dryRunEnabled: true,
+        gapRuleEnabled: false,
+        minimumGapDays: 0,
+        cleaningRuleEnabled: false,
+        experienceRuleEnabled: false
+      }
+    }).subscribe({
+      next: () => {
+        this.selectedStoreId.set(null);
+        this.loadFoodsharingAutomation();
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  storeOwnerLabel(store: FoodsharingStoreAutomation): string {
+    if (!store.ownerName && !store.ownerEmail) {
+      return this.i18n.t('adminAutomation.available');
+    }
+    if (store.ownerName && store.ownerEmail) {
+      return `${store.ownerName} (${store.ownerEmail})`;
+    }
+    return store.ownerName || store.ownerEmail || this.i18n.t('adminAutomation.available');
+  }
+
+  statusBannerText(): string {
+    const status = this.foodsharingStatus();
+    if (!status) {
+      return '';
+    }
+    if (!status.automationEnabled) {
+      return this.i18n.t('adminAutomation.modeDisabled');
+    }
+    return status.automationDryRun
+      ? this.i18n.t('adminAutomation.modeDryRun')
+      : this.i18n.t('adminAutomation.modeActive');
+  }
+
+  statusBannerClass(): string {
+    const status = this.foodsharingStatus();
+    if (!status) {
+      return '';
+    }
+    if (!status.automationEnabled) {
+      return 'automation-mode-banner--disabled';
+    }
+    return status.automationDryRun ? 'automation-mode-banner--dry-run' : 'automation-mode-banner--active';
   }
 
   runFoodsharingDryRun(): void {
@@ -145,13 +223,17 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
         this.foodsharingStatus.set(status);
         if (status.connected) {
           this.adminApi.getFoodsharingStores().subscribe({
-            next: (stores) => this.foodsharingStores.set(stores),
+            next: (overview: FoodsharingStoreAutomationOverview) => {
+              this.foodsharingStores.set(overview.automations);
+              this.availableStores.set(overview.availableStores);
+            },
             error: () => undefined
           });
           this.loadFoodsharingFuturePickupUsers();
           this.loadFoodsharingAudit();
         } else {
           this.foodsharingStores.set([]);
+          this.availableStores.set([]);
           this.foodsharingFuturePickupUsers.set([]);
           this.foodsharingAudit.set([]);
         }

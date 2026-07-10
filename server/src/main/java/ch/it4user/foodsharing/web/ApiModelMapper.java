@@ -88,12 +88,14 @@ public class ApiModelMapper {
         response.setFoodsharingId(bookingUser.getFoodsharingId());
         response.setPhoneNumber(bookingUser.getPhoneNumber());
         response.setLanguage(ch.it4user.foodsharing.openapi.model.Language.fromValue(bookingUser.getPreferredLanguage().getCode()));
+        response.setActive(bookingUser.isActive());
         response.setCanGiveEinAbs(bookingUser.isCanGiveEinAbs());
         response.setCanManageUsers(bookingUser.isCanManageUsers());
         response.setCanUseAutomations(bookingUser.isCanUseAutomations());
         response.setCanSeeUserPickupCountGrouping(bookingUser.isCanSeeUserPickupCountGrouping());
         response.setCanUseAutomationSlotApproval(bookingUser.isCanUseAutomationSlotApproval());
         response.setCanSeeAllAutomationDecisions(bookingUser.isCanSeeAllAutomationDecisions());
+        response.setWantsToBeTeacher(bookingUser.isWantsToBeTeacher());
         response.setCreatedAt(toOffsetDateTime(bookingUser.getCreatedAt()));
         response.setUpdatedAt(toOffsetDateTime(bookingUser.getUpdatedAt()));
         return response;

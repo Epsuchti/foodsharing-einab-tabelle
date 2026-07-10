@@ -9,14 +9,11 @@ import {
   BookingListResponse,
   BookingDetailResponse,
   EinAbResponse,
-  TeacherListResponse,
-  TeacherResponse,
   AdminService
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
 import { I18nService } from '../../core/i18n.service';
 import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
-import { AccordionModule } from 'primeng/accordion';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
@@ -24,8 +21,6 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { PaginatorModule } from 'primeng/paginator';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { InputTextModule } from 'primeng/inputtext';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { ConfirmationService, MessageService } from 'primeng/api';
 
 @Component({
@@ -35,33 +30,28 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     CommonModule,
     ZurichDateTimePipe,
     FormsModule,
-    AccordionModule,
     CardModule,
     ButtonModule,
     CheckboxModule,
     ConfirmDialogModule,
     PaginatorModule,
     TableModule,
-    TagModule,
-    InputTextModule,
-    InputNumberModule
+    TagModule
   ],
   templateUrl: './admin-dashboard-page.component.html'
 })
 export class AdminDashboardPageComponent implements OnInit {
   readonly i18n = inject(I18nService);
 
-  protected readonly teachers = signal<TeacherResponse[]>([]);
-  protected readonly teachersPage = signal<TeacherListResponse | null>(null);
-  protected readonly admins = signal<TeacherResponse[]>([]);
-  protected readonly adminsPage = signal<TeacherListResponse | null>(null);
   protected readonly einAbs = signal<EinAbResponse[]>([]);
   protected readonly einAbsPage = signal<AdminEinAbListResponse | null>(null);
   protected readonly bookings = signal<BookingDetailResponse[]>([]);
   protected readonly bookingsPage = signal<BookingListResponse | null>(null);
   protected readonly usersPage = signal<AdminBookingUserPageResponse | null>(null);
   protected readonly onlyThreePickups = signal(false);
+  protected readonly activeOnly = signal(true);
   protected readonly usersLoading = signal(true);
+  protected readonly expandedUserIds = signal<Record<string, boolean>>({});
 
   protected readonly pageSize = 20;
 
@@ -74,20 +64,6 @@ export class AdminDashboardPageComponent implements OnInit {
   }
 
   reload(): void {
-    this.adminApi.getAdminTeachers({ page: this.teachersPage()?.page ?? 0, size: this.pageSize }).subscribe({
-      next: (response) => {
-        this.teachers.set(response.teachers);
-        this.teachersPage.set(response);
-      },
-      error: (error) => this.toastError(resolveApiError(error, this.i18n))
-    });
-    this.adminApi.getAdminAdmins({ page: this.adminsPage()?.page ?? 0, size: this.pageSize }).subscribe({
-      next: (response) => {
-        this.admins.set(response.teachers);
-        this.adminsPage.set(response);
-      },
-      error: (error) => this.toastError(resolveApiError(error, this.i18n))
-    });
     this.adminApi.getAdminEinAbs({ page: this.einAbsPage()?.page ?? 0, size: this.pageSize }).subscribe({
       next: (response) => {
         this.einAbs.set(response.einAbs);
@@ -105,73 +81,13 @@ export class AdminDashboardPageComponent implements OnInit {
     this.loadUsersPage(this.usersPage()?.page ?? 0);
   }
 
-  toggleTeacher(teacher: TeacherResponse, active: boolean): void {
-    this.confirmationService.confirm({
-      message: this.i18n.t(active ? 'confirm.enableTeacher' : 'confirm.disableTeacher'),
-      accept: () => {
-        this.confirmationService.close();
-        const request$ = active
-          ? this.adminApi.enableAdminTeacher({ teacherId: teacher.id })
-          : this.adminApi.disableAdminTeacher({ teacherId: teacher.id });
-        request$.subscribe({
-          next: () => this.reload(),
-          error: (error) => this.toastError(resolveApiError(error, this.i18n))
-        });
-      }
-    });
-  }
-
-  toggleAdmin(teacher: TeacherResponse, admin: boolean): void {
-    this.confirmationService.confirm({
-      message: this.i18n.t(admin ? 'confirm.grantAdmin' : 'confirm.revokeAdmin'),
-      accept: () => {
-        this.confirmationService.close();
-        const request$ = admin
-          ? this.adminApi.grantAdminTeacher({ teacherId: teacher.id })
-          : this.adminApi.revokeAdminTeacher({ teacherId: teacher.id });
-        request$.subscribe({
-          next: () => this.reload(),
-          error: (error) => this.toastError(resolveApiError(error, this.i18n))
-        });
-      }
-    });
-  }
-
-  toggleAdminUserActive(adminUser: TeacherResponse, active: boolean): void {
-    this.confirmationService.confirm({
-      message: this.i18n.t(active ? 'confirm.enableTeacher' : 'confirm.disableTeacher'),
-      accept: () => {
-        this.confirmationService.close();
-        const request$ = active
-          ? this.adminApi.enableAdminUser({ adminUserId: adminUser.id })
-          : this.adminApi.disableAdminUser({ adminUserId: adminUser.id });
-        request$.subscribe({
-          next: () => this.reload(),
-          error: (error) => this.toastError(resolveApiError(error, this.i18n))
-        });
-      }
-    });
-  }
-
-  revokeAdminUser(adminUser: TeacherResponse): void {
-    this.confirmationService.confirm({
-      message: this.i18n.t('confirm.revokeAdmin'),
-      accept: () => {
-        this.confirmationService.close();
-        this.adminApi.revokeAdminUser({ adminUserId: adminUser.id }).subscribe({
-          next: () => this.reload(),
-          error: (error) => this.toastError(resolveApiError(error, this.i18n))
-        });
-      }
-    });
-  }
-
   loadUsersPage(page: number): void {
     this.usersLoading.set(true);
     this.adminApi.getAdminUsers({
       page,
       size: this.pageSize,
-      threePickupsOnly: this.onlyThreePickups()
+      threePickupsOnly: this.onlyThreePickups(),
+      activeOnly: this.activeOnly()
     }).subscribe({
       next: (response) => {
         this.usersPage.set(response);
@@ -182,16 +98,6 @@ export class AdminDashboardPageComponent implements OnInit {
         this.toastError(resolveApiError(error, this.i18n));
       }
     });
-  }
-
-  onTeachersPageChange(event: { page?: number }): void {
-    this.teachersPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
-    this.reload();
-  }
-
-  onAdminsPageChange(event: { page?: number }): void {
-    this.adminsPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
-    this.reload();
   }
 
   onEinAbsPageChange(event: { page?: number }): void {
@@ -210,6 +116,11 @@ export class AdminDashboardPageComponent implements OnInit {
 
   setOnlyThreePickups(checked: boolean): void {
     this.onlyThreePickups.set(checked);
+    this.loadUsersPage(0);
+  }
+
+  setActiveOnly(checked: boolean): void {
+    this.activeOnly.set(checked);
     this.loadUsersPage(0);
   }
 
@@ -244,12 +155,12 @@ export class AdminDashboardPageComponent implements OnInit {
     });
   }
 
-  makeBookingUserAdmin(user: AdminBookingUserResponse): void {
+  enableBookingUser(user: AdminBookingUserResponse): void {
     this.confirmationService.confirm({
-      message: this.i18n.t('confirm.grantAdmin'),
+      message: this.i18n.t('confirm.enableBookingUser'),
       accept: () => {
         this.confirmationService.close();
-        this.adminApi.grantAdminBookingUser({ bookingUserId: user.user.id }).subscribe({
+        this.adminApi.enableAdminBookingUser({ bookingUserId: user.user.id }).subscribe({
           next: () => this.reload(),
           error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });
@@ -261,8 +172,20 @@ export class AdminDashboardPageComponent implements OnInit {
     return this.usersPage()?.users ?? [];
   }
 
-  trackByUserId(_: number, user: AdminBookingUserResponse): string {
-    return user.user.id;
+  toggleExpandedUser(user: AdminBookingUserResponse): void {
+    this.expandedUserIds.update((current) => {
+      const next = { ...current };
+      if (next[user.user.id]) {
+        delete next[user.user.id];
+      } else {
+        next[user.user.id] = true;
+      }
+      return next;
+    });
+  }
+
+  isUserExpanded(user: AdminBookingUserResponse): boolean {
+    return !!this.expandedUserIds()[user.user.id];
   }
 
   private toastError(detail: string): void {

@@ -1,0 +1,163 @@
+.confirm-page {
+  display: flex;
+  justify-content: center;
+  padding: 1.25rem 0;
+}
+
+.confirm-card {
+  width: min(100%, 880px);
+}
+
+.confirm-state {
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  padding: 2.25rem 1rem;
+  text-align: center;
+}
+
+.confirm-state h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 3vw, 2.3rem);
+  color: #1f2937;
+}
+
+.confirm-state p {
+  margin: 0;
+  max-width: 38rem;
+  color: #475569;
+}
+
+.confirm-hero {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.25rem 0 1.25rem;
+}
+
+.confirm-hero__status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.confirm-hero h1 {
+  margin: 0;
+  font-size: clamp(1.9rem, 3.5vw, 2.8rem);
+  line-height: 1.05;
+  color: #0f172a;
+}
+
+.confirm-hero p {
+  margin: 0;
+  color: #475569;
+  font-size: 1rem;
+}
+
+.confirm-alert {
+  margin-bottom: 1rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  background: #fff7ed;
+  color: #9a3412;
+  line-height: 1.5;
+}
+
+.confirm-alert--success {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.confirm-identity {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0 0 1.25rem;
+}
+
+.confirm-identity__name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.confirm-identity__meta {
+  color: #64748b;
+}
+
+.confirm-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.confirm-field {
+  display: grid;
+  gap: 0.3rem;
+  padding: 0.95rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  min-width: 0;
+}
+
+.confirm-field__label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.confirm-field__value {
+  color: #0f172a;
+  font-weight: 600;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.confirm-notes {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1rem;
+}
+
+.confirm-note {
+  padding: 1rem 1.05rem;
+  border: 1px solid #d9e0ea;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.confirm-note h2 {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+  color: #1f2937;
+}
+
+.confirm-note p {
+  margin: 0;
+  white-space: pre-wrap;
+  color: #475569;
+  line-height: 1.55;
+}
+
+@media (max-width: 768px) {
+  .confirm-page {
+    padding: 0.5rem 0;
+  }
+
+  .confirm-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .confirm-state {
+    padding: 1.5rem 0.5rem;
+  }
+}

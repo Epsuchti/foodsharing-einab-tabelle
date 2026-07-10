@@ -8,4 +8,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FoodsharingStoreMembersCacheRepository extends JpaRepository<FoodsharingStoreMembersCache, UUID> {
     Optional<FoodsharingStoreMembersCache> findByAdminConnectionAndStoreId(FoodsharingAdminConnection adminConnection, long storeId);
+    void deleteAllByAdminConnection(FoodsharingAdminConnection adminConnection);
 }

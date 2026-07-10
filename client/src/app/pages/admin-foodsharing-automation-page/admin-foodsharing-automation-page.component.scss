@@ -1,0 +1,129 @@
+.automation-tabs {
+  display: block;
+  margin-top: 1.5rem;
+}
+
+.automation-tabs ::ng-deep .p-tabpanels {
+  padding: 0;
+  background: #ffffff;
+  color: #1f2937;
+}
+
+.automation-tabs ::ng-deep .p-tabpanel {
+  padding: 0;
+  background: #ffffff;
+}
+
+.automation-tabpanel {
+  padding-top: 1rem;
+}
+
+.automation-mode-banner {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.automation-mode-banner--dry-run {
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+}
+
+.automation-mode-banner--active {
+  background: #ecfdf5;
+  border: 1px solid #86efac;
+  color: #166534;
+}
+
+.automation-mode-banner--disabled {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.automation-form-grid,
+.automation-section-title,
+.automation-table {
+  display: block;
+  margin-top: 1rem;
+}
+
+.automation-table ::ng-deep .p-datatable,
+.automation-table ::ng-deep .p-datatable-wrapper,
+.automation-table ::ng-deep .p-datatable-table {
+  border-radius: 0;
+}
+
+.automation-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.automation-toolbar__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.automation-toolbar__add {
+  display: flex;
+  flex: 1 1 24rem;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.automation-toolbar__add p-select,
+.automation-toolbar__add ::ng-deep .p-select {
+  min-width: min(24rem, 100%);
+}
+
+.automation-help {
+  margin-top: 0.5rem;
+  padding: 1rem;
+  border: 1px solid #d9e0ea;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1f2937;
+}
+
+.automation-help__title,
+.automation-help__section {
+  margin: 0;
+  color: #0f172a;
+}
+
+.automation-help__section {
+  margin-top: 1.25rem;
+}
+
+.automation-help p,
+.automation-help li,
+.automation-help ul {
+  color: #334155;
+}
+
+.automation-help__intro,
+.automation-help__list,
+.automation-help__section + p {
+  margin-top: 0.75rem;
+}
+
+.automation-help__list {
+  margin-bottom: 0;
+  padding-left: 1.25rem;
+}
+
+.automation-owner--available {
+  color: #15803d;
+  font-weight: 500;
+}
+
+.automation-empty {
+  margin-top: 0.75rem;
+}

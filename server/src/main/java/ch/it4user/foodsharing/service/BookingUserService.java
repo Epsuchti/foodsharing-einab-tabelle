@@ -60,6 +60,14 @@ public class BookingUserService {
         return bookingUser;
     }
 
+    @Transactional
+    public User enable(UUID bookingUserId) {
+        User bookingUser = bookingUserRepository.findById(bookingUserId)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_USER_NOT_FOUND));
+        bookingUser.setActive(true);
+        return bookingUser;
+    }
+
     private String normalizeFoodsharingId(String foodsharingId) {
         String normalized = foodsharingId == null ? "" : foodsharingId.trim();
         if (!normalized.matches("\\d+")) {

@@ -15,7 +15,8 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
   selector: 'app-confirm-booking-page',
   standalone: true,
   imports: [CommonModule, CardModule, ProgressSpinnerModule, ZurichDateTimePipe],
-  templateUrl: './confirm-booking-page.component.html'
+  templateUrl: './confirm-booking-page.component.html',
+  styleUrl: './confirm-booking-page.component.scss'
 })
 export class ConfirmBookingPageComponent implements OnInit {
   readonly i18n = inject(I18nService);

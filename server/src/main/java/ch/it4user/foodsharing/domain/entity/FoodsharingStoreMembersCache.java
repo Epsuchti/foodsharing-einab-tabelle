@@ -11,8 +11,7 @@ import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
+import org.hibernate.Length;
 
 @Entity
 @Table(name = "foodsharing_store_members_cache", uniqueConstraints = @UniqueConstraint(name = "uk_foodsharing_store_members_cache_connection_store", columnNames = {"admin_connection_id", "store_id"}))
@@ -30,7 +29,6 @@ public class FoodsharingStoreMembersCache extends BaseEntity {
     @Column(nullable = false)
     private Instant refreshedAt;
 
-    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
-    @Column(nullable = false)
+    @Column(nullable = false, length = Length.LONG32)
     private String payloadJson;
 }

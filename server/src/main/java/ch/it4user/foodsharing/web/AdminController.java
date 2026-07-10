@@ -14,6 +14,8 @@ import ch.it4user.foodsharing.openapi.model.FoodsharingFuturePickup;
 import ch.it4user.foodsharing.openapi.model.FoodsharingFuturePickupUser;
 import ch.it4user.foodsharing.openapi.model.FoodsharingRunRequest;
 import ch.it4user.foodsharing.openapi.model.FoodsharingRunResult;
+import ch.it4user.foodsharing.openapi.model.FoodsharingManagedStore;
+import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomationOverview;
 import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomation;
 import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomationRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherListResponse;
@@ -95,12 +97,20 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<AdminBookingUserPageResponse> getAdminUsers(Integer page, Integer size, Boolean threePickupsOnly) {
+    public ResponseEntity<AdminBookingUserPageResponse> getAdminUsers(Integer page, Integer size, Boolean threePickupsOnly, Boolean activeOnly) {
         currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
         int resolvedPage = page == null ? 0 : page;
         int resolvedSize = size == null ? 50 : size;
         boolean resolvedThreePickupsOnly = threePickupsOnly != null && threePickupsOnly;
-        return ResponseEntity.ok(mapper.toAdminBookingUserPageResponse(adminService.getUsers(resolvedPage, resolvedSize, resolvedThreePickupsOnly)));
+        boolean resolvedActiveOnly = activeOnly == null || activeOnly;
+        return ResponseEntity.ok(mapper.toAdminBookingUserPageResponse(
+                adminService.getUsers(resolvedPage, resolvedSize, resolvedThreePickupsOnly, resolvedActiveOnly)));
+    }
+
+    @Override
+    public ResponseEntity<BookingUserResponse> enableAdminBookingUser(UUID bookingUserId) {
+        currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
+        return ResponseEntity.ok(mapper.toBookingUserResponse(adminService.enableBookingUser(bookingUserId)));
     }
 
     @Override
@@ -168,11 +178,17 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<List<FoodsharingStoreAutomation>> getFoodsharingStores() {
+    public ResponseEntity<FoodsharingStoreAutomationOverview> getFoodsharingStores() {
         currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATIONS);
-        return ResponseEntity.ok(foodsharingPickupAutomationService.stores().stream()
+        FoodsharingPickupAutomationService.StoreOverviewView overview = foodsharingPickupAutomationService.stores();
+        FoodsharingStoreAutomationOverview response = new FoodsharingStoreAutomationOverview();
+        response.setAutomations(overview.automations().stream()
                 .map(this::toFoodsharingStoreAutomation)
                 .toList());
+        response.setAvailableStores(overview.availableStores().stream()
+                .map(this::toFoodsharingManagedStore)
+                .toList());
+        return ResponseEntity.ok(response);
     }
 
     @Override
@@ -182,6 +198,7 @@ public class AdminController implements AdminApi {
                 new FoodsharingPickupAutomationService.StoreAutomationRequest(
                         request.getStoreName(),
                         Boolean.TRUE.equals(request.getEnabled()),
+                        request.getDryRunEnabled() == null || Boolean.TRUE.equals(request.getDryRunEnabled()),
                         Boolean.TRUE.equals(request.getGapRuleEnabled()),
                         request.getMinimumGapDays() == null ? 0 : request.getMinimumGapDays(),
                         Boolean.TRUE.equals(request.getCleaningRuleEnabled()),
@@ -243,6 +260,8 @@ public class AdminController implements AdminApi {
         response.setEmail(status.email());
         response.setFoodsharingUserId(status.foodsharingUserId());
         response.setAuthenticatedAt(toOffsetDateTime(status.authenticatedAt()));
+        response.setAutomationEnabled(status.automationEnabled());
+        response.setAutomationDryRun(status.automationDryRun());
         return response;
     }
 
@@ -251,11 +270,21 @@ public class AdminController implements AdminApi {
         response.setStoreId(store.storeId());
         response.setStoreName(store.storeName());
         response.setEnabled(store.enabled());
+        response.setDryRunEnabled(store.dryRunEnabled());
         response.setGapRuleEnabled(store.gapRuleEnabled());
         response.setMinimumGapDays(store.minimumGapDays());
         response.setCleaningRuleEnabled(store.cleaningRuleEnabled());
         response.setExperienceRuleEnabled(store.experienceRuleEnabled());
         response.setEditable(store.editable());
+        response.setOwnerName(store.ownerName());
+        response.setOwnerEmail(store.ownerEmail());
+        return response;
+    }
+
+    private FoodsharingManagedStore toFoodsharingManagedStore(FoodsharingPickupAutomationService.ManagedStoreView store) {
+        FoodsharingManagedStore response = new FoodsharingManagedStore();
+        response.setStoreId(store.storeId());
+        response.setStoreName(store.storeName());
         return response;
     }
 

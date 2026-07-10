@@ -68,11 +68,11 @@
 }
 
 .app-main {
-  max-width: 1280px;
-  margin: 0 auto;
+  margin: 0;
   padding: 1rem;
   min-width: 0;
-  width: min(100%, 1280px);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 768px) {

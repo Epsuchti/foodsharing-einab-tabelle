@@ -68,13 +68,14 @@ public class AdminService {
                 org.springframework.data.domain.PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
     }
 
-    public AdminUsersView getUsers(int page, int size, boolean threePickupsOnly) {
+    public AdminUsersView getUsers(int page, int size, boolean threePickupsOnly, boolean activeOnly) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 100);
-        List<User> users = userRepository.findAllActiveBookingUsersOrderByCreatedAtDesc();
+        List<User> users = userRepository.findAll();
         Map<UUID, List<Slot>> bookingsByUser = groupBookings(users);
         Map<UUID, List<BookingComment>> commentsByUser = groupComments(users);
         List<User> sortedUsers = users.stream()
+                .filter(user -> !activeOnly || user.isActive())
                 .filter(user -> !threePickupsOnly || bookingsByUser.getOrDefault(user.getId(), List.of()).size() >= 3)
                 .sorted(Comparator
                         .comparing((User user) -> latestPickupAt(bookingsByUser.getOrDefault(user.getId(), List.of())),
@@ -93,6 +94,11 @@ public class AdminService {
     @Transactional
     public User disableBookingUser(UUID bookingUserId) {
         return bookingUserService.disable(bookingUserId);
+    }
+
+    @Transactional
+    public User enableBookingUser(UUID bookingUserId) {
+        return bookingUserService.enable(bookingUserId);
     }
 
     @Transactional

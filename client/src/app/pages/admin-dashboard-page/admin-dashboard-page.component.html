@@ -1,92 +1,156 @@
 <section class="page-stack">
   <p-card>
-    <ng-template pTemplate="title">{{ i18n.t('admin.title') }}</ng-template>
-    <h3>{{ i18n.t('admin.admins') }}</h3>
-    <p-table [value]="admins()">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>{{ i18n.t('common.name') }}</th>
-          <th>{{ i18n.t('common.phoneNumber') }}</th>
-          <th>{{ i18n.t('common.status') }}</th>
-          <th>{{ i18n.t('admin.requested') }}</th>
-          <th>{{ i18n.t('admin.adminFlag') }}</th>
-          <th>{{ i18n.t('common.actions') }}</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-admin>
-        <tr>
-          <td>{{ admin.name }}</td>
-          <td>{{ admin.phoneNumber }}</td>
-          <td><p-tag [severity]="admin.active ? 'success' : 'warn'" [value]="admin.active ? i18n.t('common.active') : i18n.t('common.inactive')"></p-tag></td>
-          <td><p-tag [severity]="admin.wantsToBeTeacher ? 'warn' : 'secondary'" [value]="admin.wantsToBeTeacher ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
-          <td><p-tag [severity]="admin.canManageUsers ? 'contrast' : 'secondary'" [value]="admin.canManageUsers ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
-          <td class="actions-cell">
-            @if (admin.active) {
-              <button pButton size="small" severity="danger" [label]="i18n.t('admin.disable')" (click)="toggleAdminUserActive(admin, false)"></button>
-            } @else {
-              <button pButton size="small" [label]="i18n.t('admin.enable')" (click)="toggleAdminUserActive(admin, true)"></button>
-            }
-            @if (admin.canManageUsers) {
-              <button pButton size="small" severity="secondary" [label]="i18n.t('admin.revokeAdmin')" (click)="revokeAdminUser(admin)"></button>
-            }
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
-    <p-paginator
-      [rows]="pageSize"
-      [totalRecords]="adminsPage()?.totalElements ?? 0"
-      [first]="(adminsPage()?.page ?? 0) * pageSize"
-      [showCurrentPageReport]="true"
-      currentPageReportTemplate="{first} - {last} / {totalRecords}"
-      (onPageChange)="onAdminsPageChange($event)">
-    </p-paginator>
-  </p-card>
+    <ng-template pTemplate="title">{{ i18n.t('admin.users') }}</ng-template>
+    <div class="admin-users-toolbar">
+      <label class="filter-toggle">
+        <p-checkbox [binary]="true" [ngModel]="activeOnly()" (onChange)="setActiveOnly($event.checked)"></p-checkbox>
+        <span>{{ i18n.t('admin.onlyActiveUsers') }}</span>
+      </label>
+      <label class="filter-toggle">
+        <p-checkbox [binary]="true" [ngModel]="onlyThreePickups()" (onChange)="setOnlyThreePickups($event.checked)"></p-checkbox>
+        <span>{{ i18n.t('admin.onlyThreePickups') }}</span>
+      </label>
+      <span class="admin-users-count">{{ usersPage()?.totalElements ?? 0 }} {{ i18n.t('admin.users') }}</span>
+    </div>
 
-  <p-card>
-    <ng-template pTemplate="title">{{ i18n.t('admin.title') }}</ng-template>
-    <h3>{{ i18n.t('admin.teachers') }}</h3>
-    <p-table [value]="teachers()">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>{{ i18n.t('common.name') }}</th>
-          <th>{{ i18n.t('common.phoneNumber') }}</th>
-          <th>{{ i18n.t('common.status') }}</th>
-          <th>{{ i18n.t('admin.requested') }}</th>
-          <th>{{ i18n.t('admin.adminFlag') }}</th>
-          <th>{{ i18n.t('common.actions') }}</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-teacher>
-        <tr>
-          <td>{{ teacher.name }}</td>
-          <td>{{ teacher.phoneNumber }}</td>
-          <td><p-tag [severity]="teacher.active ? 'success' : 'warn'" [value]="teacher.active ? i18n.t('common.active') : i18n.t('common.inactive')"></p-tag></td>
-          <td><p-tag [severity]="teacher.wantsToBeTeacher ? 'warn' : 'secondary'" [value]="teacher.wantsToBeTeacher ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
-          <td><p-tag [severity]="teacher.canManageUsers ? 'contrast' : 'secondary'" [value]="teacher.canManageUsers ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag></td>
-          <td class="actions-cell">
-            @if (teacher.canGiveEinAbs) {
-              <button pButton size="small" severity="danger" [label]="i18n.t('admin.disable')" (click)="toggleTeacher(teacher, false)"></button>
-            } @else {
-              <button pButton size="small" [label]="i18n.t('admin.enable')" (click)="toggleTeacher(teacher, true)"></button>
-            }
-            @if (teacher.canManageUsers) {
-              <button pButton size="small" severity="secondary" [label]="i18n.t('admin.revokeAdmin')" (click)="toggleAdmin(teacher, false)"></button>
-            } @else {
-              <button pButton size="small" severity="contrast" [label]="i18n.t('admin.makeAdmin')" (click)="toggleAdmin(teacher, true)"></button>
-            }
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
-    <p-paginator
-      [rows]="pageSize"
-      [totalRecords]="teachersPage()?.totalElements ?? 0"
-      [first]="(teachersPage()?.page ?? 0) * pageSize"
-      [showCurrentPageReport]="true"
-      currentPageReportTemplate="{first} - {last} / {totalRecords}"
-      (onPageChange)="onTeachersPageChange($event)">
-    </p-paginator>
+    @if (usersLoading()) {
+      <p class="loading-box">{{ i18n.t('common.loading') }}</p>
+    } @else if (usersPage()?.users?.length) {
+      <p-table [value]="userPanels()" dataKey="user.id">
+        <ng-template pTemplate="header">
+          <tr>
+            <th></th>
+            <th>{{ i18n.t('common.name') }}</th>
+            <th>{{ i18n.t('common.foodsharingId') }}</th>
+            <th>{{ i18n.t('common.phoneNumber') }}</th>
+            <th>{{ i18n.t('common.status') }}</th>
+            <th>{{ i18n.t('admin.requested') }}</th>
+            <th>{{ i18n.t('admin.pickups') }}</th>
+            <th>{{ i18n.t('permission.canGiveEinAbs') }}</th>
+            <th>{{ i18n.t('permission.canManageUsers') }}</th>
+            <th>{{ i18n.t('permission.canUseAutomations') }}</th>
+            <th>{{ i18n.t('permission.canSeeUserPickupCountGrouping') }}</th>
+            <th>{{ i18n.t('permission.canUseAutomationSlotApproval') }}</th>
+            <th>{{ i18n.t('permission.canSeeAllAutomationDecisions') }}</th>
+            <th>{{ i18n.t('common.actions') }}</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-user>
+          <tr>
+            <td>
+              <button
+                pButton
+                type="button"
+                size="small"
+                severity="secondary"
+                [icon]="isUserExpanded(user) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
+                (click)="toggleExpandedUser(user)">
+              </button>
+            </td>
+            <td>{{ user.user.name }}</td>
+            <td>{{ user.user.foodsharingId }}</td>
+            <td>{{ user.user.phoneNumber ?? '-' }}</td>
+            <td>
+              <p-tag
+                [severity]="user.user.active ? 'success' : 'warn'"
+                [value]="user.user.active ? i18n.t('common.active') : i18n.t('common.inactive')">
+              </p-tag>
+            </td>
+            <td>
+              <p-tag
+                [severity]="user.user.wantsToBeTeacher ? 'warn' : 'secondary'"
+                [value]="user.user.wantsToBeTeacher ? i18n.t('common.yes') : i18n.t('common.no')">
+              </p-tag>
+            </td>
+            <td>{{ user.pickupCount }}</td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canGiveEinAbs"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canManageUsers"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomations"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeUserPickupCountGrouping"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationSlotApproval"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeAllAutomationDecisions"></p-checkbox></td>
+            <td class="actions-cell">
+              <button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveUserPermissions(user)"></button>
+              @if (user.user.active) {
+                <button pButton type="button" size="small" severity="danger" [label]="i18n.t('admin.disableBookingUser')" (click)="disableBookingUser(user)"></button>
+              } @else {
+                <button pButton type="button" size="small" severity="contrast" [label]="i18n.t('admin.enableBookingUser')" (click)="enableBookingUser(user)"></button>
+              }
+            </td>
+          </tr>
+          @if (isUserExpanded(user)) {
+            <tr>
+              <td [attr.colspan]="14">
+                <div class="page-stack">
+                  <div>
+                    <h4>{{ i18n.t('admin.userPickups') }}</h4>
+                    @if (user.bookings.length) {
+                      <p-table [value]="user.bookings" [paginator]="true" [rows]="5">
+                        <ng-template pTemplate="header">
+                          <tr>
+                            <th>{{ i18n.t('slots.category') }}</th>
+                            <th>{{ i18n.t('slots.date') }}</th>
+                            <th>{{ i18n.t('common.location') }}</th>
+                            <th>{{ i18n.t('slots.teacher') }}</th>
+                            <th>{{ i18n.t('common.status') }}</th>
+                          </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-booking>
+                          <tr>
+                            <td>{{ i18n.categoryLabel(booking.category) }}</td>
+                            <td>{{ booking.startDateTime | zurichDateTime }}</td>
+                            <td>{{ booking.location ?? '-' }}</td>
+                            <td>{{ booking.teacherName }}</td>
+                            <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
+                          </tr>
+                        </ng-template>
+                      </p-table>
+                    } @else {
+                      <p class="empty-state">{{ i18n.t('admin.noPickups') }}</p>
+                    }
+                  </div>
+
+                  <div>
+                    <h4>{{ i18n.t('admin.userComments') }}</h4>
+                    @if (user.comments.length) {
+                      <p-table [value]="user.comments" [paginator]="true" [rows]="5">
+                        <ng-template pTemplate="header">
+                          <tr>
+                            <th>{{ i18n.t('slots.teacher') }}</th>
+                            <th>{{ i18n.t('common.comment') }}</th>
+                            <th>{{ i18n.t('common.createdAt') }}</th>
+                          </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-comment>
+                          <tr>
+                            <td>{{ comment.teacherName }}</td>
+                            <td>{{ comment.comment }}</td>
+                            <td>{{ comment.createdAt | zurichDateTime }}</td>
+                          </tr>
+                        </ng-template>
+                      </p-table>
+                    } @else {
+                      <p class="empty-state">{{ i18n.t('admin.noComments') }}</p>
+                    }
+                  </div>
+                </div>
+              </td>
+            </tr>
+          }
+        </ng-template>
+      </p-table>
+
+      <p-paginator
+        [rows]="pageSize"
+        [totalRecords]="usersPage()?.totalElements ?? 0"
+        [first]="(usersPage()?.page ?? 0) * pageSize"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="{first} - {last} / {totalRecords}"
+        (onPageChange)="onUsersPageChange($event)">
+      </p-paginator>
+    } @else {
+      <p class="empty-state">{{ i18n.t('admin.noUsers') }}</p>
+    }
   </p-card>
 
   <p-card>
@@ -158,116 +222,4 @@
       (onPageChange)="onBookingsPageChange($event)">
     </p-paginator>
   </p-card>
-
-  <p-card>
-    <ng-template pTemplate="title">{{ i18n.t('admin.users') }}</ng-template>
-    <div class="admin-users-toolbar">
-      <label class="filter-toggle">
-        <p-checkbox [binary]="true" [ngModel]="onlyThreePickups()" (onChange)="setOnlyThreePickups($event.checked)"></p-checkbox>
-        <span>{{ i18n.t('admin.onlyThreePickups') }}</span>
-      </label>
-      <span class="admin-users-count">{{ usersPage()?.totalElements ?? 0 }} {{ i18n.t('admin.users') }}</span>
-    </div>
-
-    @if (usersLoading()) {
-      <p class="loading-box">{{ i18n.t('common.loading') }}</p>
-    } @else if (usersPage()?.users?.length) {
-      <p-accordion [multiple]="false">
-        @for (user of userPanels(); track trackByUserId($index, user)) {
-          <p-accordion-panel [value]="user.user.id">
-            <p-accordion-header>
-              <div class="accordion-header">
-                <div class="accordion-header-main">
-                  <strong>{{ user.user.name }}</strong>
-                  <span>{{ user.user.foodsharingId }}</span>
-                  <span>{{ user.user.phoneNumber }}</span>
-                </div>
-                <p-tag [value]="user.pickupCount + ' ' + i18n.t('admin.pickups')"></p-tag>
-              </div>
-            </p-accordion-header>
-            <p-accordion-content>
-              <div class="accordion-actions">
-                <button pButton type="button" icon="pi pi-ban" severity="danger" [label]="i18n.t('admin.disableBookingUser')" (click)="disableBookingUser(user)"></button>
-                @if (!user.user.canManageUsers) {
-                  <button pButton type="button" icon="pi pi-shield" severity="contrast" [label]="i18n.t('admin.makeAdmin')" (click)="makeBookingUserAdmin(user)"></button>
-                }
-              </div>
-
-              <h4>{{ i18n.t('admin.permissions') }}</h4>
-              <div class="form-grid">
-                <label><p-checkbox [binary]="true" [(ngModel)]="user.user.canGiveEinAbs"></p-checkbox> {{ i18n.t('permission.canGiveEinAbs') }}</label>
-                <label><p-checkbox [binary]="true" [(ngModel)]="user.user.canManageUsers"></p-checkbox> {{ i18n.t('permission.canManageUsers') }}</label>
-                <label><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomations"></p-checkbox> {{ i18n.t('permission.canUseAutomations') }}</label>
-                <label><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeUserPickupCountGrouping"></p-checkbox> {{ i18n.t('permission.canSeeUserPickupCountGrouping') }}</label>
-                <label><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationSlotApproval"></p-checkbox> {{ i18n.t('permission.canUseAutomationSlotApproval') }}</label>
-                <label><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeAllAutomationDecisions"></p-checkbox> {{ i18n.t('permission.canSeeAllAutomationDecisions') }}</label>
-                <button pButton type="button" [label]="i18n.t('common.save')" (click)="saveUserPermissions(user)"></button>
-              </div>
-
-              <h4>{{ i18n.t('admin.userPickups') }}</h4>
-              @if (user.bookings.length) {
-                <p-table [value]="user.bookings" [paginator]="true" [rows]="5">
-                  <ng-template pTemplate="header">
-                    <tr>
-                      <th>{{ i18n.t('slots.category') }}</th>
-                      <th>{{ i18n.t('slots.date') }}</th>
-                      <th>{{ i18n.t('common.location') }}</th>
-                      <th>{{ i18n.t('slots.teacher') }}</th>
-                      <th>{{ i18n.t('common.status') }}</th>
-                    </tr>
-                  </ng-template>
-                  <ng-template pTemplate="body" let-booking>
-                    <tr>
-                      <td>{{ i18n.categoryLabel(booking.category) }}</td>
-                      <td>{{ booking.startDateTime | zurichDateTime }}</td>
-                      <td>{{ booking.location ?? '-' }}</td>
-                      <td>{{ booking.teacherName }}</td>
-                      <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
-                    </tr>
-                  </ng-template>
-                </p-table>
-              } @else {
-                <p class="empty-state">{{ i18n.t('admin.noPickups') }}</p>
-              }
-
-              <h4>{{ i18n.t('admin.userComments') }}</h4>
-              @if (user.comments.length) {
-                <p-table [value]="user.comments" [paginator]="true" [rows]="5">
-                  <ng-template pTemplate="header">
-                    <tr>
-                      <th>{{ i18n.t('slots.teacher') }}</th>
-                      <th>{{ i18n.t('common.comment') }}</th>
-                      <th>{{ i18n.t('common.createdAt') }}</th>
-                    </tr>
-                  </ng-template>
-                  <ng-template pTemplate="body" let-comment>
-                    <tr>
-                      <td>{{ comment.teacherName }}</td>
-                      <td>{{ comment.comment }}</td>
-                      <td>{{ comment.createdAt | zurichDateTime }}</td>
-                    </tr>
-                  </ng-template>
-                </p-table>
-              } @else {
-                <p class="empty-state">{{ i18n.t('admin.noComments') }}</p>
-              }
-            </p-accordion-content>
-          </p-accordion-panel>
-        }
-      </p-accordion>
-
-      <p-paginator
-        [rows]="pageSize"
-        [totalRecords]="usersPage()?.totalElements ?? 0"
-        [first]="(usersPage()?.page ?? 0) * pageSize"
-        [showCurrentPageReport]="true"
-        currentPageReportTemplate="{first} - {last} / {totalRecords}"
-        (onPageChange)="onUsersPageChange($event)">
-      </p-paginator>
-    } @else {
-      <p class="empty-state">{{ i18n.t('admin.noUsers') }}</p>
-    }
-  </p-card>
 </section>
-
-<p-confirmDialog></p-confirmDialog>

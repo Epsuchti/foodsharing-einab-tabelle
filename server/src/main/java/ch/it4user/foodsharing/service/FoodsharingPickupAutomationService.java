@@ -76,31 +76,39 @@ public class FoodsharingPickupAutomationService {
         User admin = currentActorService.requireAutomationUser();
         connectionRepository.findByAdminUser(admin).ifPresent(connection -> {
             log.info("Foodsharing automation connection removed admin={} foodsharingUserId={} email={}", admin.getId(), connection.getFoodsharingUserId(), connection.getFoodsharingEmail());
+            auditRepository.deleteAllByAdminConnection(connection);
+            futurePickupUsersCacheRepository.deleteAllByAdminConnection(connection);
+            storeMembersCacheRepository.deleteAllByAdminConnection(connection);
+            storePickupsCacheRepository.deleteAllByAdminConnection(connection);
+            automationRepository.deleteAllByAdminConnection(connection);
             connectionRepository.delete(connection);
         });
     }
-    public ConnectionStatus status() { return connectionRepository.findByAdminUser(currentActorService.requireAutomationUser()).map(this::status).orElse(new ConnectionStatus(false, null, null, null)); }
-    private ConnectionStatus status(FoodsharingAdminConnection c) { return new ConnectionStatus(true, c.getFoodsharingEmail(), c.getFoodsharingUserId(), c.getAuthenticatedAt()); }
+    public ConnectionStatus status() { return connectionRepository.findByAdminUser(currentActorService.requireAutomationUser()).map(this::status).orElse(new ConnectionStatus(false, null, null, null, appProperties.getFoodsharing().getAutomation().isEnabled(), appProperties.getFoodsharing().getAutomation().isDryRun())); }
+    private ConnectionStatus status(FoodsharingAdminConnection c) { return new ConnectionStatus(true, c.getFoodsharingEmail(), c.getFoodsharingUserId(), c.getAuthenticatedAt(), appProperties.getFoodsharing().getAutomation().isEnabled(), appProperties.getFoodsharing().getAutomation().isDryRun()); }
 
     @Transactional
-    public List<StoreAutomationView> stores() {
+    public StoreOverviewView stores() {
         FoodsharingAdminConnection c = requireConnection();
-        List<FoodsharingPickupModels.Store> stores = managedStores(c);
-        List<StoreAutomationView> views = new ArrayList<>();
-        for (var s : stores) {
-            FoodsharingStoreAutomation a = automationRepository.findByStoreId(s.id()).orElseGet(() -> { var n = new FoodsharingStoreAutomation(); n.setAdminConnection(c); n.setStoreId(s.id()); return n; });
-            if (a.getAdminConnection().getId().equals(c.getId())) {
-                a.setStoreName(s.name()); automationRepository.save(a);
-            }
-            views.add(view(a, c));
-        }
-        if (currentActorService.hasPermission(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL)) {
-            automationRepository.findAllByEnabledTrue().stream()
-                    .filter(a -> views.stream().noneMatch(view -> view.storeId() == a.getStoreId()))
-                    .map(a -> view(a, c))
-                    .forEach(views::add);
-        }
-        return views;
+        List<FoodsharingPickupModels.Store> managedStores = managedStores(c);
+        Map<Long, FoodsharingPickupModels.Store> managedStoresById = managedStores.stream()
+                .collect(java.util.stream.Collectors.toMap(FoodsharingPickupModels.Store::id, store -> store, (left, right) -> left, LinkedHashMap::new));
+        List<StoreAutomationView> automations = automationRepository.findAll().stream()
+                .sorted(Comparator.comparing(FoodsharingStoreAutomation::getStoreName, Comparator.nullsLast(String::compareToIgnoreCase))
+                        .thenComparingLong(FoodsharingStoreAutomation::getStoreId))
+                .map(automation -> view(
+                        automation.getStoreId(),
+                        managedStoresById.getOrDefault(automation.getStoreId(), new FoodsharingPickupModels.Store(automation.getStoreId(), automation.getStoreName(), false)).name(),
+                        automation,
+                        c))
+                .toList();
+        List<ManagedStoreView> availableStores = managedStores.stream()
+                .filter(store -> automations.stream().noneMatch(automation -> automation.storeId() == store.id()))
+                .map(store -> new ManagedStoreView(store.id(), store.name()))
+                .sorted(Comparator.comparing(ManagedStoreView::storeName, Comparator.nullsLast(String::compareToIgnoreCase))
+                        .thenComparingLong(ManagedStoreView::storeId))
+                .toList();
+        return new StoreOverviewView(automations, availableStores);
     }
 
     @Transactional
@@ -114,8 +122,8 @@ public class FoodsharingPickupAutomationService {
                     return existing;
                 })
                 .orElseGet(() -> { var n = new FoodsharingStoreAutomation(); n.setAdminConnection(c); n.setStoreId(storeId); return n; });
-        a.setStoreName(request.storeName() == null ? a.getStoreName() : request.storeName()); a.setEnabled(request.enabled()); a.setGapRuleEnabled(request.gapRuleEnabled()); a.setMinimumGapDays(Math.max(0, request.minimumGapDays())); a.setCleaningRuleEnabled(request.cleaningRuleEnabled()); a.setExperienceRuleEnabled(request.experienceRuleEnabled());
-        return view(automationRepository.save(a), c);
+        a.setStoreName(request.storeName() == null ? a.getStoreName() : request.storeName()); a.setEnabled(request.enabled()); a.setDryRunEnabled(request.dryRunEnabled()); a.setGapRuleEnabled(request.gapRuleEnabled()); a.setMinimumGapDays(Math.max(0, request.minimumGapDays())); a.setCleaningRuleEnabled(request.cleaningRuleEnabled()); a.setExperienceRuleEnabled(request.experienceRuleEnabled());
+        return view(storeId, a.getStoreName(), automationRepository.save(a), c);
     }
 
     public List<AuditView> audit() {
@@ -125,7 +133,6 @@ public class FoodsharingPickupAutomationService {
         return auditRepository.findTop100ByOrderByCreatedAtDesc().stream().map(a -> view(a, storeNames)).toList();
     }
 
-    @Transactional
     public List<StorePickupUserView> futurePickupUsers() {
         FoodsharingAdminConnection connection = requireConnection();
         Duration ttl = Duration.parse(appProperties.getFoodsharing().getAutomation().getFuturePickupCacheTtl());
@@ -299,11 +306,11 @@ public class FoodsharingPickupAutomationService {
         log.info("Foodsharing automation poll finished (evaluated={}, confirmed={}, declined={}, failed={}, dryRun={})", result.evaluated(), result.confirmed(), result.declined(), result.failed(), result.dryRun());
     }
 
-    private FoodsharingPickupModels.RunResult run(List<FoodsharingStoreAutomation> automations, boolean dryRun) {
+    private FoodsharingPickupModels.RunResult run(List<FoodsharingStoreAutomation> automations, boolean forcedDryRun) {
         int evaluated=0, confirmed=0, declined=0, failed=0; List<String> messages = new ArrayList<>();
         if (automations.isEmpty()) {
-            log.info("Foodsharing automation run skipped (dryRun={}, automations=0)", dryRun);
-            return new FoodsharingPickupModels.RunResult(0, 0, 0, 0, dryRun, messages);
+            log.info("Foodsharing automation run skipped (dryRun={}, automations=0)", forcedDryRun);
+            return new FoodsharingPickupModels.RunResult(0, 0, 0, 0, forcedDryRun, messages);
         }
         Map<java.util.UUID, FoodsharingAdminConnection> connectionsById = automations.stream()
                 .map(FoodsharingStoreAutomation::getAdminConnection)
@@ -315,12 +322,15 @@ public class FoodsharingPickupAutomationService {
         String connectionSummary = connectionsById.values().stream()
                 .map(connection -> "admin=" + connection.getAdminUser().getId() + ",foodsharingUserId=" + connection.getFoodsharingUserId() + ",email=" + connection.getFoodsharingEmail())
                 .collect(java.util.stream.Collectors.joining(" | "));
-        log.info("Foodsharing automation run started (dryRun={}, automations={}, connections={})", dryRun, automations.size(), connectionSummary);
+        log.info("Foodsharing automation run started (dryRun={}, automations={}, connections={})", forcedDryRun, automations.size(), connectionSummary);
         Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache = new HashMap<>();
         Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache = new HashMap<>();
+        boolean effectiveDryRunUsed = forcedDryRun;
         for (FoodsharingStoreAutomation a : automations) {
+            boolean effectiveDryRun = forcedDryRun || a.isDryRunEnabled();
+            effectiveDryRunUsed = effectiveDryRunUsed || effectiveDryRun;
             String cacheKey = cacheKey(a.getAdminConnection(), a.getStoreId());
-            log.info("Foodsharing automation evaluating storeId={} storeName={} admin={} foodsharingUserId={} email={}", a.getStoreId(), a.getStoreName(), a.getAdminConnection().getAdminUser().getId(), a.getAdminConnection().getFoodsharingUserId(), a.getAdminConnection().getFoodsharingEmail());
+            log.info("Foodsharing automation evaluating storeId={} storeName={} admin={} foodsharingUserId={} email={} dryRun={}", a.getStoreId(), a.getStoreName(), a.getAdminConnection().getAdminUser().getId(), a.getAdminConnection().getFoodsharingUserId(), a.getAdminConnection().getFoodsharingEmail(), effectiveDryRun);
             List<FoodsharingPickupModels.Pickup> storePickups = storePickups(a.getAdminConnection(), a.getStoreId()).stream()
                     .sorted(Comparator.comparing(FoodsharingPickupModels.Pickup::date))
                     .toList();
@@ -332,29 +342,29 @@ public class FoodsharingPickupAutomationService {
                 var decision = evaluate(a, p.date(), u.id(), livePickupsCache, initialPickupsCache); String reason = String.join("\n", decision.reasons());
                 String userMessage = decision.userMessage() != null ? decision.userMessage() : (decision.allowed() ? null : reason);
                 if (decision.allowed()) {
-                    log.info("Foodsharing automation decision=confirm dryRun={} admin={} foodsharingUserId={} email={} storeId={} pickupDate={} userId={} userName={}", dryRun, a.getAdminConnection().getAdminUser().getId(), a.getAdminConnection().getFoodsharingUserId(), a.getAdminConnection().getFoodsharingEmail(), a.getStoreId(), p.date(), u.id(), u.name());
-                    if (!dryRun) {
+                    log.info("Foodsharing automation decision=confirm dryRun={} admin={} foodsharingUserId={} email={} storeId={} pickupDate={} userId={} userName={}", effectiveDryRun, a.getAdminConnection().getAdminUser().getId(), a.getAdminConnection().getFoodsharingUserId(), a.getAdminConnection().getFoodsharingEmail(), a.getStoreId(), p.date(), u.id(), u.name());
+                    if (!effectiveDryRun) {
                         client.confirm(a.getAdminConnection(), a.getStoreId(), p.date(), u.id());
                         if (userMessage != null && !userMessage.isBlank()) {
                             messageService.send(u.id(), "Fairteilerreinigung", userMessage);
                         }
                     }
                     confirmed++;
-                    saveAudit(a, u.id(), u.name(), p.date(), dryRun, dryRun ? FoodsharingPickupAutomationDecision.WOULD_CONFIRM : FoodsharingPickupAutomationDecision.CONFIRMED, reason, userMessage, null);
+                    saveAudit(a, u.id(), u.name(), p.date(), effectiveDryRun, effectiveDryRun ? FoodsharingPickupAutomationDecision.WOULD_CONFIRM : FoodsharingPickupAutomationDecision.CONFIRMED, reason, userMessage, null);
                     updateLiveCache(livePickupsCache, cacheKey, p.date(), u.id(), true);
                 }
                 else {
-                    log.info("Foodsharing automation decision=decline dryRun={} admin={} foodsharingUserId={} email={} storeId={} pickupDate={} userId={} userName={}", dryRun, a.getAdminConnection().getAdminUser().getId(), a.getAdminConnection().getFoodsharingUserId(), a.getAdminConnection().getFoodsharingEmail(), a.getStoreId(), p.date(), u.id(), u.name());
-                    if (!dryRun) client.decline(a.getAdminConnection(), a.getStoreId(), p.date(), u.id(), reason);
+                    log.info("Foodsharing automation decision=decline dryRun={} admin={} foodsharingUserId={} email={} storeId={} pickupDate={} userId={} userName={}", effectiveDryRun, a.getAdminConnection().getAdminUser().getId(), a.getAdminConnection().getFoodsharingUserId(), a.getAdminConnection().getFoodsharingEmail(), a.getStoreId(), p.date(), u.id(), u.name());
+                    if (!effectiveDryRun) client.decline(a.getAdminConnection(), a.getStoreId(), p.date(), u.id(), reason);
                     declined++;
-                    saveAudit(a, u.id(), u.name(), p.date(), dryRun, dryRun ? FoodsharingPickupAutomationDecision.WOULD_DECLINE : FoodsharingPickupAutomationDecision.DECLINED, reason, userMessage, null);
+                    saveAudit(a, u.id(), u.name(), p.date(), effectiveDryRun, effectiveDryRun ? FoodsharingPickupAutomationDecision.WOULD_DECLINE : FoodsharingPickupAutomationDecision.DECLINED, reason, userMessage, null);
                     updateLiveCache(livePickupsCache, cacheKey, p.date(), u.id(), false);
                 }
-            } catch (RuntimeException ex) { failed++; messages.add(ex.getMessage()); saveAudit(a, u.id(), u.name(), p.date(), dryRun, FoodsharingPickupAutomationDecision.FAILED, "Automation failed", null, ex.getMessage()); }
+            } catch (RuntimeException ex) { failed++; messages.add(ex.getMessage()); saveAudit(a, u.id(), u.name(), p.date(), effectiveDryRun, FoodsharingPickupAutomationDecision.FAILED, "Automation failed", null, ex.getMessage()); }
             }
         }
-        log.info("Foodsharing automation run finished (evaluated={}, confirmed={}, declined={}, failed={}, dryRun={}, connections={})", evaluated, confirmed, declined, failed, dryRun, connectionSummary);
-        return new FoodsharingPickupModels.RunResult(evaluated, confirmed, declined, failed, dryRun, messages);
+        log.info("Foodsharing automation run finished (evaluated={}, confirmed={}, declined={}, failed={}, dryRun={}, connections={})", evaluated, confirmed, declined, failed, effectiveDryRunUsed, connectionSummary);
+        return new FoodsharingPickupModels.RunResult(evaluated, confirmed, declined, failed, effectiveDryRunUsed, messages);
     }
 
     private FoodsharingPickupModels.Decision evaluate(FoodsharingStoreAutomation a, Instant pickupDate, String userId, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache) {
@@ -513,7 +523,24 @@ public class FoodsharingPickupAutomationService {
     private String normalizeRequired(String value) { if (value == null || value.isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED); return value.trim(); }
     private void saveAudit(FoodsharingStoreAutomation a, String userId, String userName, Instant pickupDate, boolean dryRun, FoodsharingPickupAutomationDecision decision, String reasons, String userMessage, String error) { var audit = new FoodsharingPickupAutomationAudit(); audit.setAdminConnection(a.getAdminConnection()); audit.setStoreId(a.getStoreId()); audit.setFoodsharingUserId(userId); audit.setFoodsharingUserName(userName == null || userName.isBlank() ? null : userName); audit.setPickupDate(pickupDate); audit.setDryRun(dryRun); audit.setDecision(decision); audit.setReasons(reasons); audit.setUserMessage(userMessage); audit.setFoodsharingError(error); auditRepository.save(audit); }
     private FoodsharingAdminConnection requireConnection() { return connectionRepository.findByAdminUser(currentActorService.requireAutomationUser()).orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED)); }
-    private StoreAutomationView view(FoodsharingStoreAutomation a, FoodsharingAdminConnection currentConnection) { return new StoreAutomationView(a.getStoreId(), a.getStoreName(), a.isEnabled(), a.isGapRuleEnabled(), a.getMinimumGapDays(), a.isCleaningRuleEnabled(), a.isExperienceRuleEnabled(), a.getAdminConnection().getId().equals(currentConnection.getId())); }
+    private StoreAutomationView view(long storeId, String storeName, FoodsharingStoreAutomation automation, FoodsharingAdminConnection currentConnection) {
+        if (automation == null) {
+            return new StoreAutomationView(storeId, storeName, false, true, false, 0, false, false, true, null, null);
+        }
+        User owner = automation.getAdminConnection().getAdminUser();
+        return new StoreAutomationView(
+                storeId,
+                storeName,
+                automation.isEnabled(),
+                automation.isDryRunEnabled(),
+                automation.isGapRuleEnabled(),
+                automation.getMinimumGapDays(),
+                automation.isCleaningRuleEnabled(),
+                automation.isExperienceRuleEnabled(),
+                automation.getAdminConnection().getId().equals(currentConnection.getId()),
+                owner == null ? null : owner.getName(),
+                owner == null ? null : owner.getEmail());
+    }
     private AuditView view(FoodsharingPickupAutomationAudit a, Map<Long, String> storeNames) { return new AuditView(a.getStoreId(), storeNames.getOrDefault(a.getStoreId(), String.valueOf(a.getStoreId())), a.getFoodsharingUserId(), a.getFoodsharingUserName(), a.getPickupDate(), a.isDryRun(), a.getDecision().name(), a.getReasons(), a.getUserMessage(), a.getFoodsharingError(), a.getCreatedAt()); }
     private long monthsAgo(Instant value, Instant now) { return value == null ? 0 : ChronoUnit.MONTHS.between(value.atZone(SWISS_ZONE).toLocalDate(), now.atZone(SWISS_ZONE).toLocalDate()); }
     private String monthSuffix(long months) { return months == 1 ? " Monat" : " Monaten"; }
@@ -521,9 +548,11 @@ public class FoodsharingPickupAutomationService {
 
     public record CleaningRuleExemptionRequest(String foodsharingId, String reason) {}
     public record CleaningRuleExemptionView(UUID id, String foodsharingId, String reason) {}
-    public record ConnectionStatus(boolean connected, String email, String foodsharingUserId, Instant authenticatedAt) {}
-    public record StoreAutomationRequest(String storeName, boolean enabled, boolean gapRuleEnabled, int minimumGapDays, boolean cleaningRuleEnabled, boolean experienceRuleEnabled) {}
-    public record StoreAutomationView(long storeId, String storeName, boolean enabled, boolean gapRuleEnabled, int minimumGapDays, boolean cleaningRuleEnabled, boolean experienceRuleEnabled, boolean editable) {}
+    public record ConnectionStatus(boolean connected, String email, String foodsharingUserId, Instant authenticatedAt, boolean automationEnabled, boolean automationDryRun) {}
+    public record ManagedStoreView(long storeId, String storeName) {}
+    public record StoreOverviewView(List<StoreAutomationView> automations, List<ManagedStoreView> availableStores) {}
+    public record StoreAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled, boolean gapRuleEnabled, int minimumGapDays, boolean cleaningRuleEnabled, boolean experienceRuleEnabled) {}
+    public record StoreAutomationView(long storeId, String storeName, boolean enabled, boolean dryRunEnabled, boolean gapRuleEnabled, int minimumGapDays, boolean cleaningRuleEnabled, boolean experienceRuleEnabled, boolean editable, String ownerName, String ownerEmail) {}
     public record AuditView(long storeId, String storeName, String foodsharingUserId, String foodsharingUserName, Instant pickupDate, boolean dryRun, String decision, String reasons, String userMessage, String error, Instant createdAt) {}
     public record StorePickupUserView(String foodsharingUserId, String name, int futurePickupCount, List<StorePickupView> futurePickups) {}
     public record StorePickupView(long storeId, String storeName, Instant pickupDate, boolean confirmed) {}

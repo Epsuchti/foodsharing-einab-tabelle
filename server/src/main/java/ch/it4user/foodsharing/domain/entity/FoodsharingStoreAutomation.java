@@ -34,6 +34,9 @@ public class FoodsharingStoreAutomation extends BaseEntity {
     private boolean enabled = false;
 
     @Column(nullable = false)
+    private boolean dryRunEnabled = true;
+
+    @Column(nullable = false)
     private boolean gapRuleEnabled = false;
 
     @Column(nullable = false)

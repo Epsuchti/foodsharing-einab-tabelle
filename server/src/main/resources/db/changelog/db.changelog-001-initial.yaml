@@ -2,8 +2,6 @@ databaseChangeLog:
   - changeSet:
       id: 001-create-core-tables
       author: codex
-      validCheckSum:
-        - 9:28e6e5a109e5b931e98e8f9a42eb7ea2
       changes:
         - createTable:
             tableName: users
@@ -17,10 +15,14 @@ databaseChangeLog:
               - column: {name: name, type: VARCHAR(200), constraints: {nullable: false}}
               - column: {name: phone_number, type: VARCHAR(50)}
               - column: {name: ical_link, type: VARCHAR(2000)}
-              - column: {name: active, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
-              - column: {name: is_admin, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
-              - column: {name: is_teacher, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: active, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
               - column: {name: wants_to_be_teacher, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: can_give_ein_abs, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: can_manage_users, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: can_use_automations, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: can_see_user_pickup_count_grouping, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: can_use_automation_slot_approval, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: can_see_all_automation_decisions, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
               - column: {name: preferred_language, type: VARCHAR(10), defaultValue: DE, constraints: {nullable: false}}
         - insert:
             tableName: users
@@ -34,9 +36,13 @@ databaseChangeLog:
               - column: {name: phone_number, value: "076 683 90 77"}
               - column: {name: ical_link, value: "https://foodsharing.network/api/calendar/c90b5c1ea036183b4361?formatting=html&events=accepted&pickups=true&history=true"}
               - column: {name: active, valueBoolean: true}
-              - column: {name: is_admin, valueBoolean: true}
-              - column: {name: is_teacher, valueBoolean: true}
               - column: {name: wants_to_be_teacher, valueBoolean: false}
+              - column: {name: can_give_ein_abs, valueBoolean: true}
+              - column: {name: can_manage_users, valueBoolean: true}
+              - column: {name: can_use_automations, valueBoolean: true}
+              - column: {name: can_see_user_pickup_count_grouping, valueBoolean: true}
+              - column: {name: can_use_automation_slot_approval, valueBoolean: true}
+              - column: {name: can_see_all_automation_decisions, valueBoolean: true}
               - column: {name: preferred_language, value: "DE"}
         - createTable:
             tableName: einabs
@@ -149,8 +155,8 @@ databaseChangeLog:
               - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
               - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
               - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
-              - column: {name: session_cookie_ciphertext, type: TEXT}
-              - column: {name: csrf_token_ciphertext, type: TEXT}
+              - column: {name: session_cookie_ciphertext, type: VARCHAR(32600)}
+              - column: {name: csrf_token_ciphertext, type: VARCHAR(32600)}
               - column: {name: authenticated_at, type: TIMESTAMP WITH TIME ZONE}
         - createTable:
             tableName: foodsharing_admin_connections
@@ -163,8 +169,8 @@ databaseChangeLog:
               - column: {name: foodsharing_user_id, type: VARCHAR(100)}
               - column: {name: foodsharing_email, type: VARCHAR(255), constraints: {nullable: false}}
               - column: {name: foodsharing_password_ciphertext, type: VARCHAR(32600)}
-              - column: {name: session_cookie_ciphertext, type: TEXT}
-              - column: {name: csrf_token_ciphertext, type: TEXT}
+              - column: {name: session_cookie_ciphertext, type: VARCHAR(32600)}
+              - column: {name: csrf_token_ciphertext, type: VARCHAR(32600)}
               - column: {name: authenticated_at, type: TIMESTAMP WITH TIME ZONE}
         - addForeignKeyConstraint:
             baseTableName: foodsharing_admin_connections
@@ -241,9 +247,11 @@ databaseChangeLog:
               - column: {name: store_id, type: BIGINT, constraints: {nullable: false}}
               - column: {name: store_name, type: VARCHAR(255), defaultValue: '', constraints: {nullable: false}}
               - column: {name: enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: dry_run_enabled, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
               - column: {name: gap_rule_enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
               - column: {name: minimum_gap_days, type: INT, defaultValueNumeric: 0, constraints: {nullable: false}}
               - column: {name: cleaning_rule_enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: experience_rule_enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
         - addForeignKeyConstraint:
             baseTableName: foodsharing_store_automations
             baseColumnNames: admin_connection_id
@@ -254,6 +262,10 @@ databaseChangeLog:
             tableName: foodsharing_store_automations
             columnNames: admin_connection_id, store_id
             constraintName: uk_foodsharing_store_automations_connection_store
+        - addUniqueConstraint:
+            tableName: foodsharing_store_automations
+            columnNames: store_id
+            constraintName: uk_foodsharing_store_automations_store
         - createTable:
             tableName: foodsharing_pickup_automation_audits
             columns:
@@ -268,8 +280,8 @@ databaseChangeLog:
               - column: {name: dry_run, type: BOOLEAN, constraints: {nullable: false}}
               - column: {name: decision, type: VARCHAR(32), constraints: {nullable: false}}
               - column: {name: reasons, type: VARCHAR(4000), constraints: {nullable: false}}
-              - column: {name: user_message, type: TEXT}
-              - column: {name: foodsharing_error, type: TEXT}
+              - column: {name: user_message, type: VARCHAR(32600)}
+              - column: {name: foodsharing_error, type: VARCHAR(32600)}
         - addForeignKeyConstraint:
             baseTableName: foodsharing_pickup_automation_audits
             baseColumnNames: admin_connection_id
@@ -296,52 +308,20 @@ databaseChangeLog:
               - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
               - column: {name: foodsharing_id, type: VARCHAR(100), constraints: {nullable: false}}
               - column: {name: token_hash, type: VARCHAR(64), constraints: {nullable: false, unique: true}}
-              - column: {name: roles, type: VARCHAR(128), constraints: {nullable: false}}
+              - column: {name: permissions, type: VARCHAR(512), defaultValue: '', constraints: {nullable: false}}
               - column: {name: expires_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+        - createTable:
+            tableName: foodsharing_cleaning_rule_exemptions
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: foodsharing_id, type: VARCHAR(100), constraints: {nullable: false, unique: true}}
+              - column: {name: reason, type: VARCHAR(1000), constraints: {nullable: false}}
         - addColumn:
             tableName: foodsharing_pickup_automation_audits
             columns:
               - column:
                   name: foodsharing_user_name
                   type: VARCHAR(255)
-  - changeSet:
-      id: 002-fix-h2-long-text-columns
-      author: codex
-      dbms: h2
-      changes:
-        - modifyDataType:
-            tableName: foodsharing_api_sessions
-            columnName: session_cookie_ciphertext
-            newDataType: VARCHAR(32600)
-        - modifyDataType:
-            tableName: foodsharing_api_sessions
-            columnName: csrf_token_ciphertext
-            newDataType: VARCHAR(32600)
-        - modifyDataType:
-            tableName: foodsharing_admin_connections
-            columnName: session_cookie_ciphertext
-            newDataType: VARCHAR(32600)
-        - modifyDataType:
-            tableName: foodsharing_admin_connections
-            columnName: csrf_token_ciphertext
-            newDataType: VARCHAR(32600)
-        - modifyDataType:
-            tableName: foodsharing_future_pickup_users_cache
-            columnName: payload_json
-            newDataType: VARCHAR(32600)
-        - modifyDataType:
-            tableName: foodsharing_store_pickups_cache
-            columnName: payload_json
-            newDataType: VARCHAR(32600)
-        - modifyDataType:
-            tableName: foodsharing_store_members_cache
-            columnName: payload_json
-            newDataType: VARCHAR(32600)
-        - modifyDataType:
-            tableName: foodsharing_pickup_automation_audits
-            columnName: user_message
-            newDataType: VARCHAR(32600)
-        - modifyDataType:
-            tableName: foodsharing_pickup_automation_audits
-            columnName: foodsharing_error
-            newDataType: VARCHAR(32600)

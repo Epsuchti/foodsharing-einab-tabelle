@@ -1,63 +1,73 @@
-<p-card>
-  <ng-template pTemplate="title">{{ i18n.t('book.confirmedTitle') }}</ng-template>
-  @if (loading()) {
-    <p-progressSpinner strokeWidth="4"></p-progressSpinner>
-  } @else if (error()) {
-    <p class="empty-state">{{ error() }}</p>
-  } @else if (booking()) {
-    @if (sessionService.isAuthenticated()) {
-      <div class="success-state">{{ i18n.t('book.confirmedLoggedIn') }}</div>
-    } @else {
-      <p class="empty-state">{{ i18n.t('book.loginLater') }}</p>
+<section class="confirm-page">
+  <p-card class="confirm-card">
+    @if (loading()) {
+      <div class="confirm-state confirm-state--loading">
+        <p-progressSpinner strokeWidth="4"></p-progressSpinner>
+      </div>
+    } @else if (error()) {
+      <div class="confirm-state confirm-state--error">
+        <h1>{{ i18n.t('book.confirmedTitle') }}</h1>
+        <p>{{ error() }}</p>
+      </div>
+    } @else if (booking()) {
+      <div class="confirm-hero">
+        <div class="confirm-hero__status">{{ i18n.t('book.confirmedTitle') }}</div>
+        <h1>{{ i18n.categoryLabel(booking()!.category) }}</h1>
+        <p>{{ booking()!.startDateTime | zurichDateTime }}</p>
+      </div>
+
+      <div class="confirm-alert" [class.confirm-alert--success]="sessionService.isAuthenticated()">
+        @if (sessionService.isAuthenticated()) {
+          {{ i18n.t('book.confirmedLoggedIn') }}
+        } @else {
+          {{ i18n.t('book.loginLater') }}
+        }
+      </div>
+
+      <div class="confirm-identity">
+        <div class="confirm-identity__name">{{ booking()?.bookingUser?.name }}</div>
+        <div class="confirm-identity__meta">{{ booking()?.bookingUser?.foodsharingId }}</div>
+      </div>
+
+      <div class="confirm-grid">
+        <div class="confirm-field">
+          <span class="confirm-field__label">{{ i18n.t('slots.teacher') }}</span>
+          <div class="confirm-field__value">{{ booking()?.teacherName }}</div>
+        </div>
+        <div class="confirm-field">
+          <span class="confirm-field__label">{{ i18n.t('common.phoneNumber') }}</span>
+          <div class="confirm-field__value">{{ booking()?.teacherPhoneNumber }}</div>
+        </div>
+        <div class="confirm-field">
+          <span class="confirm-field__label">{{ i18n.t('common.location') }}</span>
+          <div class="confirm-field__value">{{ booking()?.location ?? '-' }}</div>
+        </div>
+        <div class="confirm-field">
+          <span class="confirm-field__label">{{ i18n.t('common.publicLocation') }}</span>
+          <div class="confirm-field__value">{{ booking()?.publicLocation ?? '-' }}</div>
+        </div>
+        <div class="confirm-field">
+          <span class="confirm-field__label">{{ i18n.t('common.visitFairteiler') }}</span>
+          <div class="confirm-field__value">{{ booking()?.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no') }}</div>
+        </div>
+      </div>
+
+      @if (booking()?.whatToBring || booking()?.hint) {
+        <div class="confirm-notes">
+          @if (booking()?.whatToBring) {
+            <section class="confirm-note">
+              <h2>{{ i18n.t('common.whatToBring') }}</h2>
+              <p>{{ booking()?.whatToBring }}</p>
+            </section>
+          }
+          @if (booking()?.hint) {
+            <section class="confirm-note">
+              <h2>{{ i18n.t('common.hint') }}</h2>
+              <p>{{ booking()?.hint }}</p>
+            </section>
+          }
+        </div>
+      }
     }
-    <div class="info-grid">
-      <div><strong>{{ booking()?.bookingUser?.name }}</strong></div>
-      <div>{{ booking()?.bookingUser?.foodsharingId }}</div>
-    </div>
-    <p class="empty-state">
-      {{ i18n.categoryLabel(booking()!.category) }} - {{ booking()!.startDateTime | zurichDateTime }}
-    </p>
-    <div class="stack-form">
-      <div>
-        <span class="slot-card__label">{{ i18n.t('slots.teacher') }}</span>
-        <div>{{ booking()?.teacherName }}</div>
-      </div>
-      <div>
-        <span class="slot-card__label">{{ i18n.t('common.phoneNumber') }}</span>
-        <div>{{ booking()?.teacherPhoneNumber }}</div>
-      </div>
-      <div>
-        <span class="slot-card__label">{{ i18n.t('slots.category') }}</span>
-        <div>{{ i18n.categoryLabel(booking()!.category) }}</div>
-      </div>
-      <div>
-        <span class="slot-card__label">{{ i18n.t('slots.date') }}</span>
-        <div>{{ booking()!.startDateTime | zurichDateTime }}</div>
-      </div>
-      <div>
-        <span class="slot-card__label">{{ i18n.t('common.location') }}</span>
-        <div>{{ booking()?.location ?? '-' }}</div>
-      </div>
-      <div>
-        <span class="slot-card__label">{{ i18n.t('common.publicLocation') }}</span>
-        <div>{{ booking()?.publicLocation ?? '-' }}</div>
-      </div>
-      @if (booking()?.whatToBring) {
-        <div>
-          <span class="slot-card__label">{{ i18n.t('common.whatToBring') }}</span>
-          <div style="white-space: pre-wrap;">{{ booking()?.whatToBring }}</div>
-        </div>
-      }
-      @if (booking()?.hint) {
-        <div>
-          <span class="slot-card__label">{{ i18n.t('common.hint') }}</span>
-          <div style="white-space: pre-wrap;">{{ booking()?.hint }}</div>
-        </div>
-      }
-      <div>
-        <span class="slot-card__label">{{ i18n.t('common.visitFairteiler') }}</span>
-        <div>{{ booking()?.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no') }}</div>
-      </div>
-    </div>
-  }
-</p-card>
+  </p-card>
+</section>

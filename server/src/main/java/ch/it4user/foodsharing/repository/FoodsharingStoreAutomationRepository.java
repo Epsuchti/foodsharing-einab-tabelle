@@ -12,4 +12,5 @@ public interface FoodsharingStoreAutomationRepository extends JpaRepository<Food
     List<FoodsharingStoreAutomation> findAllByEnabledTrue();
     Optional<FoodsharingStoreAutomation> findByAdminConnectionAndStoreId(FoodsharingAdminConnection adminConnection, long storeId);
     Optional<FoodsharingStoreAutomation> findByStoreId(long storeId);
+    void deleteAllByAdminConnection(FoodsharingAdminConnection adminConnection);
 }

@@ -15,8 +15,8 @@ public class SpaForwardingController {
     }
 
     @GetMapping(value = {
-            "/{path:^(?!api$|actuator$|error$|assets$|media$)[^.]*$}",
-            "/{path:^(?!api$|actuator$|error$|assets$|media$)[^.]*$}/**"
+            "/{path:^(?!api$|actuator$|error$|assets$|media$|h2-console$)[^.]*$}",
+            "/{path:^(?!api$|actuator$|error$|assets$|media$|h2-console$)[^.]*$}/**"
     })
     public String forward(HttpServletRequest request) {
         if (request.getRequestURI().contains(".")) {
