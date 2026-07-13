@@ -75,6 +75,8 @@ public class CurrentActorService {
             case CAN_USE_AUTOMATIONS -> user.isCanUseAutomations();
             case CAN_SEE_USER_PICKUP_COUNT_GROUPING -> user.isCanSeeUserPickupCountGrouping();
             case CAN_USE_AUTOMATION_SLOT_APPROVAL -> user.isCanUseAutomationSlotApproval();
+            case CAN_USE_AUTOMATION_REQUEST_APPROVAL -> user.isCanUseAutomationRequestApproval();
+            case CAN_USE_AUTOMATION_OPEN_SLOT_ADVERTISING -> user.isCanUseAutomationOpenSlotAdvertising();
             case CAN_SEE_ALL_AUTOMATION_DECISIONS -> user.isCanSeeAllAutomationDecisions();
         };
     }

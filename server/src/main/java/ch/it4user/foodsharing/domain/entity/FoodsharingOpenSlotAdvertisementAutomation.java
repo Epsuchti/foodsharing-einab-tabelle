@@ -7,6 +7,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -47,6 +49,7 @@ public class FoodsharingOpenSlotAdvertisementAutomation extends BaseEntity {
     @Column(length = 255)
     private String telegramChatId;
 
+    @JdbcTypeCode(SqlTypes.CLOB)
     @Column(nullable = false, columnDefinition = "TEXT")
     private String messagesJson = "[]";
 }

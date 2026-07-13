@@ -5,10 +5,18 @@ import ch.it4user.foodsharing.domain.entity.FoodsharingOpenSlotAdvertisementAudi
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface FoodsharingOpenSlotAdvertisementAuditRepository extends JpaRepository<FoodsharingOpenSlotAdvertisementAudit, UUID> {
     java.util.List<FoodsharingOpenSlotAdvertisementAudit> findTop100ByOrderByCreatedAtDesc();
-    boolean existsByAutomationAndPickupDateAndTriggerHoursBefore(FoodsharingOpenSlotAdvertisementAutomation automation, Instant pickupDate, int triggerHoursBefore);
+    @Query("select count(a) > 0 from FoodsharingOpenSlotAdvertisementAudit a "
+            + "where a.automation = :automation and a.pickupDate = :pickupDate "
+            + "and a.triggerHoursBefore = :triggerHoursBefore")
+    boolean existsByAutomationAndPickupDateAndTriggerHoursBefore(
+            @Param("automation") FoodsharingOpenSlotAdvertisementAutomation automation,
+            @Param("pickupDate") Instant pickupDate,
+            @Param("triggerHoursBefore") int triggerHoursBefore);
     java.util.List<FoodsharingOpenSlotAdvertisementAudit> findAllByAutomationAndPickupDateAndTelegramMessageIdIsNotNullAndTelegramDeletedAtIsNull(FoodsharingOpenSlotAdvertisementAutomation automation, Instant pickupDate);
     void deleteAllByAutomation(FoodsharingOpenSlotAdvertisementAutomation automation);
 }

@@ -138,7 +138,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
     const firstTemplate = String(data[`advertMessages${advertNumber}`] || '').split('\n---\n').map((message) => message.trim()).filter(Boolean)[0];
     if (!firstTemplate) {
-      return 'Add at least one message to preview it here.';
+      return this.i18n.t('automation.addAdvertMessagePreview');
     }
     const sampleDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
     const date = sampleDate.toISOString().slice(0, 10);
@@ -165,15 +165,15 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     const sendToTelegram = Boolean(data[`advertSendToTelegram${advertNumber}`]);
     const telegramChatId = String(data[`advertTelegramChatId${advertNumber}`] || '').trim();
     if (!sendToStoreChat && !sendToTelegram) {
-      this.toastError('Select store chat, Telegram, or both.');
+      this.toastError(this.i18n.t('automation.selectDestination'));
       return;
     }
     if (sendToTelegram && !telegramChatId) {
-      this.toastError('Select a Telegram chat or enter a chat id.');
+      this.toastError(this.i18n.t('automation.selectTelegramChat'));
       return;
     }
     if (messages.length === 0) {
-      this.toastError('Add at least one advert message.');
+      this.toastError(this.i18n.t('automation.addAdvertMessage'));
       return;
     }
     this.adminApi.saveFoodsharingOpenSlotAdvertisementAutomation({
@@ -210,7 +210,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
     const chatId = String(data[`advertTelegramChatId${advertNumber}`] || '').trim();
     if (!chatId) {
-      this.toastError('Select a Telegram chat or enter a chat id.');
+      this.toastError(this.i18n.t('automation.selectTelegramChat'));
       return;
     }
     this.adminApi.sendFoodsharingTelegramTestMessage({
@@ -219,7 +219,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
         message: this.previewOpenSlotAdvertisement(store, advertNumber)
       }
     }).subscribe({
-      next: () => this.messageService.add({ severity: 'success', summary: 'Telegram test message sent' }),
+      next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('automation.telegramTestSent') }),
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
   }

@@ -134,6 +134,8 @@ export class AdminDashboardPageComponent implements OnInit {
         canUseAutomations: user.user.canUseAutomations,
         canSeeUserPickupCountGrouping: user.user.canSeeUserPickupCountGrouping,
         canUseAutomationSlotApproval: user.user.canUseAutomationSlotApproval,
+        canUseAutomationRequestApproval: user.user.canUseAutomationRequestApproval,
+        canUseAutomationOpenSlotAdvertising: user.user.canUseAutomationOpenSlotAdvertising,
         canSeeAllAutomationDecisions: user.user.canSeeAllAutomationDecisions
       }
     }).subscribe({
