@@ -24,6 +24,8 @@ public class PermissionResolutionService {
             if (user.isCanUseAutomations()) permissions.add(UserPermission.CAN_USE_AUTOMATIONS);
             if (user.isCanSeeUserPickupCountGrouping()) permissions.add(UserPermission.CAN_SEE_USER_PICKUP_COUNT_GROUPING);
             if (user.isCanUseAutomationSlotApproval()) permissions.add(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
+            if (user.isCanUseAutomationRequestApproval()) permissions.add(UserPermission.CAN_USE_AUTOMATION_REQUEST_APPROVAL);
+            if (user.isCanUseAutomationOpenSlotAdvertising()) permissions.add(UserPermission.CAN_USE_AUTOMATION_OPEN_SLOT_ADVERTISING);
             if (user.isCanSeeAllAutomationDecisions()) permissions.add(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS);
         });
         return permissions;

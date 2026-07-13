@@ -55,6 +55,12 @@ public class User extends BaseEntity {
     private boolean canUseAutomationSlotApproval = false;
 
     @Column(nullable = false)
+    private boolean canUseAutomationRequestApproval = false;
+
+    @Column(nullable = false)
+    private boolean canUseAutomationOpenSlotAdvertising = false;
+
+    @Column(nullable = false)
     private boolean canSeeAllAutomationDecisions = false;
 
     @Enumerated(EnumType.STRING)

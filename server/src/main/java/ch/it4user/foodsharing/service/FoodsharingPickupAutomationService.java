@@ -7,6 +7,10 @@ import ch.it4user.foodsharing.domain.entity.FoodsharingPickupAutomationAudit;
 import ch.it4user.foodsharing.domain.entity.FoodsharingStoreMembersCache;
 import ch.it4user.foodsharing.domain.entity.FoodsharingStorePickupsCache;
 import ch.it4user.foodsharing.domain.entity.FoodsharingStoreAutomation;
+import ch.it4user.foodsharing.domain.entity.FoodsharingRequestAutomation;
+import ch.it4user.foodsharing.domain.entity.FoodsharingRequestAutomationAudit;
+import ch.it4user.foodsharing.domain.entity.FoodsharingOpenSlotAdvertisementAutomation;
+import ch.it4user.foodsharing.domain.entity.FoodsharingOpenSlotAdvertisementAudit;
 import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.enumtype.FoodsharingPickupAutomationDecision;
 import ch.it4user.foodsharing.domain.enumtype.UserPermission;
@@ -17,6 +21,10 @@ import ch.it4user.foodsharing.repository.FoodsharingFuturePickupUsersCacheReposi
 import ch.it4user.foodsharing.repository.FoodsharingStoreMembersCacheRepository;
 import ch.it4user.foodsharing.repository.FoodsharingStorePickupsCacheRepository;
 import ch.it4user.foodsharing.repository.FoodsharingStoreAutomationRepository;
+import ch.it4user.foodsharing.repository.FoodsharingRequestAutomationRepository;
+import ch.it4user.foodsharing.repository.FoodsharingRequestAutomationAuditRepository;
+import ch.it4user.foodsharing.repository.FoodsharingOpenSlotAdvertisementAutomationRepository;
+import ch.it4user.foodsharing.repository.FoodsharingOpenSlotAdvertisementAuditRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Duration;
@@ -25,17 +33,22 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Locale;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -48,6 +61,10 @@ public class FoodsharingPickupAutomationService {
     private final FoodsharingPickupApiClient client;
     private final FoodsharingAdminConnectionRepository connectionRepository;
     private final FoodsharingStoreAutomationRepository automationRepository;
+    private final FoodsharingRequestAutomationRepository requestAutomationRepository;
+    private final FoodsharingRequestAutomationAuditRepository requestAutomationAuditRepository;
+    private final FoodsharingOpenSlotAdvertisementAutomationRepository advertisementAutomationRepository;
+    private final FoodsharingOpenSlotAdvertisementAuditRepository advertisementAuditRepository;
     private final FoodsharingPickupAutomationAuditRepository auditRepository;
     private final FoodsharingFuturePickupUsersCacheRepository futurePickupUsersCacheRepository;
     private final FoodsharingStoreMembersCacheRepository storeMembersCacheRepository;
@@ -55,17 +72,19 @@ public class FoodsharingPickupAutomationService {
     private final FoodsharingCleaningRuleExemptionRepository cleaningRuleExemptionRepository;
     private final FoodsharingMessageService messageService;
     private final ObjectMapper objectMapper;
+    private final RestClient telegramClient = RestClient.create("https://api.telegram.org");
+    private final AtomicBoolean scheduledRunInProgress = new AtomicBoolean(false);
 
-    public FoodsharingPickupAutomationService(AppProperties appProperties, CurrentActorService currentActorService, CryptoService cryptoService, FoodsharingPickupApiClient client, FoodsharingAdminConnectionRepository connectionRepository, FoodsharingStoreAutomationRepository automationRepository, FoodsharingPickupAutomationAuditRepository auditRepository, FoodsharingFuturePickupUsersCacheRepository futurePickupUsersCacheRepository, FoodsharingStoreMembersCacheRepository storeMembersCacheRepository, FoodsharingStorePickupsCacheRepository storePickupsCacheRepository, FoodsharingCleaningRuleExemptionRepository cleaningRuleExemptionRepository, FoodsharingMessageService messageService, ObjectMapper objectMapper) {
-        this.appProperties = appProperties; this.currentActorService = currentActorService; this.cryptoService = cryptoService; this.client = client; this.connectionRepository = connectionRepository; this.automationRepository = automationRepository; this.auditRepository = auditRepository; this.futurePickupUsersCacheRepository = futurePickupUsersCacheRepository; this.storeMembersCacheRepository = storeMembersCacheRepository; this.storePickupsCacheRepository = storePickupsCacheRepository; this.cleaningRuleExemptionRepository = cleaningRuleExemptionRepository; this.messageService = messageService; this.objectMapper = objectMapper;
+    public FoodsharingPickupAutomationService(AppProperties appProperties, CurrentActorService currentActorService, CryptoService cryptoService, FoodsharingPickupApiClient client, FoodsharingAdminConnectionRepository connectionRepository, FoodsharingStoreAutomationRepository automationRepository, FoodsharingRequestAutomationRepository requestAutomationRepository, FoodsharingRequestAutomationAuditRepository requestAutomationAuditRepository, FoodsharingOpenSlotAdvertisementAutomationRepository advertisementAutomationRepository, FoodsharingOpenSlotAdvertisementAuditRepository advertisementAuditRepository, FoodsharingPickupAutomationAuditRepository auditRepository, FoodsharingFuturePickupUsersCacheRepository futurePickupUsersCacheRepository, FoodsharingStoreMembersCacheRepository storeMembersCacheRepository, FoodsharingStorePickupsCacheRepository storePickupsCacheRepository, FoodsharingCleaningRuleExemptionRepository cleaningRuleExemptionRepository, FoodsharingMessageService messageService, ObjectMapper objectMapper) {
+        this.appProperties = appProperties; this.currentActorService = currentActorService; this.cryptoService = cryptoService; this.client = client; this.connectionRepository = connectionRepository; this.automationRepository = automationRepository; this.requestAutomationRepository = requestAutomationRepository; this.requestAutomationAuditRepository = requestAutomationAuditRepository; this.advertisementAutomationRepository = advertisementAutomationRepository; this.advertisementAuditRepository = advertisementAuditRepository; this.auditRepository = auditRepository; this.futurePickupUsersCacheRepository = futurePickupUsersCacheRepository; this.storeMembersCacheRepository = storeMembersCacheRepository; this.storePickupsCacheRepository = storePickupsCacheRepository; this.cleaningRuleExemptionRepository = cleaningRuleExemptionRepository; this.messageService = messageService; this.objectMapper = objectMapper;
     }
 
     @Transactional
-    public ConnectionStatus connect(String email, String password) {
+    public ConnectionStatus connect(String email, String password, String telegramBotToken) {
         User admin = currentActorService.requireAutomationUser();
         var session = client.login(email, password);
         FoodsharingAdminConnection c = connectionRepository.findByAdminUser(admin).orElseGet(FoodsharingAdminConnection::new);
-        c.setAdminUser(admin); c.setFoodsharingEmail(email); c.setFoodsharingPasswordCiphertext(cryptoService.encrypt(password)); c.setFoodsharingUserId(session.foodsharingUserId()); c.setSessionCookieCiphertext(cryptoService.encrypt(session.cookie())); c.setCsrfTokenCiphertext(cryptoService.encrypt(session.csrf())); c.setAuthenticatedAt(Instant.now());
+        c.setAdminUser(admin); c.setFoodsharingEmail(email); c.setFoodsharingPasswordCiphertext(cryptoService.encrypt(password)); c.setFoodsharingUserId(session.foodsharingUserId()); c.setSessionCookieCiphertext(cryptoService.encrypt(session.cookie())); c.setCsrfTokenCiphertext(cryptoService.encrypt(session.csrf())); c.setTelegramBotTokenCiphertext(telegramBotToken == null || telegramBotToken.isBlank() ? null : cryptoService.encrypt(telegramBotToken.trim())); c.setAuthenticatedAt(Instant.now());
         connectionRepository.save(c);
         log.info("Foodsharing automation connection saved admin={} foodsharingUserId={} email={}", admin.getId(), session.foodsharingUserId(), email);
         return status(c);
@@ -81,6 +100,8 @@ public class FoodsharingPickupAutomationService {
             storeMembersCacheRepository.deleteAllByAdminConnection(connection);
             storePickupsCacheRepository.deleteAllByAdminConnection(connection);
             automationRepository.deleteAllByAdminConnection(connection);
+            requestAutomationRepository.deleteAllByAdminConnection(connection);
+            advertisementAutomationRepository.deleteAllByAdminConnection(connection);
             connectionRepository.delete(connection);
         });
     }
@@ -124,6 +145,284 @@ public class FoodsharingPickupAutomationService {
                 .orElseGet(() -> { var n = new FoodsharingStoreAutomation(); n.setAdminConnection(c); n.setStoreId(storeId); return n; });
         a.setStoreName(request.storeName() == null ? a.getStoreName() : request.storeName()); a.setEnabled(request.enabled()); a.setDryRunEnabled(request.dryRunEnabled()); a.setGapRuleEnabled(request.gapRuleEnabled()); a.setMinimumGapDays(Math.max(0, request.minimumGapDays())); a.setCleaningRuleEnabled(request.cleaningRuleEnabled()); a.setExperienceRuleEnabled(request.experienceRuleEnabled());
         return view(storeId, a.getStoreName(), automationRepository.save(a), c);
+    }
+
+
+
+    public ExtraAutomationOverviewView extraAutomationOverview() {
+        FoodsharingAdminConnection connection = requireConnection();
+        List<RequestAutomationView> requests = requestAutomationRepository.findAll().stream()
+                .filter(a -> a.getAdminConnection().getId().equals(connection.getId()))
+                .map(a -> new RequestAutomationView(a.getStoreId(), a.getStoreName(), a.isEnabled(), a.isDryRunEnabled(), true))
+                .toList();
+        List<AdvertisementAutomationView> advertisements = advertisementAutomationRepository.findAll().stream()
+                .filter(a -> a.getAdminConnection().getId().equals(connection.getId()))
+                .map(a -> advertisementView(a, true))
+                .toList();
+        return new ExtraAutomationOverviewView(requests, advertisements);
+    }
+
+    @Transactional
+    public RequestAutomationView saveRequestAutomation(long storeId, RequestAutomationRequest request) {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_REQUEST_APPROVAL);
+        FoodsharingAdminConnection c = requireConnection();
+        FoodsharingRequestAutomation a = requestAutomationRepository.findByStoreId(storeId)
+                .map(existing -> {
+                    if (!existing.getAdminConnection().getId().equals(c.getId())) throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.VALIDATION_FAILED, List.of("A request automation already exists for this store."));
+                    return existing;
+                })
+                .orElseGet(() -> { var n = new FoodsharingRequestAutomation(); n.setAdminConnection(c); n.setStoreId(storeId); return n; });
+        a.setStoreName(request.storeName() == null ? a.getStoreName() : request.storeName());
+        a.setEnabled(request.enabled());
+        a.setDryRunEnabled(request.dryRunEnabled());
+        return new RequestAutomationView(a.getStoreId(), a.getStoreName(), a.isEnabled(), a.isDryRunEnabled(), a.getAdminConnection().getId().equals(c.getId()));
+    }
+
+    @Transactional
+    public AdvertisementAutomationView saveAdvertisementAutomation(long storeId, int advertNumber, AdvertisementAutomationRequest request) {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_OPEN_SLOT_ADVERTISING);
+        if (advertNumber < 1 || advertNumber > 3) throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Advert number must be between 1 and 3."));
+        FoodsharingAdminConnection c = requireConnection();
+        FoodsharingOpenSlotAdvertisementAutomation a = advertisementAutomationRepository.findByStoreIdAndAdvertNumber(storeId, advertNumber)
+                .orElseGet(() -> { var n = new FoodsharingOpenSlotAdvertisementAutomation(); n.setAdminConnection(c); n.setStoreId(storeId); n.setAdvertNumber(advertNumber); return n; });
+        if (!a.getAdminConnection().getId().equals(c.getId())) throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.VALIDATION_FAILED, List.of("An advertisement automation already exists for this store."));
+        a.setStoreName(request.storeName() == null ? a.getStoreName() : request.storeName());
+        a.setEnabled(request.enabled()); a.setTriggerHoursBefore(Math.max(1, request.triggerHoursBefore()));
+        a.setSendToStoreChat(request.sendToStoreChat()); a.setSendToTelegram(request.sendToTelegram()); a.setTelegramChatId(blankToNull(request.telegramChatId()));
+        validateTemplateVariables(request.messages());
+        a.setMessagesJson(serializeMessages(request.messages()));
+        a = advertisementAutomationRepository.save(a);
+        return advertisementView(a, true);
+    }
+
+    @Transactional
+    public AutomationRunSummary runRequestAutomations() {
+        return runRequestAutomations(false);
+    }
+
+    @Transactional
+    public AutomationRunSummary runRequestAutomations(boolean dryRunOverride) {
+        if (!appProperties.getFoodsharing().getAutomation().isEnabled()) {
+            return new AutomationRunSummary(0, 0, 1, true, List.of("Request automation skipped: global automation is disabled."));
+        }
+        boolean globalDryRun = dryRunOverride || appProperties.getFoodsharing().getAutomation().isDryRun();
+        int evaluated = 0;
+        int acted = 0;
+        int skipped = 0;
+        List<String> messages = new ArrayList<>();
+        int maxApprovals = Math.max(0, appProperties.getFoodsharing().getAutomation().getMaxRequestApprovalsPerRun());
+        for (FoodsharingRequestAutomation a : requestAutomationRepository.findAllByEnabledTrue()) {
+            boolean dryRun = globalDryRun || a.isDryRunEnabled();
+            List<FoodsharingPickupApiClient.RequestUser> requests = client.requests(a.getAdminConnection(), a.getStoreId());
+            if (requests.isEmpty()) {
+                skipped++;
+                messages.add("No open requests for " + a.getStoreName() + " (" + a.getStoreId() + ").");
+            }
+            for (FoodsharingPickupApiClient.RequestUser user : requests) {
+                if (acted >= maxApprovals) { skipped++; messages.add("Request automation limit reached (" + maxApprovals + ")."); break; }
+                evaluated++;
+                log.info("Foodsharing request automation approving dryRun={} storeId={} userId={} userName={}", dryRun, a.getStoreId(), user.id(), user.name());
+                if (user.id() == null || user.id().isBlank()) { skipped++; saveRequestAudit(a, user, dryRun, "SKIPPED", "Missing Foodsharing user id.", null); continue; }
+                try {
+                    if (!dryRun) { client.approveRequest(a.getAdminConnection(), a.getStoreId(), user.id()); invalidateStoreCaches(a.getAdminConnection(), a.getStoreId()); }
+                    acted++;
+                    String reason = (dryRun ? "Would approve request." : "Request approved.");
+                    saveRequestAudit(a, user, dryRun, dryRun ? "WOULD_APPROVE" : "APPROVED", reason, null);
+                    messages.add((dryRun ? "Would approve " : "Approved ") + user.name() + " (" + user.id() + ") for " + a.getStoreName() + ".");
+                } catch (RuntimeException ex) {
+                    skipped++;
+                    saveRequestAudit(a, user, dryRun, "FAILED", "Request approval failed.", ex.getMessage());
+                    messages.add("Failed to approve " + user.name() + " (" + user.id() + "): " + ex.getMessage());
+                }
+            }
+        }
+        return new AutomationRunSummary(evaluated, acted, skipped, globalDryRun, messages);
+    }
+
+    @Scheduled(fixedDelayString = "#{T(java.time.Duration).parse('${app.foodsharing.automation.poll-interval:PT5M}').toMillis()}")
+    @Transactional
+    public void scheduledAutomationRun() {
+        if (!scheduledRunInProgress.compareAndSet(false, true)) {
+            log.info("Foodsharing automation poll skipped because another run is still in progress.");
+            return;
+        }
+        try {
+            runRequestAutomations();
+            scheduledRun();
+            runAdvertisementAutomations(false);
+        } finally {
+            scheduledRunInProgress.set(false);
+        }
+    }
+
+    @Transactional
+    public AutomationRunSummary runAdvertisementAutomations() {
+        return runAdvertisementAutomations(false);
+    }
+
+    @Transactional
+    public AutomationRunSummary runAdvertisementAutomations(boolean dryRunOverride) {
+        if (!appProperties.getFoodsharing().getAutomation().isEnabled()) {
+            return new AutomationRunSummary(0, 0, 1, true, List.of("Open-slot advertisement automation skipped: global automation is disabled."));
+        }
+        boolean dryRun = dryRunOverride || appProperties.getFoodsharing().getAutomation().isDryRun();
+        Instant now = Instant.now();
+        int evaluated = 0;
+        int acted = 0;
+        int skipped = 0;
+        List<String> runMessages = new ArrayList<>();
+        int maxAdvertisements = Math.max(0, appProperties.getFoodsharing().getAutomation().getMaxAdvertisementsPerRun());
+        for (FoodsharingOpenSlotAdvertisementAutomation a : advertisementAutomationRepository.findAllByEnabledTrue()) {
+            List<String> messages = deserializeMessages(a.getMessagesJson());
+            if (messages.isEmpty()) {
+                skipped++;
+                runMessages.add("Advertisement " + a.getAdvertNumber() + " for " + a.getStoreName() + " skipped: no messages configured.");
+                continue;
+            }
+            if (!a.isSendToStoreChat() && !a.isSendToTelegram()) {
+                skipped++;
+                runMessages.add("Advertisement " + a.getAdvertNumber() + " for " + a.getStoreName() + " skipped: no output target selected.");
+                continue;
+            }
+            for (FoodsharingPickupModels.Pickup p : storePickups(a.getAdminConnection(), a.getStoreId())) {
+                evaluated++;
+                if (!p.users().isEmpty()) {
+                    if (!dryRun) deleteTelegramAdvertisementsForFilledSlot(a, p.date());
+                    skipped++;
+                    continue;
+                }
+                Instant triggerAt = p.date().minus(Duration.ofHours(a.getTriggerHoursBefore()));
+                if (triggerAt.isAfter(now) || now.isAfter(p.date())) {
+                    skipped++;
+                    continue;
+                }
+                if (advertisementAuditRepository.existsByAutomationAndPickupDateAndTriggerHoursBefore(a, p.date(), a.getTriggerHoursBefore())) {
+                    skipped++;
+                    runMessages.add("Advertisement " + a.getAdvertNumber() + " for " + a.getStoreName() + " skipped: already sent for " + p.date() + ".");
+                    continue;
+                }
+                if (acted >= maxAdvertisements) { skipped++; runMessages.add("Advertisement limit reached (" + maxAdvertisements + ")."); break; }
+                String message = renderAdvertisement(messages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(messages.size())), p.date(), a.getStoreName(), a.getAdminConnection().getFoodsharingUserId());
+                if (!dryRun && a.isSendToStoreChat()) client.sendStoreChatMessage(a.getAdminConnection(), a.getStoreId(), message);
+                Integer telegramMessageId = null;
+                if (!dryRun && a.isSendToTelegram() && a.getTelegramChatId() != null) telegramMessageId = sendTelegram(a, message);
+                if (!dryRun) {
+                    FoodsharingOpenSlotAdvertisementAudit audit = new FoodsharingOpenSlotAdvertisementAudit();
+                    audit.setAutomation(a); audit.setStoreId(a.getStoreId()); audit.setPickupDate(p.date()); audit.setTriggerHoursBefore(a.getTriggerHoursBefore()); audit.setTelegramMessageId(telegramMessageId); audit.setStatus("SENT"); audit.setDryRun(false); audit.setMessage(message); audit.setReason("Advertisement sent.");
+                    advertisementAuditRepository.save(audit);
+                }
+                acted++;
+                runMessages.add((dryRun ? "Would advertise " : "Advertised ") + a.getStoreName() + " slot " + p.date() + " with advert " + a.getAdvertNumber() + ".");
+            }
+        }
+        return new AutomationRunSummary(evaluated, acted, skipped, dryRun, runMessages);
+    }
+
+    public void sendTelegramTestMessage(String chatId, String message) {
+        FoodsharingAdminConnection connection = requireConnection();
+        String token = telegramToken(connection);
+        if (token == null || token.isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Telegram bot token is not configured."));
+        try {
+            telegramClient.post().uri("/bot{token}/sendMessage", token).contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("chat_id", normalizeRequired(chatId), "text", normalize(message).isBlank() ? "Foodsharing automation test message" : normalize(message)))
+                    .retrieve().toBodilessEntity();
+        } catch (RuntimeException ex) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Telegram test message failed: " + ex.getMessage()));
+        }
+    }
+
+
+    private void saveRequestAudit(FoodsharingRequestAutomation automation, FoodsharingPickupApiClient.RequestUser user, boolean dryRun, String status, String reason, String error) {
+        FoodsharingRequestAutomationAudit audit = new FoodsharingRequestAutomationAudit();
+        audit.setAutomation(automation);
+        audit.setStoreId(automation.getStoreId());
+        audit.setFoodsharingUserId(user.id() == null || user.id().isBlank() ? "unknown" : user.id());
+        audit.setFoodsharingUserName(user.name());
+        audit.setDryRun(dryRun);
+        audit.setStatus(status);
+        audit.setReason(reason);
+        audit.setError(error);
+        requestAutomationAuditRepository.save(audit);
+    }
+
+    private void validateTemplateVariables(List<String> messages) {
+        java.util.Set<String> allowed = java.util.Set.of("date", "dateDe", "weekday", "time", "datetime", "datetimeDe", "storeName", "adminFoodsharingId", "adminProfileUrl");
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\{\\{\\s*([^}\\s]+)\\s*}} ".trim());
+        for (String message : messages == null ? List.<String>of() : messages) {
+            java.util.regex.Matcher matcher = pattern.matcher(message == null ? "" : message);
+            while (matcher.find()) {
+                if (!allowed.contains(matcher.group(1))) {
+                    throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Unknown template variable: {{" + matcher.group(1) + "}}"));
+                }
+            }
+        }
+    }
+
+    private void invalidateStoreCaches(FoodsharingAdminConnection connection, long storeId) {
+        storePickupsCacheRepository.deleteByAdminConnectionAndStoreId(connection, storeId);
+        storeMembersCacheRepository.deleteByAdminConnectionAndStoreId(connection, storeId);
+    }
+
+    private Integer sendTelegram(FoodsharingOpenSlotAdvertisementAutomation automation, String text) {
+        String token = telegramToken(automation.getAdminConnection());
+        if (token == null || token.isBlank()) return null;
+        Object response = telegramClient.post().uri("/bot{token}/sendMessage", token).contentType(MediaType.APPLICATION_JSON).body(Map.of("chat_id", automation.getTelegramChatId(), "text", text)).retrieve().body(Object.class);
+        if (response instanceof Map<?, ?> root && root.get("result") instanceof Map<?, ?> result && result.get("message_id") instanceof Number messageId) {
+            return messageId.intValue();
+        }
+        return null;
+    }
+
+    private void deleteTelegramAdvertisementsForFilledSlot(FoodsharingOpenSlotAdvertisementAutomation automation, Instant pickupDate) {
+        if (!automation.isSendToTelegram() || automation.getTelegramChatId() == null) return;
+        String token = telegramToken(automation.getAdminConnection());
+        if (token == null || token.isBlank()) return;
+        for (FoodsharingOpenSlotAdvertisementAudit audit : advertisementAuditRepository.findAllByAutomationAndPickupDateAndTelegramMessageIdIsNotNullAndTelegramDeletedAtIsNull(automation, pickupDate)) {
+            telegramClient.post().uri("/bot{token}/deleteMessage", token).contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("chat_id", automation.getTelegramChatId(), "message_id", audit.getTelegramMessageId()))
+                    .retrieve().toBodilessEntity();
+            audit.setTelegramDeletedAt(Instant.now());
+            advertisementAuditRepository.save(audit);
+        }
+    }
+
+
+    public List<TelegramChatView> telegramChats() {
+        FoodsharingAdminConnection connection = requireConnection();
+        String token = telegramToken(connection);
+        if (token == null || token.isBlank()) return List.of();
+        Object response = telegramClient.get().uri("/bot{token}/getUpdates", token).retrieve().body(Object.class);
+        Map<String, TelegramChatView> chats = new LinkedHashMap<>();
+        if (response instanceof Map<?, ?> root && root.get("result") instanceof List<?> updates) {
+            for (Object update : updates) {
+                if (!(update instanceof Map<?, ?> updateMap)) continue;
+                Object message = firstPresent(updateMap, "message", "channel_post", "my_chat_member");
+                if (message instanceof Map<?, ?> messageMap) {
+                    Object chat = messageMap.get("chat");
+                    if (chat instanceof Map<?, ?> chatMap) {
+                        String id = String.valueOf(chatMap.get("id"));
+                        String title = String.valueOf(firstPresent(chatMap, "title", "username", "first_name"));
+                        String type = String.valueOf(firstPresent(chatMap, "type"));
+                        if (!id.isBlank()) chats.put(id, new TelegramChatView(id, title == null || title.equals("null") ? id : title, type == null || type.equals("null") ? "" : type));
+                    }
+                }
+            }
+        }
+        return new ArrayList<>(chats.values());
+    }
+
+    private String telegramToken(FoodsharingAdminConnection connection) {
+        if (connection.getTelegramBotTokenCiphertext() != null && !connection.getTelegramBotTokenCiphertext().isBlank()) {
+            return cryptoService.decrypt(connection.getTelegramBotTokenCiphertext());
+        }
+        return appProperties.getFoodsharing().getAutomation().getTelegramBotToken();
+    }
+
+    private Object firstPresent(Map<?, ?> map, String... keys) {
+        for (String key : keys) {
+            if (map.containsKey(key)) return map.get(key);
+        }
+        return null;
     }
 
     public List<AuditView> audit() {
@@ -289,7 +588,6 @@ public class FoodsharingPickupAutomationService {
     @Transactional
     public FoodsharingPickupModels.RunResult run(boolean dryRun) { return run(automationRepository.findAllByEnabledTrue(), dryRun || appProperties.getFoodsharing().getAutomation().isDryRun()); }
 
-    @Scheduled(fixedDelayString = "#{T(java.time.Duration).parse('${app.foodsharing.automation.poll-interval:PT5M}').toMillis()}")
     @Transactional
     public void scheduledRun() {
         if (!appProperties.getFoodsharing().getAutomation().isEnabled()) {
@@ -520,6 +818,41 @@ public class FoodsharingPickupAutomationService {
     }
 
     private CleaningRuleExemptionView view(FoodsharingCleaningRuleExemption exemption) { return new CleaningRuleExemptionView(exemption.getId(), exemption.getFoodsharingId(), exemption.getReason()); }
+    private AdvertisementAutomationView advertisementView(FoodsharingOpenSlotAdvertisementAutomation a, boolean editable) {
+        return new AdvertisementAutomationView(a.getStoreId(), a.getStoreName(), a.getAdvertNumber(), a.isEnabled(), a.getTriggerHoursBefore(), a.isSendToStoreChat(), a.isSendToTelegram(), a.getTelegramChatId(), deserializeMessages(a.getMessagesJson()), editable);
+    }
+
+    private String serializeMessages(List<String> messages) {
+        try { return objectMapper.writeValueAsString(messages == null ? List.of() : messages.stream().map(this::normalize).filter(v -> !v.isBlank()).toList()); }
+        catch (Exception ex) { throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, ApiErrorCode.UNEXPECTED_ERROR, List.of("Could not store advertisement messages.")); }
+    }
+
+    private List<String> deserializeMessages(String json) {
+        try { return objectMapper.readValue(json == null || json.isBlank() ? "[]" : json, new TypeReference<List<String>>() {}); }
+        catch (Exception ex) { return List.of(); }
+    }
+
+    private String renderAdvertisement(String template, Instant pickupDate, String storeName, String adminFoodsharingId) {
+        var zdt = pickupDate.atZone(SWISS_ZONE);
+        String normalizedAdminFoodsharingId = adminFoodsharingId == null ? "" : adminFoodsharingId.trim();
+        String adminProfileUrl = normalizedAdminFoodsharingId.isBlank() ? "" : "https://foodsharing.de/user/" + normalizedAdminFoodsharingId + "/profile";
+        String time = zdt.toLocalTime().truncatedTo(ChronoUnit.MINUTES).toString();
+        String dateDe = zdt.format(DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.GERMAN));
+        String weekday = zdt.format(DateTimeFormatter.ofPattern("EEEE", Locale.GERMAN));
+        return normalize(template).replace("{{storeName}}", storeName == null ? "" : storeName)
+                .replace("{{date}}", zdt.toLocalDate().toString())
+                .replace("{{dateDe}}", dateDe)
+                .replace("{{weekday}}", weekday)
+                .replace("{{time}}", time)
+                .replace("{{datetime}}", zdt.toLocalDate() + " " + time)
+                .replace("{{datetimeDe}}", weekday + ", " + dateDe + " um " + time)
+                .replace("{{adminFoodsharingId}}", normalizedAdminFoodsharingId)
+                .replace("{{adminProfileUrl}}", adminProfileUrl);
+    }
+
+    private String normalize(String value) { return value == null ? "" : value.trim(); }
+    private String blankToNull(String value) { String normalized = normalize(value); return normalized.isBlank() ? null : normalized; }
+
     private String normalizeRequired(String value) { if (value == null || value.isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED); return value.trim(); }
     private void saveAudit(FoodsharingStoreAutomation a, String userId, String userName, Instant pickupDate, boolean dryRun, FoodsharingPickupAutomationDecision decision, String reasons, String userMessage, String error) { var audit = new FoodsharingPickupAutomationAudit(); audit.setAdminConnection(a.getAdminConnection()); audit.setStoreId(a.getStoreId()); audit.setFoodsharingUserId(userId); audit.setFoodsharingUserName(userName == null || userName.isBlank() ? null : userName); audit.setPickupDate(pickupDate); audit.setDryRun(dryRun); audit.setDecision(decision); audit.setReasons(reasons); audit.setUserMessage(userMessage); audit.setFoodsharingError(error); auditRepository.save(audit); }
     private FoodsharingAdminConnection requireConnection() { return connectionRepository.findByAdminUser(currentActorService.requireAutomationUser()).orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED)); }
@@ -578,4 +911,24 @@ public class FoodsharingPickupAutomationService {
             return new StorePickupUserView(foodsharingUserId, name, sortedPickups.size(), sortedPickups);
         }
     }
+
+    public List<ExtraAutomationAuditView> extraAutomationAudit() {
+        List<ExtraAutomationAuditView> result = new ArrayList<>();
+        result.addAll(requestAutomationAuditRepository.findTop100ByOrderByCreatedAtDesc().stream()
+                .map(a -> new ExtraAutomationAuditView("REQUEST", a.getStoreId(), a.getAutomation().getStoreName(), null, a.getFoodsharingUserId(), a.getFoodsharingUserName(), a.isDryRun(), a.getStatus(), a.getReason(), null, a.getError(), a.getCreatedAt()))
+                .toList());
+        result.addAll(advertisementAuditRepository.findTop100ByOrderByCreatedAtDesc().stream()
+                .map(a -> new ExtraAutomationAuditView("ADVERTISEMENT", a.getStoreId(), a.getAutomation().getStoreName(), a.getPickupDate(), null, null, a.isDryRun(), a.getStatus(), a.getReason(), a.getMessage(), a.getError(), a.getCreatedAt()))
+                .toList());
+        return result.stream().sorted(Comparator.comparing(ExtraAutomationAuditView::createdAt).reversed()).limit(100).toList();
+    }
+
+    public record RequestAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled) {}
+    public record RequestAutomationView(long storeId, String storeName, boolean enabled, boolean dryRunEnabled, boolean editable) {}
+    public record AdvertisementAutomationRequest(String storeName, boolean enabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> messages) {}
+    public record AdvertisementAutomationView(long storeId, String storeName, int advertNumber, boolean enabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> messages, boolean editable) {}
+    public record TelegramChatView(String id, String title, String type) {}
+    public record AutomationRunSummary(int evaluated, int acted, int skipped, boolean dryRun, List<String> messages) {}
+    public record ExtraAutomationOverviewView(List<RequestAutomationView> requestAutomations, List<AdvertisementAutomationView> advertisementAutomations) {}
+    public record ExtraAutomationAuditView(String automationType, long storeId, String storeName, Instant pickupDate, String foodsharingUserId, String foodsharingUserName, boolean dryRun, String status, String reason, String message, String error, Instant createdAt) {}
 }

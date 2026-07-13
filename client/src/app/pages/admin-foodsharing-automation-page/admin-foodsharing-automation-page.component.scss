@@ -127,3 +127,28 @@
 .automation-empty {
   margin-top: 0.75rem;
 }
+
+.advert-preview {
+  margin-top: 0.5rem;
+  max-width: 28rem;
+  padding: 0.5rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #334155;
+  white-space: pre-wrap;
+}
+
+.advert-config {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 24rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.advert-config textarea {
+  width: 100%;
+  min-height: 5rem;
+}

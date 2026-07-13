@@ -12,6 +12,10 @@
           {{ i18n.t('common.password') }}
           <input pInputText type="password" [(ngModel)]="foodsharingPassword">
         </label>
+        <label>
+          Telegram bot token
+          <input pInputText type="password" [(ngModel)]="telegramBotToken" placeholder="Optional: token from BotFather for this admin">
+        </label>
         <button pButton type="button" [label]="i18n.t('adminAutomation.connect')" (click)="connectFoodsharing()"></button>
       </div>
     } @else {
@@ -22,6 +26,8 @@
       <div class="actions-cell">
         <button pButton type="button" severity="secondary" [label]="i18n.t('adminAutomation.disconnect')" (click)="disconnectFoodsharing()"></button>
         <button pButton type="button" [label]="i18n.t('adminAutomation.runDryRun')" (click)="runFoodsharingDryRun()"></button>
+        <button pButton type="button" severity="secondary" label="Dry-run requests" (click)="runRequestAutomationDryRun()"></button>
+        <button pButton type="button" severity="secondary" label="Dry-run adverts" (click)="runAdvertisementAutomationDryRun()"></button>
       </div>
 
       @if (foodsharingRunResult()) {
@@ -86,6 +92,15 @@
                   <li>{{ i18n.t('adminAutomation.rulesCleaningFuture') }}</li>
                   <li>{{ i18n.t('adminAutomation.rulesCleaningOverride') }}</li>
                 </ul>
+                <h4 class="automation-help__section">Telegram open-slot adverts</h4>
+                <ol class="automation-help__list">
+                  <li>Create a bot in Telegram with BotFather and copy the token.</li>
+                  <li>Paste the token when connecting Foodsharing on this page. The token is stored for your admin connection.</li>
+                  <li>Add the bot to the target group/channel and send one message there so it can appear in the chat dropdown. You can also type the chat id manually. <button pButton type="button" size="small" label="Refresh Telegram chats" (click)="refreshTelegramChats()"></button></li>
+                  <li>Write one or more advert messages. Separate multiple random variants with a line containing <code>---</code>.</li>
+                </ol>
+                <p>Available variables: <code>{{date}}</code>, <code>{{dateDe}}</code>, <code>{{weekday}}</code>, <code>{{time}}</code>, <code>{{datetime}}</code>, <code>{{datetimeDe}}</code>, <code>{{storeName}}</code>, <code>{{adminFoodsharingId}}</code>, <code>{{adminProfileUrl}}</code>.</p>
+                <p>The preview below each advert is a dry-run template preview and works even when all real pickup slots are currently booked.</p>
               </div>
 
               <div class="automation-toolbar">
@@ -125,6 +140,8 @@
                   <th>{{ i18n.t('adminAutomation.minimumGapDays') }}</th>
                   <th>{{ i18n.t('adminAutomation.cleaningRule') }}</th>
                   <th>{{ i18n.t('adminAutomation.experienceRule') }}</th>
+                  <th>Auto approve requests</th>
+                  <th>Open-slot advert</th>
                   <th>{{ i18n.t('common.actions') }}</th>
                 </tr>
               </ng-template>
@@ -141,6 +158,25 @@
                   <td><p-inputNumber [(ngModel)]="store.minimumGapDays" [min]="0" [showButtons]="true" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)"></p-inputNumber></td>
                   <td><p-checkbox [binary]="true" [(ngModel)]="store.cleaningRuleEnabled" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)"></p-checkbox></td>
                   <td><p-checkbox [binary]="true" [(ngModel)]="store.experienceRuleEnabled" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)"></p-checkbox></td>
+                  <td>
+                    <p-checkbox [binary]="true" [(ngModel)]="store.requestEnabled" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval)"></p-checkbox>
+                    <button pButton type="button" size="small" label="Save" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval)" (click)="saveRequestAutomation(store)"></button>
+                  </td>
+                  <td>
+                    @for (advertNumber of advertNumbers; track advertNumber) {
+                      <div class="advert-config">
+                        <strong>Advert {{ advertNumber }}</strong>
+                        <p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertEnabled' + advertNumber]" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)"></p-checkbox>
+                        <p-inputNumber [(ngModel)]="$any(store)['advertHoursBefore' + advertNumber]" [min]="1" [max]="168" [placeholder]="advertNumber === 1 ? '24' : advertNumber === 2 ? '12' : '3'" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)"></p-inputNumber>
+                        <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendToStoreChat' + advertNumber]" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)"></p-checkbox> Store chat</label>
+                        <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendToTelegram' + advertNumber]" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)"></p-checkbox> Telegram</label>
+                        <p-select [options]="telegramChatOptions()" [(ngModel)]="$any(store)['advertTelegramChatId' + advertNumber]" [editable]="true" placeholder="Telegram chat/channel" appendTo="body" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)"></p-select>
+                        <textarea pInputText rows="3" placeholder="Messages separated by ---; variables: {{date}}, {{dateDe}}, {{weekday}}, {{time}}, {{datetimeDe}}, {{storeName}}, {{adminProfileUrl}}" [(ngModel)]="$any(store)['advertMessages' + advertNumber]" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)"></textarea>
+                        <div class="advert-preview"><strong>Preview:</strong> {{ previewOpenSlotAdvertisement(store, advertNumber) }}</div>
+                        <div class="actions-cell"><button pButton type="button" size="small" label="Send Telegram test" severity="secondary" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)" (click)="sendTelegramTestMessage(store, advertNumber)"></button><button pButton type="button" size="small" label="Save advert" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)" (click)="saveOpenSlotAdvertisement(store, advertNumber)"></button></div>
+                      </div>
+                    }
+                  </td>
                   <td><button pButton type="button" size="small" [label]="i18n.t('common.save')" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)" (click)="saveFoodsharingStore(store)"></button></td>
                 </tr>
               </ng-template>
@@ -181,6 +217,36 @@
                 </ng-template>
                 </p-table>
               }
+
+                <h3 class="automation-section-title">Request/ad automation audit</h3>
+                <p-table class="automation-table" [value]="extraAutomationAudit()" [paginator]="true" [rows]="10">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th>Type</th>
+                    <th>Store</th>
+                    <th>User / pickup</th>
+                    <th>Status</th>
+                    <th>Dry-run</th>
+                    <th>Reason</th>
+                    <th>Message</th>
+                    <th>Error</th>
+                    <th>{{ i18n.t('common.createdAt') }}</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-entry>
+                  <tr>
+                    <td>{{ entry.automationType }}</td>
+                    <td>{{ entry.storeName || entry.storeId }}</td>
+                    <td>{{ entry.foodsharingUserName || entry.foodsharingUserId || (entry.pickupDate | date:'dd.MM.yyyy HH:mm':'Europe/Zurich') }}</td>
+                    <td><p-tag [value]="entry.status"></p-tag></td>
+                    <td>{{ entry.dryRun ? i18n.t('common.yes') : i18n.t('common.no') }}</td>
+                    <td>{{ entry.reason || '-' }}</td>
+                    <td>{{ entry.message || '-' }}</td>
+                    <td>{{ entry.error || '-' }}</td>
+                    <td>{{ entry.createdAt | zurichDateTime: 'short' }}</td>
+                  </tr>
+                </ng-template>
+                </p-table>
             </div>
           </p-tabpanel>
 

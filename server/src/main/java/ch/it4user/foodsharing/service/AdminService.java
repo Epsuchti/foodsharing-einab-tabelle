@@ -133,6 +133,8 @@ public class AdminService {
         user.setCanUseAutomations(permissions.canUseAutomations());
         user.setCanSeeUserPickupCountGrouping(permissions.canSeeUserPickupCountGrouping());
         user.setCanUseAutomationSlotApproval(permissions.canUseAutomationSlotApproval());
+        user.setCanUseAutomationRequestApproval(permissions.canUseAutomationRequestApproval());
+        user.setCanUseAutomationOpenSlotAdvertising(permissions.canUseAutomationOpenSlotAdvertising());
         user.setCanSeeAllAutomationDecisions(permissions.canSeeAllAutomationDecisions());
         if (permissions.canManageUsers()) {
             user.setActive(true);
@@ -177,6 +179,7 @@ public class AdminService {
 
     public record UserPermissions(boolean canGiveEinAbs, boolean canManageUsers, boolean canUseAutomations,
                                   boolean canSeeUserPickupCountGrouping, boolean canUseAutomationSlotApproval,
+                                  boolean canUseAutomationRequestApproval, boolean canUseAutomationOpenSlotAdvertising,
                                   boolean canSeeAllAutomationDecisions) {
     }
 

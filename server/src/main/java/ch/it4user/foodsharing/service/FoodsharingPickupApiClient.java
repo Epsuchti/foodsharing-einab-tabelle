@@ -9,6 +9,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -104,6 +105,38 @@ public class FoodsharingPickupApiClient {
                     fingerprint(csrfToken(connection)));
             restClient.patch().uri("/api/stores/{storeId}/pickups/{pickupDate}/users/{userId}", storeId, format(pickupDate), userId)
                     .headers(h -> apply(h, connection)).retrieve().toBodilessEntity();
+            return null;
+        });
+    }
+
+    public List<RequestUser> requests(FoodsharingAdminConnection connection, long storeId) {
+        Object body = get(connection, "GET", "/api/stores/{storeId}/requests", Object.class, false, storeId);
+        List<RequestUser> result = new ArrayList<>();
+        for (Object item : asList(body)) {
+            Map<?, ?> request = (Map<?, ?>) item;
+            Map<?, ?> profile = first(request, "profile", "user") instanceof Map<?, ?> p ? p : request;
+            result.add(new RequestUser(string(first(profile, "id", "userId")), string(first(profile, "name"))));
+        }
+        return result;
+    }
+
+    public void approveRequest(FoodsharingAdminConnection connection, long storeId, String userId) {
+        runWithSessionRetry(connection, false, () -> {
+            log.info("Foodsharing request: PATCH /api/stores/{}/requests/{} user={} cookie={} csrf={}",
+                    storeId, userId, connection.getFoodsharingEmail(), fingerprint(cookie(connection)), fingerprint(csrfToken(connection)));
+            restClient.patch().uri("/api/stores/{storeId}/requests/{userId}", storeId, userId)
+                    .headers(h -> apply(h, connection)).retrieve().toBodilessEntity();
+            return null;
+        });
+    }
+
+    public void sendStoreChatMessage(FoodsharingAdminConnection connection, long storeId, String body) {
+        runWithSessionRetry(connection, false, () -> {
+            log.info("Foodsharing request: POST /api/stores/{}/messages user={} cookie={} csrf={}",
+                    storeId, connection.getFoodsharingEmail(), fingerprint(cookie(connection)), fingerprint(csrfToken(connection)));
+            restClient.post().uri("/api/stores/{storeId}/messages", storeId)
+                    .contentType(MediaType.APPLICATION_JSON).headers(h -> apply(h, connection))
+                    .body(Map.of("body", body)).retrieve().toBodilessEntity();
             return null;
         });
     }
@@ -242,6 +275,7 @@ public class FoodsharingPickupApiClient {
     private static Instant instant(Object o) { return Instant.parse(string(o)); }
     private static Instant instantOrNull(Object o) { return o == null || string(o).isBlank() ? null : Instant.parse(string(o)); }
     private static int intValue(Object o) { return o instanceof Number n ? n.intValue() : Integer.parseInt(string(o).isBlank()?"0":string(o)); }
+    public record RequestUser(String id, String name) {}
     private static String cookieValue(String cookieHeader, String name) {
         if (cookieHeader == null || cookieHeader.isBlank()) {
             return null;

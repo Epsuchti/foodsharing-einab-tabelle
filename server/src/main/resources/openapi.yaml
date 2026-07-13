@@ -829,6 +829,155 @@ paths:
                 $ref: '#/components/schemas/FoodsharingConnectionStatus'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+
+  /api/admin/foodsharing/extra-automation-overview:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingExtraAutomationOverview
+      responses:
+        '200':
+          description: Request and advertisement automation settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingExtraAutomationOverview'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/request-automation/run:
+    post:
+      tags: [admin]
+      operationId: runFoodsharingRequestAutomationDryRun
+      responses:
+        '200':
+          description: Request automation dry-run result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRunSummary'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/open-slot-advertisements/run:
+    post:
+      tags: [admin]
+      operationId: runFoodsharingOpenSlotAdvertisementDryRun
+      responses:
+        '200':
+          description: Open-slot advertisement dry-run result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRunSummary'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/telegram/test-message:
+    post:
+      tags: [admin]
+      operationId: sendFoodsharingTelegramTestMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramTestMessageRequest'
+      responses:
+        '204':
+          description: Telegram test message sent
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/admin/foodsharing/extra-automation-audit:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingExtraAutomationAudit
+      responses:
+        '200':
+          description: Request and advertisement automation audit entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodsharingExtraAutomationAudit'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/telegram/chats:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingTelegramChats
+      responses:
+        '200':
+          description: Telegram chats visible to the connected admin bot
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TelegramChat'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/stores/{storeId}/request-automation:
+    put:
+      tags: [admin]
+      operationId: saveFoodsharingRequestAutomation
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsharingRequestAutomationRequest'
+      responses:
+        '200':
+          description: Foodsharing request automation settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingRequestAutomation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/stores/{storeId}/open-slot-advertisements/{advertNumber}:
+    put:
+      tags: [admin]
+      operationId: saveFoodsharingOpenSlotAdvertisementAutomation
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: advertNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsharingOpenSlotAdvertisementAutomationRequest'
+      responses:
+        '200':
+          description: Foodsharing open-slot advertisement automation settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingOpenSlotAdvertisementAutomation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/foodsharing/stores:
     get:
       tags: [admin]
@@ -1164,7 +1313,7 @@ components:
             $ref: '#/components/schemas/UserPermission'
     UserPermissionsRequest:
       type: object
-      required: [canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canSeeAllAutomationDecisions]
+      required: [canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canUseAutomationRequestApproval, canUseAutomationOpenSlotAdvertising, canSeeAllAutomationDecisions]
       properties:
         canGiveEinAbs:
           type: boolean
@@ -1176,8 +1325,170 @@ components:
           type: boolean
         canUseAutomationSlotApproval:
           type: boolean
+        canUseAutomationRequestApproval:
+          type: boolean
+        canUseAutomationOpenSlotAdvertising:
+          type: boolean
         canSeeAllAutomationDecisions:
           type: boolean
+
+
+    AutomationRunSummary:
+      type: object
+      required: [evaluated, acted, skipped, dryRun, messages]
+      properties:
+        evaluated:
+          type: integer
+          format: int32
+        acted:
+          type: integer
+          format: int32
+        skipped:
+          type: integer
+          format: int32
+        dryRun:
+          type: boolean
+        messages:
+          type: array
+          items:
+            type: string
+    TelegramTestMessageRequest:
+      type: object
+      required: [chatId]
+      properties:
+        chatId:
+          type: string
+        message:
+          type: string
+    FoodsharingRequestAutomationRequest:
+      type: object
+      required: [storeName, enabled, dryRunEnabled]
+      properties:
+        storeName:
+          type: string
+        enabled:
+          type: boolean
+        dryRunEnabled:
+          type: boolean
+    FoodsharingOpenSlotAdvertisementAutomationRequest:
+      type: object
+      required: [storeName, enabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, messages]
+      properties:
+        storeName:
+          type: string
+        enabled:
+          type: boolean
+        triggerHoursBefore:
+          type: integer
+          format: int32
+        sendToStoreChat:
+          type: boolean
+        sendToTelegram:
+          type: boolean
+        telegramChatId:
+          type: string
+        messages:
+          type: array
+          items:
+            type: string
+    FoodsharingRequestAutomation:
+      type: object
+      required: [storeId, storeName, enabled, dryRunEnabled, editable]
+      properties:
+        storeId:
+          type: integer
+          format: int64
+        storeName:
+          type: string
+        enabled:
+          type: boolean
+        dryRunEnabled:
+          type: boolean
+        editable:
+          type: boolean
+    FoodsharingOpenSlotAdvertisementAutomation:
+      type: object
+      required: [storeId, storeName, advertNumber, enabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, messages, editable]
+      properties:
+        storeId:
+          type: integer
+          format: int64
+        storeName:
+          type: string
+        advertNumber:
+          type: integer
+          format: int32
+        enabled:
+          type: boolean
+        triggerHoursBefore:
+          type: integer
+          format: int32
+        sendToStoreChat:
+          type: boolean
+        sendToTelegram:
+          type: boolean
+        telegramChatId:
+          type: string
+        messages:
+          type: array
+          items:
+            type: string
+        editable:
+          type: boolean
+    FoodsharingExtraAutomationOverview:
+      type: object
+      required: [requestAutomations, advertisementAutomations]
+      properties:
+        requestAutomations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodsharingRequestAutomation'
+        advertisementAutomations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodsharingOpenSlotAdvertisementAutomation'
+
+    FoodsharingExtraAutomationAudit:
+      type: object
+      required: [automationType, storeId, dryRun, status, createdAt]
+      properties:
+        automationType:
+          type: string
+        storeId:
+          type: integer
+          format: int64
+        storeName:
+          type: string
+        pickupDate:
+          type: string
+          format: date-time
+        foodsharingUserId:
+          type: string
+        foodsharingUserName:
+          type: string
+        dryRun:
+          type: boolean
+        status:
+          type: string
+        reason:
+          type: string
+        message:
+          type: string
+        error:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    TelegramChat:
+      type: object
+      required: [id, title, type]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
     FoodsharingConnectRequest:
       type: object
       required: [email, password]
@@ -1188,6 +1499,8 @@ components:
         password:
           type: string
           minLength: 1
+        telegramBotToken:
+          type: string
     FoodsharingConnectionStatus:
       type: object
       required: [connected]
@@ -1377,7 +1690,7 @@ components:
             $ref: '#/components/schemas/FoodsharingFuturePickup'
     TeacherResponse:
       type: object
-      required: [id, foodsharingId, name, active, language, createdAt, updatedAt, canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canSeeAllAutomationDecisions]
+      required: [id, foodsharingId, name, active, language, createdAt, updatedAt, canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canUseAutomationRequestApproval, canUseAutomationOpenSlotAdvertising, canSeeAllAutomationDecisions]
       properties:
         id:
           type: string
@@ -1404,6 +1717,10 @@ components:
         canSeeUserPickupCountGrouping:
           type: boolean
         canUseAutomationSlotApproval:
+          type: boolean
+        canUseAutomationRequestApproval:
+          type: boolean
+        canUseAutomationOpenSlotAdvertising:
           type: boolean
         canSeeAllAutomationDecisions:
           type: boolean
@@ -1463,7 +1780,7 @@ components:
           $ref: '#/components/schemas/Language'
     BookingUserResponse:
       type: object
-      required: [id, name, foodsharingId, language, active, createdAt, updatedAt, canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canSeeAllAutomationDecisions]
+      required: [id, name, foodsharingId, language, active, createdAt, updatedAt, canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canUseAutomationRequestApproval, canUseAutomationOpenSlotAdvertising, canSeeAllAutomationDecisions]
       properties:
         id:
           type: string
@@ -1490,6 +1807,10 @@ components:
         canSeeUserPickupCountGrouping:
           type: boolean
         canUseAutomationSlotApproval:
+          type: boolean
+        canUseAutomationRequestApproval:
+          type: boolean
+        canUseAutomationOpenSlotAdvertising:
           type: boolean
         canSeeAllAutomationDecisions:
           type: boolean

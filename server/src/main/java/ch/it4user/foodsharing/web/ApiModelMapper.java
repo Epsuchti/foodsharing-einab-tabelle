@@ -52,6 +52,8 @@ public class ApiModelMapper {
         response.setCanUseAutomations(teacher.isCanUseAutomations());
         response.setCanSeeUserPickupCountGrouping(teacher.isCanSeeUserPickupCountGrouping());
         response.setCanUseAutomationSlotApproval(teacher.isCanUseAutomationSlotApproval());
+        response.setCanUseAutomationRequestApproval(teacher.isCanUseAutomationRequestApproval());
+        response.setCanUseAutomationOpenSlotAdvertising(teacher.isCanUseAutomationOpenSlotAdvertising());
         response.setCanSeeAllAutomationDecisions(teacher.isCanSeeAllAutomationDecisions());
         response.setLanguage(ch.it4user.foodsharing.openapi.model.Language.fromValue(teacher.getPreferredLanguage().getCode()));
         response.setCreatedAt(toOffsetDateTime(teacher.getCreatedAt()));
@@ -94,6 +96,8 @@ public class ApiModelMapper {
         response.setCanUseAutomations(bookingUser.isCanUseAutomations());
         response.setCanSeeUserPickupCountGrouping(bookingUser.isCanSeeUserPickupCountGrouping());
         response.setCanUseAutomationSlotApproval(bookingUser.isCanUseAutomationSlotApproval());
+        response.setCanUseAutomationRequestApproval(bookingUser.isCanUseAutomationRequestApproval());
+        response.setCanUseAutomationOpenSlotAdvertising(bookingUser.isCanUseAutomationOpenSlotAdvertising());
         response.setCanSeeAllAutomationDecisions(bookingUser.isCanSeeAllAutomationDecisions());
         response.setWantsToBeTeacher(bookingUser.isWantsToBeTeacher());
         response.setCreatedAt(toOffsetDateTime(bookingUser.getCreatedAt()));

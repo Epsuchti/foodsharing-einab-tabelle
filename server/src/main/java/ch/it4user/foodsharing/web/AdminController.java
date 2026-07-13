@@ -153,6 +153,8 @@ public class AdminController implements AdminApi {
                 Boolean.TRUE.equals(request.getCanUseAutomations()),
                 Boolean.TRUE.equals(request.getCanSeeUserPickupCountGrouping()),
                 Boolean.TRUE.equals(request.getCanUseAutomationSlotApproval()),
+                Boolean.TRUE.equals(request.getCanUseAutomationRequestApproval()),
+                Boolean.TRUE.equals(request.getCanUseAutomationOpenSlotAdvertising()),
                 Boolean.TRUE.equals(request.getCanSeeAllAutomationDecisions()));
         return ResponseEntity.ok(mapper.toTeacherResponse(adminService.setUserPermissions(userId, permissions)));
     }
@@ -161,7 +163,7 @@ public class AdminController implements AdminApi {
     public ResponseEntity<FoodsharingConnectionStatus> connectFoodsharing(FoodsharingConnectRequest request) {
         currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATIONS);
         return ResponseEntity.ok(toFoodsharingConnectionStatus(
-                foodsharingPickupAutomationService.connect(request.getEmail(), request.getPassword())));
+                foodsharingPickupAutomationService.connect(request.getEmail(), request.getPassword(), request.getTelegramBotToken())));
     }
 
     @Override

@@ -110,6 +110,9 @@ public class AppProperties {
         private String futurePickupCacheTtl = "PT15M";
         private String storePickupCacheTtl = "PT1M";
         private String storeMembersCacheTtl = "PT1M";
+        private String telegramBotToken = "";
+        private int maxRequestApprovalsPerRun = 50;
+        private int maxAdvertisementsPerRun = 50;
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -127,6 +130,12 @@ public class AppProperties {
         public void setStorePickupCacheTtl(String storePickupCacheTtl) { this.storePickupCacheTtl = storePickupCacheTtl; }
         public String getStoreMembersCacheTtl() { return storeMembersCacheTtl; }
         public void setStoreMembersCacheTtl(String storeMembersCacheTtl) { this.storeMembersCacheTtl = storeMembersCacheTtl; }
+        public String getTelegramBotToken() { return telegramBotToken; }
+        public void setTelegramBotToken(String telegramBotToken) { this.telegramBotToken = telegramBotToken; }
+        public int getMaxRequestApprovalsPerRun() { return maxRequestApprovalsPerRun; }
+        public void setMaxRequestApprovalsPerRun(int maxRequestApprovalsPerRun) { this.maxRequestApprovalsPerRun = maxRequestApprovalsPerRun; }
+        public int getMaxAdvertisementsPerRun() { return maxAdvertisementsPerRun; }
+        public void setMaxAdvertisementsPerRun(int maxAdvertisementsPerRun) { this.maxAdvertisementsPerRun = maxAdvertisementsPerRun; }
     }
 
     public static class Mail {
