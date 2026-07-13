@@ -55,7 +55,6 @@ public class TeacherController implements TeacherApi {
         User teacher = currentActorService.requireTeacher();
         User updated = teacherService.updateProfile(
                 teacher,
-                updateTeacherMeRequest.getPhoneNumber(),
                 updateTeacherMeRequest.getIcalLink(),
                 mapLanguage(updateTeacherMeRequest.getLanguage()));
         return ResponseEntity.ok(mapper.toTeacherSelfResponse(updated, teacherService.getIcalCandidates(updated)));

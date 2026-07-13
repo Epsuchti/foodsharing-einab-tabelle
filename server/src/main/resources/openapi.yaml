@@ -1098,9 +1098,6 @@ components:
         foodsharingId:
           type: string
           pattern: '^\d+$'
-        icalLink:
-          type: string
-          format: uri
         language:
           $ref: '#/components/schemas/Language'
     NotificationSubscriptionRequest:
@@ -1450,12 +1447,8 @@ components:
                 $ref: '#/components/schemas/IcalCandidate'
     UpdateTeacherMeRequest:
       type: object
-      required: [phoneNumber, language]
+      required: [language]
       properties:
-        phoneNumber:
-          type: string
-          minLength: 3
-          maxLength: 50
         icalLink:
           type: string
           maxLength: 2000

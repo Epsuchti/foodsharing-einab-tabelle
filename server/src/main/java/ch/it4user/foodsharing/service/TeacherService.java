@@ -54,7 +54,7 @@ public class TeacherService {
     }
 
     @Transactional
-    public User signup(String foodsharingId, String icalLink, LanguageCode language) {
+    public User signup(String foodsharingId, LanguageCode language) {
         String normalizedFoodsharingId = foodsharingId.trim();
         FoodsharingUserInfo foodsharingUser = foodsharingClient.getUser(normalizedFoodsharingId);
         User teacher = userRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId).orElseGet(User::new);
@@ -65,16 +65,14 @@ public class TeacherService {
         }
         teacher.setWantsToBeTeacher(true);
         teacher.setActive(true);
-        teacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
         teacher.setPreferredLanguage(language);
         return userRepository.save(teacher);
     }
 
     @Transactional
-    public User updateProfile(User teacher, String phoneNumber, String icalLink, LanguageCode language) {
+    public User updateProfile(User teacher, String icalLink, LanguageCode language) {
         User managedTeacher = userRepository.findById(teacher.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
-        managedTeacher.setPhoneNumber(phoneNumber == null ? null : phoneNumber.trim());
         managedTeacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
         managedTeacher.setPreferredLanguage(language);
         return managedTeacher;

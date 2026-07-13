@@ -27,6 +27,17 @@ export const routes: Routes = [
   { path: 'teacher', component: TeacherDashboardPageComponent, canActivate: [authGuard], data: { permissions: [UserPermission.CanGiveEinAbs] } },
   { path: 'teacher/bookings', component: TeacherBookingsPageComponent, canActivate: [authGuard], data: { permissions: [UserPermission.CanGiveEinAbs] } },
   { path: 'admin', component: AdminDashboardPageComponent, canActivate: [authGuard], data: { permissions: [UserPermission.CanManageUsers] } },
-  { path: 'admin/foodsharing-automation', component: AdminFoodsharingAutomationPageComponent, canActivate: [authGuard], data: { permissions: [UserPermission.CanUseAutomations, UserPermission.CanUseAutomationSlotApproval] } },
+  {
+    path: 'admin/foodsharing-automation',
+    component: AdminFoodsharingAutomationPageComponent,
+    canActivate: [authGuard],
+    data: {
+      permissions: [
+        UserPermission.CanSeeUserPickupCountGrouping,
+        UserPermission.CanUseAutomationSlotApproval,
+        UserPermission.CanSeeAllAutomationDecisions
+      ]
+    }
+  },
   { path: '**', redirectTo: '' }
 ];

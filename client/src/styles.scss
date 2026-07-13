@@ -260,6 +260,11 @@ p {
   color: #000 !important;
 }
 
+.p-paginator,
+.p-datatable .p-paginator {
+  border-radius: 0;
+}
+
 @media (max-width: 768px) {
   .page-grid,
   .filters {

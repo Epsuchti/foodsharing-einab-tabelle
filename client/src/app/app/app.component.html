@@ -32,7 +32,11 @@
       @if (sessionService.hasPermission(UserPermission.CanManageUsers)) {
         <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.admin') }}</a>
       }
-      @if ((sessionService.hasPermission(UserPermission.CanUseAutomations) || sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval))) {
+      @if (
+        sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)
+        || sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)
+        || sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)
+      ) {
         <a routerLink="/admin/foodsharing-automation" routerLinkActive="active">{{ i18n.t('nav.adminAutomation') }}</a>
       }
     </nav>
@@ -64,7 +68,11 @@
         @if (sessionService.hasPermission(UserPermission.CanManageUsers)) {
           <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">{{ i18n.t('nav.admin') }}</a>
         }
-        @if ((sessionService.hasPermission(UserPermission.CanUseAutomations) || sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval))) {
+        @if (
+          sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)
+          || sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)
+          || sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)
+        ) {
           <a routerLink="/admin/foodsharing-automation" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.adminAutomation') }}</a>
         }
       </nav>

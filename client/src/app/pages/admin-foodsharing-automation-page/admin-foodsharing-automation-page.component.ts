@@ -68,6 +68,9 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly visibleFoodsharingStores = computed(() => this.onlyMyAutomations()
     ? this.foodsharingStores().filter((store) => store.editable)
     : this.foodsharingStores());
+  protected readonly canManageAutomation = computed(() =>
+    this.sessionService.hasPermission(UserPermission.CanUseAutomations)
+    || this.sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval));
   protected readonly availableStoreOptions = computed(() => this.availableStores().map((store) => ({
     label: `${store.storeName} (${store.storeId})`,
     value: store.storeId
@@ -79,7 +82,16 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   private readonly messageService = inject(MessageService);
 
   ngOnInit(): void {
-    this.loadFoodsharingAutomation();
+    if (this.canManageAutomation()) {
+      this.loadFoodsharingAutomation();
+    } else {
+      if (this.sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
+        this.loadFoodsharingFuturePickupUsers();
+      }
+      if (this.sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) {
+        this.loadFoodsharingAudit();
+      }
+    }
     this.loadCleaningRuleExemptions();
   }
 

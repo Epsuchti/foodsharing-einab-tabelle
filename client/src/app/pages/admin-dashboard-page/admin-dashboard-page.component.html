@@ -28,7 +28,6 @@
             <th>{{ i18n.t('admin.pickups') }}</th>
             <th>{{ i18n.t('permission.canGiveEinAbs') }}</th>
             <th>{{ i18n.t('permission.canManageUsers') }}</th>
-            <th>{{ i18n.t('permission.canUseAutomations') }}</th>
             <th>{{ i18n.t('permission.canSeeUserPickupCountGrouping') }}</th>
             <th>{{ i18n.t('permission.canUseAutomationSlotApproval') }}</th>
             <th>{{ i18n.t('permission.canSeeAllAutomationDecisions') }}</th>
@@ -65,7 +64,6 @@
             <td>{{ user.pickupCount }}</td>
             <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canGiveEinAbs"></p-checkbox></td>
             <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canManageUsers"></p-checkbox></td>
-            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomations"></p-checkbox></td>
             <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeUserPickupCountGrouping"></p-checkbox></td>
             <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationSlotApproval"></p-checkbox></td>
             <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeAllAutomationDecisions"></p-checkbox></td>
@@ -80,7 +78,7 @@
           </tr>
           @if (isUserExpanded(user)) {
             <tr>
-              <td [attr.colspan]="14">
+              <td [attr.colspan]="13">
                 <div class="page-stack">
                   <div>
                     <h4>{{ i18n.t('admin.userPickups') }}</h4>

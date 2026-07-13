@@ -82,8 +82,6 @@ public class PublicController implements PublicApi {
     public ResponseEntity<TeacherResponse> signupTeacher(TeacherSignupRequest teacherSignupRequest) {
         TeacherResponse response = mapper.toTeacherResponse(teacherService.signup(
                 teacherSignupRequest.getFoodsharingId(),
-                teacherSignupRequest.getIcalLink() == null ? null : teacherSignupRequest.getIcalLink().toString()
-                ,
                 mapLanguage(teacherSignupRequest.getLanguage())
         ));
         return ResponseEntity.status(201).body(response);

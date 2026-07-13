@@ -1,0 +1,132 @@
+.teacher-profile-card ::ng-deep .p-card-body {
+  gap: 1.25rem;
+}
+
+.teacher-profile-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid #d9e0ea;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef7f4 100%);
+}
+
+.teacher-profile-summary__identity {
+  min-width: 0;
+}
+
+.teacher-profile-summary__name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.teacher-profile-summary__meta {
+  margin-top: 0.2rem;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.teacher-profile-summary__status {
+  flex: 0 0 auto;
+}
+
+.teacher-profile-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.teacher-profile-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.teacher-profile-fact--wide {
+  grid-column: 1 / -1;
+}
+
+.teacher-profile-fact__label,
+.teacher-profile-form__label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.teacher-profile-fact__value {
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.teacher-profile-fact__value--break {
+  overflow-wrap: anywhere;
+}
+
+.teacher-profile-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.1rem;
+}
+
+.teacher-profile-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.teacher-profile-form__hint,
+.teacher-profile-form__actions,
+.teacher-profile-form__inactive {
+  grid-column: 1 / -1;
+}
+
+.teacher-profile-form__hint {
+  margin: 0.2rem 0 0;
+  padding: 1rem 1.05rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+.teacher-profile-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.4rem;
+}
+
+.teacher-profile-form__inactive {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+  color: #9a3412;
+}
+
+.teacher-profile-form ::ng-deep .p-inputtext {
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .teacher-profile-summary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .teacher-profile-facts,
+  .teacher-profile-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

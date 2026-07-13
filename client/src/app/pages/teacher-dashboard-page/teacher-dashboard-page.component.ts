@@ -54,7 +54,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     TableModule,
     TagModule
   ],
-  templateUrl: './teacher-dashboard-page.component.html'
+  templateUrl: './teacher-dashboard-page.component.html',
+  styleUrl: './teacher-dashboard-page.component.scss'
 })
 export class TeacherDashboardPageComponent implements OnInit {
   readonly i18n = inject(I18nService);
@@ -88,7 +89,6 @@ export class TeacherDashboardPageComponent implements OnInit {
   });
 
   protected readonly teacherProfileForm = inject(FormBuilder).nonNullable.group({
-    phoneNumber: ['', [Validators.required, Validators.minLength(3)]],
     icalLink: ['']
   });
 
@@ -105,7 +105,6 @@ export class TeacherDashboardPageComponent implements OnInit {
       next: (response) => {
         this.teacher.set(response);
         this.teacherProfileForm.reset({
-          phoneNumber: response.phoneNumber,
           icalLink: response.icalLink ?? ''
         });
       },
@@ -148,7 +147,6 @@ export class TeacherDashboardPageComponent implements OnInit {
     this.profileSaveLoading.set(true);
     const formValue = this.teacherProfileForm.getRawValue();
     const updateTeacherMeRequest: UpdateTeacherMeRequest = {
-      phoneNumber: formValue.phoneNumber.trim(),
       language: this.i18n.apiLanguage(),
       icalLink: formValue.icalLink?.trim() || undefined
     };
@@ -157,7 +155,7 @@ export class TeacherDashboardPageComponent implements OnInit {
         this.teacher.set(response);
         this.icalCandidates.set(response.icalCandidates ?? []);
         this.icalCandidatesPage.update((current) => current ? { ...current, candidates: response.icalCandidates ?? [] } : current);
-        this.teacherProfileForm.reset({ phoneNumber: response.phoneNumber, icalLink: response.icalLink ?? '' });
+        this.teacherProfileForm.reset({ icalLink: response.icalLink ?? '' });
         this.profileSaveLoading.set(false);
       },
       error: (error) => {
