@@ -3,6 +3,7 @@ package ch.it4user.foodsharing.web;
 import ch.it4user.foodsharing.openapi.api.AdminApi;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
 import ch.it4user.foodsharing.openapi.model.AdminEinAbListResponse;
+import ch.it4user.foodsharing.openapi.model.AutomationRunSummary;
 import ch.it4user.foodsharing.openapi.model.BookingListResponse;
 import ch.it4user.foodsharing.openapi.model.BookingUserResponse;
 import ch.it4user.foodsharing.openapi.model.FoodsharingAutomationAudit;
@@ -10,8 +11,14 @@ import ch.it4user.foodsharing.openapi.model.FoodsharingCleaningRuleExemption;
 import ch.it4user.foodsharing.openapi.model.FoodsharingCleaningRuleExemptionRequest;
 import ch.it4user.foodsharing.openapi.model.FoodsharingConnectRequest;
 import ch.it4user.foodsharing.openapi.model.FoodsharingConnectionStatus;
+import ch.it4user.foodsharing.openapi.model.FoodsharingExtraAutomationAudit;
+import ch.it4user.foodsharing.openapi.model.FoodsharingExtraAutomationOverview;
 import ch.it4user.foodsharing.openapi.model.FoodsharingFuturePickup;
 import ch.it4user.foodsharing.openapi.model.FoodsharingFuturePickupUser;
+import ch.it4user.foodsharing.openapi.model.FoodsharingOpenSlotAdvertisementAutomation;
+import ch.it4user.foodsharing.openapi.model.FoodsharingOpenSlotAdvertisementAutomationRequest;
+import ch.it4user.foodsharing.openapi.model.FoodsharingRequestAutomation;
+import ch.it4user.foodsharing.openapi.model.FoodsharingRequestAutomationRequest;
 import ch.it4user.foodsharing.openapi.model.FoodsharingRunRequest;
 import ch.it4user.foodsharing.openapi.model.FoodsharingRunResult;
 import ch.it4user.foodsharing.openapi.model.FoodsharingManagedStore;
@@ -20,6 +27,8 @@ import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomation;
 import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomationRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherResponse;
+import ch.it4user.foodsharing.openapi.model.TelegramChat;
+import ch.it4user.foodsharing.openapi.model.TelegramTestMessageRequest;
 import ch.it4user.foodsharing.openapi.model.UserPermissionsRequest;
 import ch.it4user.foodsharing.domain.enumtype.UserPermission;
 import ch.it4user.foodsharing.service.AdminService;
@@ -216,6 +225,78 @@ public class AdminController implements AdminApi {
                 foodsharingPickupAutomationService.run(Boolean.TRUE.equals(request.getDryRun()))));
     }
 
+    @Override
+    public ResponseEntity<FoodsharingExtraAutomationOverview> getFoodsharingExtraAutomationOverview() {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATIONS);
+        return ResponseEntity.ok(toFoodsharingExtraAutomationOverview(foodsharingPickupAutomationService.extraAutomationOverview()));
+    }
+
+    @Override
+    public ResponseEntity<List<FoodsharingExtraAutomationAudit>> getFoodsharingExtraAutomationAudit() {
+        currentActorService.requirePermission(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS);
+        return ResponseEntity.ok(foodsharingPickupAutomationService.extraAutomationAudit().stream()
+                .map(this::toFoodsharingExtraAutomationAudit)
+                .toList());
+    }
+
+    @Override
+    public ResponseEntity<List<TelegramChat>> getFoodsharingTelegramChats() {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_OPEN_SLOT_ADVERTISING);
+        return ResponseEntity.ok(foodsharingPickupAutomationService.telegramChats().stream()
+                .map(this::toTelegramChat)
+                .toList());
+    }
+
+    @Override
+    public ResponseEntity<AutomationRunSummary> runFoodsharingRequestAutomationDryRun() {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_REQUEST_APPROVAL);
+        return ResponseEntity.ok(toAutomationRunSummary(foodsharingPickupAutomationService.runRequestAutomations(true)));
+    }
+
+    @Override
+    public ResponseEntity<AutomationRunSummary> runFoodsharingOpenSlotAdvertisementDryRun() {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_OPEN_SLOT_ADVERTISING);
+        return ResponseEntity.ok(toAutomationRunSummary(foodsharingPickupAutomationService.runAdvertisementAutomations(true)));
+    }
+
+    @Override
+    public ResponseEntity<Void> sendFoodsharingTelegramTestMessage(TelegramTestMessageRequest request) {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_OPEN_SLOT_ADVERTISING);
+        foodsharingPickupAutomationService.sendTelegramTestMessage(request.getChatId(), request.getMessage());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    public ResponseEntity<FoodsharingRequestAutomation> saveFoodsharingRequestAutomation(Long storeId, FoodsharingRequestAutomationRequest request) {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_REQUEST_APPROVAL);
+        FoodsharingPickupAutomationService.RequestAutomationRequest serviceRequest =
+                new FoodsharingPickupAutomationService.RequestAutomationRequest(
+                        request.getStoreName(),
+                        Boolean.TRUE.equals(request.getEnabled()),
+                        Boolean.TRUE.equals(request.getDryRunEnabled()));
+        return ResponseEntity.ok(toFoodsharingRequestAutomation(
+                foodsharingPickupAutomationService.saveRequestAutomation(storeId, serviceRequest)));
+    }
+
+    @Override
+    public ResponseEntity<FoodsharingOpenSlotAdvertisementAutomation> saveFoodsharingOpenSlotAdvertisementAutomation(
+            Long storeId,
+            Integer advertNumber,
+            FoodsharingOpenSlotAdvertisementAutomationRequest request) {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_OPEN_SLOT_ADVERTISING);
+        FoodsharingPickupAutomationService.AdvertisementAutomationRequest serviceRequest =
+                new FoodsharingPickupAutomationService.AdvertisementAutomationRequest(
+                        request.getStoreName(),
+                        Boolean.TRUE.equals(request.getEnabled()),
+                        request.getTriggerHoursBefore() == null ? 0 : request.getTriggerHoursBefore(),
+                        Boolean.TRUE.equals(request.getSendToStoreChat()),
+                        Boolean.TRUE.equals(request.getSendToTelegram()),
+                        request.getTelegramChatId(),
+                        request.getMessages() == null ? List.of() : request.getMessages());
+        return ResponseEntity.ok(toFoodsharingOpenSlotAdvertisementAutomation(
+                foodsharingPickupAutomationService.saveAdvertisementAutomation(storeId, advertNumber, serviceRequest)));
+    }
+
 
     @Override
     public ResponseEntity<List<FoodsharingCleaningRuleExemption>> getFoodsharingCleaningRuleExemptions() {
@@ -298,6 +379,77 @@ public class AdminController implements AdminApi {
         response.setFailed(result.failed());
         response.setDryRun(result.dryRun());
         response.setMessages(result.messages());
+        return response;
+    }
+
+    private FoodsharingExtraAutomationOverview toFoodsharingExtraAutomationOverview(FoodsharingPickupAutomationService.ExtraAutomationOverviewView overview) {
+        FoodsharingExtraAutomationOverview response = new FoodsharingExtraAutomationOverview();
+        response.setRequestAutomations(overview.requestAutomations().stream()
+                .map(this::toFoodsharingRequestAutomation)
+                .toList());
+        response.setAdvertisementAutomations(overview.advertisementAutomations().stream()
+                .map(this::toFoodsharingOpenSlotAdvertisementAutomation)
+                .toList());
+        return response;
+    }
+
+    private FoodsharingRequestAutomation toFoodsharingRequestAutomation(FoodsharingPickupAutomationService.RequestAutomationView requestAutomation) {
+        FoodsharingRequestAutomation response = new FoodsharingRequestAutomation();
+        response.setStoreId(requestAutomation.storeId());
+        response.setStoreName(requestAutomation.storeName());
+        response.setEnabled(requestAutomation.enabled());
+        response.setDryRunEnabled(requestAutomation.dryRunEnabled());
+        response.setEditable(requestAutomation.editable());
+        return response;
+    }
+
+    private FoodsharingOpenSlotAdvertisementAutomation toFoodsharingOpenSlotAdvertisementAutomation(FoodsharingPickupAutomationService.AdvertisementAutomationView advertisement) {
+        FoodsharingOpenSlotAdvertisementAutomation response = new FoodsharingOpenSlotAdvertisementAutomation();
+        response.setStoreId(advertisement.storeId());
+        response.setStoreName(advertisement.storeName());
+        response.setAdvertNumber(advertisement.advertNumber());
+        response.setEnabled(advertisement.enabled());
+        response.setTriggerHoursBefore(advertisement.triggerHoursBefore());
+        response.setSendToStoreChat(advertisement.sendToStoreChat());
+        response.setSendToTelegram(advertisement.sendToTelegram());
+        response.setTelegramChatId(advertisement.telegramChatId());
+        response.setMessages(advertisement.messages());
+        response.setEditable(advertisement.editable());
+        return response;
+    }
+
+    private FoodsharingExtraAutomationAudit toFoodsharingExtraAutomationAudit(FoodsharingPickupAutomationService.ExtraAutomationAuditView audit) {
+        FoodsharingExtraAutomationAudit response = new FoodsharingExtraAutomationAudit();
+        response.setAutomationType(audit.automationType());
+        response.setStoreId(audit.storeId());
+        response.setStoreName(audit.storeName());
+        response.setPickupDate(toOffsetDateTime(audit.pickupDate()));
+        response.setFoodsharingUserId(audit.foodsharingUserId());
+        response.setFoodsharingUserName(audit.foodsharingUserName());
+        response.setDryRun(audit.dryRun());
+        response.setStatus(audit.status());
+        response.setReason(audit.reason());
+        response.setMessage(audit.message());
+        response.setError(audit.error());
+        response.setCreatedAt(toOffsetDateTime(audit.createdAt()));
+        return response;
+    }
+
+    private TelegramChat toTelegramChat(FoodsharingPickupAutomationService.TelegramChatView chat) {
+        TelegramChat response = new TelegramChat();
+        response.setId(chat.id());
+        response.setTitle(chat.title());
+        response.setType(chat.type());
+        return response;
+    }
+
+    private AutomationRunSummary toAutomationRunSummary(FoodsharingPickupAutomationService.AutomationRunSummary summary) {
+        AutomationRunSummary response = new AutomationRunSummary();
+        response.setEvaluated(summary.evaluated());
+        response.setActed(summary.acted());
+        response.setSkipped(summary.skipped());
+        response.setDryRun(summary.dryRun());
+        response.setMessages(summary.messages());
         return response;
     }
 
