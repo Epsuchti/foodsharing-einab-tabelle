@@ -24,6 +24,7 @@ import ch.it4user.foodsharing.openapi.model.FoodsharingRequestAutomationOverview
 import ch.it4user.foodsharing.openapi.model.FoodsharingRunRequest;
 import ch.it4user.foodsharing.openapi.model.FoodsharingRunResult;
 import ch.it4user.foodsharing.openapi.model.FoodsharingManagedStore;
+import ch.it4user.foodsharing.openapi.model.FoodsharingTelegramBotTokenRequest;
 import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomationOverview;
 import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomation;
 import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomationRequest;
@@ -185,6 +186,13 @@ public class AdminController implements AdminApi {
     }
 
     @Override
+    public ResponseEntity<Void> saveFoodsharingTelegramBotToken(FoodsharingTelegramBotTokenRequest request) {
+        currentActorService.requireAutomationUser();
+        foodsharingPickupAutomationService.saveTelegramBotToken(request.getTelegramBotToken());
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
     public ResponseEntity<FoodsharingConnectionStatus> getFoodsharingStatus() {
         currentActorService.requireAutomationUser();
         return ResponseEntity.ok(toFoodsharingConnectionStatus(foodsharingPickupAutomationService.status()));
@@ -218,6 +226,13 @@ public class AdminController implements AdminApi {
                         Boolean.TRUE.equals(request.getExperienceRuleEnabled()));
         return ResponseEntity.ok(toFoodsharingStoreAutomation(
                 foodsharingPickupAutomationService.save(storeId, serviceRequest)));
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteFoodsharingStoreAutomation(Long storeId) {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
+        foodsharingPickupAutomationService.delete(storeId);
+        return ResponseEntity.noContent().build();
     }
 
     @Override
@@ -311,6 +326,13 @@ public class AdminController implements AdminApi {
     }
 
     @Override
+    public ResponseEntity<Void> deleteFoodsharingRequestAutomation(Long storeId) {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_REQUEST_APPROVAL);
+        foodsharingPickupAutomationService.deleteRequestAutomation(storeId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
     public ResponseEntity<FoodsharingOpenSlotAdvertisementAutomation> saveFoodsharingOpenSlotAdvertisementAutomation(
             Long storeId,
             Integer advertNumber,
@@ -327,6 +349,13 @@ public class AdminController implements AdminApi {
                         request.getMessages() == null ? List.of() : request.getMessages());
         return ResponseEntity.ok(toFoodsharingOpenSlotAdvertisementAutomation(
                 foodsharingPickupAutomationService.saveAdvertisementAutomation(storeId, advertNumber, serviceRequest)));
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteFoodsharingOpenSlotAdvertisementAutomation(Long storeId, Integer advertNumber) {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_OPEN_SLOT_ADVERTISING);
+        foodsharingPickupAutomationService.deleteAdvertisementAutomation(storeId, advertNumber);
+        return ResponseEntity.noContent().build();
     }
 
 
@@ -375,6 +404,7 @@ public class AdminController implements AdminApi {
         response.setEmail(status.email());
         response.setFoodsharingUserId(status.foodsharingUserId());
         response.setAuthenticatedAt(toOffsetDateTime(status.authenticatedAt()));
+        response.setTelegramBotTokenConfigured(status.telegramBotTokenConfigured());
         response.setAutomationEnabled(status.automationEnabled());
         response.setAutomationDryRun(status.automationDryRun());
         return response;

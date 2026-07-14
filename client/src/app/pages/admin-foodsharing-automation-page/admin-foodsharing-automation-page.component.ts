@@ -85,7 +85,6 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     .filter((store) => Boolean((store as FoodsharingStoreAutomation & Record<string, unknown>)['slotApprovalConfigured'])));
   protected readonly requestAutomationStores = computed(() => this.visibleFoodsharingStores()
     .filter((store) => Boolean((store as FoodsharingStoreAutomation & Record<string, unknown>)['requestConfigured'])));
-  protected readonly requestDeclineMessagePreview = computed(() => this.buildRequestDeclineMessagePreview());
   protected readonly advertisementAutomationStores = computed(() => this.visibleFoodsharingStores()
     .filter((store) => this.advertisementNumbers(store).length > 0));
   protected readonly availableStoreOptions = computed(() => this.availableStores().map((store) => ({
@@ -126,15 +125,43 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     this.adminApi.connectFoodsharing({
       foodsharingConnectRequest: {
         email: this.foodsharingEmail(),
-        password: this.foodsharingPassword,
-        telegramBotToken: this.telegramBotToken || undefined
+        password: this.foodsharingPassword
       }
     }).subscribe({
       next: (status) => {
         this.foodsharingStatus.set(status);
         this.foodsharingPassword = '';
-        this.telegramBotToken = '';
         this.loadActiveAutomationTab();
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  saveTelegramBotToken(): void {
+    this.adminApi.saveFoodsharingTelegramBotToken({
+      foodsharingTelegramBotTokenRequest: {
+        telegramBotToken: this.telegramBotToken
+      }
+    }).subscribe({
+      next: () => {
+        this.telegramBotToken = '';
+        this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') });
+        this.loadFoodsharingStatus();
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  removeTelegramBotToken(): void {
+    this.adminApi.saveFoodsharingTelegramBotToken({
+      foodsharingTelegramBotTokenRequest: {
+        telegramBotToken: ''
+      }
+    }).subscribe({
+      next: () => {
+        this.telegramBotToken = '';
+        this.messageService.add({ severity: 'success', summary: this.i18n.t('common.deleted') });
+        this.loadFoodsharingStatus();
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
@@ -153,6 +180,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
         this.slotRunResult.set(null);
         this.requestRunResult.set(null);
         this.advertisementRunResult.set(null);
+        this.telegramBotToken = '';
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
@@ -169,6 +197,16 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
         maximumDistanceKm: Number(store.requestMaximumDistanceKm ?? 0)
       }
     }).subscribe({ next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') }), error: (error) => this.toastError(resolveApiError(error, this.i18n)) });
+  }
+
+  deleteRequestAutomation(store: FoodsharingStoreAutomation): void {
+    if (!window.confirm(this.i18n.t('common.deleteConfirm'))) {
+      return;
+    }
+    this.adminApi.deleteFoodsharingRequestAutomation({ storeId: store.storeId }).subscribe({
+      next: () => this.reloadActiveAutomationTab(),
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
   }
 
   addRequestAutomation(): void {
@@ -197,8 +235,8 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
 
   previewOpenSlotAdvertisement(store: FoodsharingStoreAutomation, advertNumber: number): string {
     const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
-    const firstTemplate = String(data[`advertMessages${advertNumber}`] || '').split('\n---\n').map((message) => message.trim()).filter(Boolean)[0];
-    if (!firstTemplate) {
+    const templates = String(data[`advertMessages${advertNumber}`] || '').split('\n---\n').map((message) => message.trim()).filter(Boolean);
+    if (templates.length === 0) {
       return this.i18n.t('automation.addAdvertMessagePreview');
     }
     const sampleDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -207,8 +245,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     const adminFoodsharingId = this.sessionService.foodsharingId() || '';
     const dateDe = sampleDate.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' });
     const weekday = sampleDate.toLocaleDateString('de-CH', { weekday: 'long' });
-    return firstTemplate
-      .replaceAll('{{storeName}}', store.storeName || '')
+    return templates.map((template) => template
       .replaceAll('{{date}}', date)
       .replaceAll('{{dateDe}}', dateDe)
       .replaceAll('{{weekday}}', weekday)
@@ -216,36 +253,40 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       .replaceAll('{{datetime}}', `${date} ${time}`)
       .replaceAll('{{datetimeDe}}', `${weekday}, ${dateDe} um ${time}`)
       .replaceAll('{{adminFoodsharingId}}', adminFoodsharingId)
-      .replaceAll('{{adminProfileUrl}}', adminFoodsharingId ? `https://foodsharing.de/user/${adminFoodsharingId}/profile` : '');
+      .replaceAll('{{adminProfileUrl}}', adminFoodsharingId ? `https://foodsharing.de/user/${adminFoodsharingId}/profile` : '')
+    ).join('\n\n---\n\n');
   }
 
-  private buildRequestDeclineMessagePreview(): string {
-    const stores = this.requestAutomationStores() as Array<FoodsharingStoreAutomation & { requestDistanceRuleEnabled?: boolean; requestMaximumDistanceKm?: number }>;
-    const store = stores.find((entry) => entry.requestDistanceRuleEnabled && Number(entry.requestMaximumDistanceKm ?? 0) > 0);
-    if (!store) {
-      return this.i18n.language() === 'en'
-        ? 'Enable the distance rule to see the rejection message preview.'
-        : this.i18n.language() === 'gws'
-          ? `Aktiviere d'Distanzregle, zum e Ufahnde-Vorschau z gseh.`
-          : 'Aktiviere die Distanzregel, um die Ablehnungsnachricht anzuzeigen.';
-    }
-    const maximumDistance = this.formatDistance(Number(store.requestMaximumDistanceKm ?? 0));
-    if (this.i18n.language() === 'en') {
-      return `The request is automatically declined because the distance of {{distanceInKm}} km exceeds the maximum of ${maximumDistance} km.`;
-    }
-    if (this.i18n.language() === 'gws') {
-      return `D'Aafrag wird automäsch abglehnt, will d'Distanz vo {{distanceInKm}} km s'Maximum vo ${maximumDistance} km überschriitet.`;
-    }
-    return `Die Anfrage wird automatisch abgelehnt, weil die Entfernung von {{distanceInKm}} km das Maximum von ${maximumDistance} km überschreitet.`;
+  advertisementMessages(store: FoodsharingStoreAutomation, advertNumber: number): string[] {
+    const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
+    const messages = String(data[`advertMessages${advertNumber}`] || '').split('\n---\n').map((message) => message.trim());
+    return messages.length > 0 ? messages : [''];
   }
 
-  private formatDistance(distance: number): string {
-    return Number.isInteger(distance) ? String(distance) : distance.toFixed(2).replace(/\.?0+$/, '');
+  updateAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number, index: number, value: string): void {
+    const messages = this.advertisementMessages(store, advertNumber);
+    messages[index] = value;
+    this.setAdvertisementMessages(store, advertNumber, messages);
+  }
+
+  addAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number): void {
+    const messages = this.advertisementMessages(store, advertNumber);
+    messages.push('');
+    this.setAdvertisementMessages(store, advertNumber, messages);
+  }
+
+  removeAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number, index: number): void {
+    const messages = this.advertisementMessages(store, advertNumber);
+    if (messages.length === 1) {
+      return;
+    }
+    messages.splice(index, 1);
+    this.setAdvertisementMessages(store, advertNumber, messages);
   }
 
   saveOpenSlotAdvertisement(store: FoodsharingStoreAutomation, advertNumber: number): void {
     const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
-    const messages = String(data[`advertMessages${advertNumber}`] || '').split('\n---\n').map((message) => message.trim()).filter(Boolean);
+    const messages = this.advertisementMessages(store, advertNumber).map((message) => message.trim()).filter(Boolean);
     const sendToStoreChat = Boolean(data[`advertSendToStoreChat${advertNumber}`]);
     const sendToTelegram = Boolean(data[`advertSendToTelegram${advertNumber}`]);
     const telegramChatId = String(data[`advertTelegramChatId${advertNumber}`] || '').trim();
@@ -274,6 +315,22 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
         messages
       }
     }).subscribe({ next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') }), error: (error) => this.toastError(resolveApiError(error, this.i18n)) });
+  }
+
+  deleteAdvertisementAutomation(store: FoodsharingStoreAutomation, advertNumber: number): void {
+    if (!window.confirm(this.i18n.t('common.deleteConfirm'))) {
+      return;
+    }
+    this.adminApi.deleteFoodsharingOpenSlotAdvertisementAutomation({ storeId: store.storeId, advertNumber }).subscribe({
+      next: () => this.reloadActiveAutomationTab(),
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  private setAdvertisementMessages(store: FoodsharingStoreAutomation, advertNumber: number, messages: string[]): void {
+    const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
+    data[`advertMessages${advertNumber}`] = messages.join('\n---\n');
+    this.foodsharingStores.update((stores) => [...stores]);
   }
 
   runRequestAutomationDryRun(): void {
@@ -320,6 +377,21 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       storeId: store.storeId,
       foodsharingStoreAutomationRequest: store
     }).subscribe({
+      next: (savedStore) => {
+        this.foodsharingStores.update((stores) => stores.map((entry) => entry.storeId === savedStore.storeId
+          ? { ...entry, ...savedStore, slotApprovalConfigured: true }
+          : entry));
+        this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') });
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  deleteFoodsharingStore(store: FoodsharingStoreAutomation): void {
+    if (!window.confirm(this.i18n.t('common.deleteConfirm'))) {
+      return;
+    }
+    this.adminApi.deleteFoodsharingStoreAutomation({ storeId: store.storeId }).subscribe({
       next: () => this.reloadActiveAutomationTab(),
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });

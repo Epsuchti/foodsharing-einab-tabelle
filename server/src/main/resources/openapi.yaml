@@ -974,6 +974,21 @@ paths:
                   $ref: '#/components/schemas/TelegramChat'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/telegram/bot-token:
+    put:
+      tags: [admin]
+      operationId: saveFoodsharingTelegramBotToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsharingTelegramBotTokenRequest'
+      responses:
+        '204':
+          description: Telegram bot token saved
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/foodsharing/stores/{storeId}/request-automation:
     put:
       tags: [admin]
@@ -1002,6 +1017,23 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [admin]
+      operationId: deleteFoodsharingRequestAutomation
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Request automation deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/foodsharing/stores/{storeId}/open-slot-advertisements/{advertNumber}:
     put:
       tags: [admin]
@@ -1036,6 +1068,29 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [admin]
+      operationId: deleteFoodsharingOpenSlotAdvertisementAutomation
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: advertNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Open-slot advertisement deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/foodsharing/stores:
     get:
       tags: [admin]
@@ -1079,6 +1134,23 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [admin]
+      operationId: deleteFoodsharingStoreAutomation
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Foodsharing store automation deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/admin/foodsharing/automation/run:
     post:
       tags: [admin]
@@ -1585,6 +1657,12 @@ components:
           minLength: 1
         telegramBotToken:
           type: string
+    FoodsharingTelegramBotTokenRequest:
+      type: object
+      required: [telegramBotToken]
+      properties:
+        telegramBotToken:
+          type: string
     FoodsharingConnectionStatus:
       type: object
       required: [connected]
@@ -1599,6 +1677,8 @@ components:
         authenticatedAt:
           type: string
           format: date-time
+        telegramBotTokenConfigured:
+          type: boolean
         automationEnabled:
           type: boolean
         automationDryRun:
