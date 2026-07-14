@@ -564,7 +564,7 @@ public class FoodsharingPickupAutomationService {
         if (connection.getTelegramBotTokenCiphertext() != null && !connection.getTelegramBotTokenCiphertext().isBlank()) {
             return cryptoService.decrypt(connection.getTelegramBotTokenCiphertext());
         }
-        return appProperties.getFoodsharing().getAutomation().getTelegramBotToken();
+        return null;
     }
 
     private Object firstPresent(Map<?, ?> map, String... keys) {
