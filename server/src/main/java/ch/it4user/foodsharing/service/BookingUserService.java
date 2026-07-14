@@ -29,9 +29,6 @@ public class BookingUserService {
     public User getOrCreate(String foodsharingId, LanguageCode language) {
         String normalizedFoodsharingId = normalizeFoodsharingId(foodsharingId);
         FoodsharingUserInfo foodsharingUser = foodsharingClient.getUser(normalizedFoodsharingId);
-        if (foodsharingUser.sleeping()) {
-            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.BOOKING_USER_DISABLED);
-        }
         User bookingUser = bookingUserRepository.findByFoodsharingIdIgnoreCaseForUpdate(normalizedFoodsharingId)
                 .orElseGet(() -> createUserWithIdentityLock(normalizedFoodsharingId));
         bookingUser.setName(foodsharingUser.name());
