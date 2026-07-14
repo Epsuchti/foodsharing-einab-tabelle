@@ -149,17 +149,27 @@ public class FoodsharingPickupAutomationService {
 
 
 
-    public ExtraAutomationOverviewView extraAutomationOverview() {
+    @Transactional(readOnly = true)
+    public List<RequestAutomationView> requestAutomationOverview() {
         FoodsharingAdminConnection connection = requireConnection();
-        List<RequestAutomationView> requests = requestAutomationRepository.findAll().stream()
+        return requestAutomationRepository.findAll().stream()
                 .filter(a -> a.getAdminConnection().getId().equals(connection.getId()))
-                .map(a -> new RequestAutomationView(a.getStoreId(), a.getStoreName(), a.isEnabled(), a.isDryRunEnabled(), true))
+                .map(a -> new RequestAutomationView(a.getStoreId(), a.getStoreName(), a.isEnabled(), a.isDryRunEnabled(), a.isDistanceRuleEnabled(), a.getMaximumDistanceKm(), true))
                 .toList();
-        List<AdvertisementAutomationView> advertisements = advertisementAutomationRepository.findAll().stream()
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdvertisementAutomationView> openSlotAdvertisementOverview() {
+        FoodsharingAdminConnection connection = requireConnection();
+        return advertisementAutomationRepository.findAll().stream()
                 .filter(a -> a.getAdminConnection().getId().equals(connection.getId()))
                 .map(a -> advertisementView(a, true))
                 .toList();
-        return new ExtraAutomationOverviewView(requests, advertisements);
+    }
+
+    @Transactional(readOnly = true)
+    public ExtraAutomationOverviewView extraAutomationOverview() {
+        return new ExtraAutomationOverviewView(requestAutomationOverview(), openSlotAdvertisementOverview());
     }
 
     @Transactional
@@ -172,10 +182,14 @@ public class FoodsharingPickupAutomationService {
                     return existing;
                 })
                 .orElseGet(() -> { var n = new FoodsharingRequestAutomation(); n.setAdminConnection(c); n.setStoreId(storeId); return n; });
+        validateRequestAutomation(request);
         a.setStoreName(request.storeName() == null ? a.getStoreName() : request.storeName());
         a.setEnabled(request.enabled());
         a.setDryRunEnabled(request.dryRunEnabled());
-        return new RequestAutomationView(a.getStoreId(), a.getStoreName(), a.isEnabled(), a.isDryRunEnabled(), a.getAdminConnection().getId().equals(c.getId()));
+        a.setDistanceRuleEnabled(request.distanceRuleEnabled());
+        a.setMaximumDistanceKm(normalizeDistance(request.maximumDistanceKm()));
+        a = requestAutomationRepository.save(a);
+        return new RequestAutomationView(a.getStoreId(), a.getStoreName(), a.isEnabled(), a.isDryRunEnabled(), a.isDistanceRuleEnabled(), a.getMaximumDistanceKm(), a.getAdminConnection().getId().equals(c.getId()));
     }
 
     @Transactional
@@ -216,22 +230,52 @@ public class FoodsharingPickupAutomationService {
             List<FoodsharingPickupApiClient.RequestUser> requests = client.requests(a.getAdminConnection(), a.getStoreId());
             if (requests.isEmpty()) {
                 skipped++;
-                messages.add("No open requests for " + a.getStoreName() + " (" + a.getStoreId() + ").");
+                String message = "No open requests for " + a.getStoreName() + " (" + a.getStoreId() + ").";
+                saveRequestAudit(a, (String) null, (String) null, dryRun, "SKIPPED", message, null, null);
+                messages.add(message);
             }
             for (FoodsharingPickupApiClient.RequestUser user : requests) {
-                if (acted >= maxApprovals) { skipped++; messages.add("Request automation limit reached (" + maxApprovals + ")."); break; }
+                if (acted >= maxApprovals) {
+                    skipped++;
+                    String message = "Request automation limit reached (" + maxApprovals + ").";
+                    saveRequestAudit(a, user, dryRun, "SKIPPED", message, null, null);
+                    messages.add(message);
+                    break;
+                }
                 evaluated++;
                 log.info("Foodsharing request automation approving dryRun={} storeId={} userId={} userName={}", dryRun, a.getStoreId(), user.id(), user.name());
-                if (user.id() == null || user.id().isBlank()) { skipped++; saveRequestAudit(a, user, dryRun, "SKIPPED", "Missing Foodsharing user id.", null); continue; }
+                if (user.id() == null || user.id().isBlank()) { skipped++; saveRequestAudit(a, user, dryRun, "SKIPPED", "Missing Foodsharing user id.", null, null); continue; }
+                if (a.isDistanceRuleEnabled()) {
+                    Double distanceInKm = user.distanceInKm();
+                    if (distanceInKm == null) {
+                        skipped++;
+                        saveRequestAudit(a, user, dryRun, "SKIPPED", "Missing request distance.", null, null);
+                        continue;
+                    }
+                    if (distanceInKm > a.getMaximumDistanceKm()) {
+                        String message = "Die Anfrage wurde automatisch abgelehnt, weil die Entfernung von " + formatDistance(distanceInKm) + " km das Maximum von " + formatDistance(a.getMaximumDistanceKm()) + " km überschreitet.";
+                        if (!dryRun) {
+                            client.declineRequest(a.getAdminConnection(), a.getStoreId(), user.id(), message);
+                            invalidateStoreCaches(a.getAdminConnection(), a.getStoreId());
+                            acted++;
+                            saveRequestAudit(a, user, dryRun, "DECLINED", message, message, null);
+                        } else {
+                            skipped++;
+                            saveRequestAudit(a, user, dryRun, "WOULD_DECLINE", message, message, null);
+                        }
+                        messages.add((dryRun ? "Würde ablehnen: " : "Abgelehnt: ") + message);
+                        continue;
+                    }
+                }
                 try {
                     if (!dryRun) { client.approveRequest(a.getAdminConnection(), a.getStoreId(), user.id()); invalidateStoreCaches(a.getAdminConnection(), a.getStoreId()); }
                     acted++;
                     String reason = (dryRun ? "Would approve request." : "Request approved.");
-                    saveRequestAudit(a, user, dryRun, dryRun ? "WOULD_APPROVE" : "APPROVED", reason, null);
+                    saveRequestAudit(a, user, dryRun, dryRun ? "WOULD_APPROVE" : "APPROVED", reason, null, null);
                     messages.add((dryRun ? "Would approve " : "Approved ") + user.name() + " (" + user.id() + ") for " + a.getStoreName() + ".");
                 } catch (RuntimeException ex) {
                     skipped++;
-                    saveRequestAudit(a, user, dryRun, "FAILED", "Request approval failed.", ex.getMessage());
+                    saveRequestAudit(a, user, dryRun, "FAILED", "Request approval failed.", null, ex.getMessage());
                     messages.add("Failed to approve " + user.name() + " (" + user.id() + "): " + ex.getMessage());
                 }
             }
@@ -308,7 +352,7 @@ public class FoodsharingPickupAutomationService {
                 if (!dryRun && a.isSendToTelegram() && a.getTelegramChatId() != null) telegramMessageId = sendTelegram(a, message);
                 if (!dryRun) {
                     FoodsharingOpenSlotAdvertisementAudit audit = new FoodsharingOpenSlotAdvertisementAudit();
-                    audit.setAutomation(a); audit.setStoreId(a.getStoreId()); audit.setPickupDate(p.date()); audit.setTriggerHoursBefore(a.getTriggerHoursBefore()); audit.setTelegramMessageId(telegramMessageId); audit.setStatus("SENT"); audit.setDryRun(false); audit.setMessage(message); audit.setReason("Advertisement sent.");
+                    audit.setAutomation(a); audit.setStoreId(a.getStoreId()); audit.setStoreName(a.getStoreName()); audit.setPickupDate(p.date()); audit.setTriggerHoursBefore(a.getTriggerHoursBefore()); audit.setTelegramMessageId(telegramMessageId); audit.setStatus("SENT"); audit.setDryRun(false); audit.setMessage(message); audit.setReason("Advertisement sent.");
                     advertisementAuditRepository.save(audit);
                 }
                 acted++;
@@ -332,17 +376,40 @@ public class FoodsharingPickupAutomationService {
     }
 
 
-    private void saveRequestAudit(FoodsharingRequestAutomation automation, FoodsharingPickupApiClient.RequestUser user, boolean dryRun, String status, String reason, String error) {
+    private void saveRequestAudit(FoodsharingRequestAutomation automation, FoodsharingPickupApiClient.RequestUser user, boolean dryRun, String status, String reason, String message, String error) {
+        saveRequestAudit(automation, user.id(), user.name(), dryRun, status, reason, message, error);
+    }
+
+    private void saveRequestAudit(FoodsharingRequestAutomation automation, String foodsharingUserId, String foodsharingUserName, boolean dryRun, String status, String reason, String message, String error) {
         FoodsharingRequestAutomationAudit audit = new FoodsharingRequestAutomationAudit();
         audit.setAutomation(automation);
         audit.setStoreId(automation.getStoreId());
-        audit.setFoodsharingUserId(user.id() == null || user.id().isBlank() ? "unknown" : user.id());
-        audit.setFoodsharingUserName(user.name());
+        audit.setStoreName(automation.getStoreName());
+        audit.setFoodsharingUserId(foodsharingUserId == null || foodsharingUserId.isBlank() ? "unknown" : foodsharingUserId);
+        audit.setFoodsharingUserName(foodsharingUserName);
         audit.setDryRun(dryRun);
         audit.setStatus(status);
         audit.setReason(reason);
+        audit.setMessage(message);
         audit.setError(error);
         requestAutomationAuditRepository.save(audit);
+    }
+
+    private void validateRequestAutomation(RequestAutomationRequest request) {
+        if (request.maximumDistanceKm() != null && request.maximumDistanceKm() < 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Maximum distance must not be negative."));
+        }
+        if (request.distanceRuleEnabled() && (request.maximumDistanceKm() == null || request.maximumDistanceKm() <= 0)) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Maximum distance must be greater than 0 when the distance rule is enabled."));
+        }
+    }
+
+    private double normalizeDistance(Double value) {
+        return value == null ? 0.0 : value;
+    }
+
+    private String formatDistance(double value) {
+        return String.format(Locale.ROOT, "%.1f", value);
     }
 
     private void validateTemplateVariables(List<String> messages) {
@@ -912,19 +979,30 @@ public class FoodsharingPickupAutomationService {
         }
     }
 
+    @Transactional(readOnly = true)
     public List<ExtraAutomationAuditView> extraAutomationAudit() {
         List<ExtraAutomationAuditView> result = new ArrayList<>();
-        result.addAll(requestAutomationAuditRepository.findTop100ByOrderByCreatedAtDesc().stream()
-                .map(a -> new ExtraAutomationAuditView("REQUEST", a.getStoreId(), a.getAutomation().getStoreName(), null, a.getFoodsharingUserId(), a.getFoodsharingUserName(), a.isDryRun(), a.getStatus(), a.getReason(), null, a.getError(), a.getCreatedAt()))
-                .toList());
-        result.addAll(advertisementAuditRepository.findTop100ByOrderByCreatedAtDesc().stream()
-                .map(a -> new ExtraAutomationAuditView("ADVERTISEMENT", a.getStoreId(), a.getAutomation().getStoreName(), a.getPickupDate(), null, null, a.isDryRun(), a.getStatus(), a.getReason(), a.getMessage(), a.getError(), a.getCreatedAt()))
-                .toList());
+        result.addAll(requestAutomationAudit());
+        result.addAll(openSlotAdvertisementAudit());
         return result.stream().sorted(Comparator.comparing(ExtraAutomationAuditView::createdAt).reversed()).limit(100).toList();
     }
 
-    public record RequestAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled) {}
-    public record RequestAutomationView(long storeId, String storeName, boolean enabled, boolean dryRunEnabled, boolean editable) {}
+    @Transactional(readOnly = true)
+    public List<ExtraAutomationAuditView> requestAutomationAudit() {
+        return requestAutomationAuditRepository.findTop100ByOrderByCreatedAtDesc().stream()
+                .map(a -> new ExtraAutomationAuditView("REQUEST", a.getStoreId(), a.getStoreName(), null, a.getFoodsharingUserId(), a.getFoodsharingUserName(), a.isDryRun(), a.getStatus(), a.getReason(), null, a.getError(), a.getCreatedAt()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExtraAutomationAuditView> openSlotAdvertisementAudit() {
+        return advertisementAuditRepository.findTop100ByOrderByCreatedAtDesc().stream()
+                .map(a -> new ExtraAutomationAuditView("ADVERTISEMENT", a.getStoreId(), a.getStoreName(), a.getPickupDate(), null, null, a.isDryRun(), a.getStatus(), a.getReason(), a.getMessage(), a.getError(), a.getCreatedAt()))
+                .toList();
+    }
+
+    public record RequestAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled, boolean distanceRuleEnabled, Double maximumDistanceKm) {}
+    public record RequestAutomationView(long storeId, String storeName, boolean enabled, boolean dryRunEnabled, boolean distanceRuleEnabled, double maximumDistanceKm, boolean editable) {}
     public record AdvertisementAutomationRequest(String storeName, boolean enabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> messages) {}
     public record AdvertisementAutomationView(long storeId, String storeName, int advertNumber, boolean enabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> messages, boolean editable) {}
     public record TelegramChatView(String id, String title, String type) {}

@@ -115,7 +115,7 @@ public class FoodsharingPickupApiClient {
         for (Object item : asList(body)) {
             Map<?, ?> request = (Map<?, ?>) item;
             Map<?, ?> profile = first(request, "profile", "user") instanceof Map<?, ?> p ? p : request;
-            result.add(new RequestUser(string(first(profile, "id", "userId")), string(first(profile, "name"))));
+            result.add(new RequestUser(string(first(profile, "id", "userId")), string(first(profile, "name")), doubleOrNull(first(request, "distanceInKm"))));
         }
         return result;
     }
@@ -126,6 +126,17 @@ public class FoodsharingPickupApiClient {
                     storeId, userId, connection.getFoodsharingEmail(), fingerprint(cookie(connection)), fingerprint(csrfToken(connection)));
             restClient.patch().uri("/api/stores/{storeId}/requests/{userId}", storeId, userId)
                     .headers(h -> apply(h, connection)).retrieve().toBodilessEntity();
+            return null;
+        });
+    }
+
+    public void declineRequest(FoodsharingAdminConnection connection, long storeId, String userId, String message) {
+        runWithSessionRetry(connection, false, () -> {
+            log.info("Foodsharing request: DELETE /api/stores/{}/requests/{} user={} cookie={} csrf={}",
+                    storeId, userId, connection.getFoodsharingEmail(), fingerprint(cookie(connection)), fingerprint(csrfToken(connection)));
+            restClient.method(org.springframework.http.HttpMethod.DELETE).uri("/api/stores/{storeId}/requests/{userId}", storeId, userId)
+                    .contentType(MediaType.APPLICATION_JSON).headers(h -> apply(h, connection))
+                    .body(Map.of("message", message)).retrieve().toBodilessEntity();
             return null;
         });
     }
@@ -275,7 +286,9 @@ public class FoodsharingPickupApiClient {
     private static Instant instant(Object o) { return Instant.parse(string(o)); }
     private static Instant instantOrNull(Object o) { return o == null || string(o).isBlank() ? null : Instant.parse(string(o)); }
     private static int intValue(Object o) { return o instanceof Number n ? n.intValue() : Integer.parseInt(string(o).isBlank()?"0":string(o)); }
-    public record RequestUser(String id, String name) {}
+    private static Double doubleValue(Object o) { return o instanceof Number n ? n.doubleValue() : Double.parseDouble(string(o).isBlank()?"0":string(o)); }
+    private static Double doubleOrNull(Object o) { return o == null || string(o).isBlank() ? null : doubleValue(o); }
+    public record RequestUser(String id, String name, Double distanceInKm) {}
     private static String cookieValue(String cookieHeader, String name) {
         if (cookieHeader == null || cookieHeader.isBlank()) {
             return null;

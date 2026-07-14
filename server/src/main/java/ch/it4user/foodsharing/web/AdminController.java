@@ -17,8 +17,10 @@ import ch.it4user.foodsharing.openapi.model.FoodsharingFuturePickup;
 import ch.it4user.foodsharing.openapi.model.FoodsharingFuturePickupUser;
 import ch.it4user.foodsharing.openapi.model.FoodsharingOpenSlotAdvertisementAutomation;
 import ch.it4user.foodsharing.openapi.model.FoodsharingOpenSlotAdvertisementAutomationRequest;
+import ch.it4user.foodsharing.openapi.model.FoodsharingOpenSlotAdvertisementOverview;
 import ch.it4user.foodsharing.openapi.model.FoodsharingRequestAutomation;
 import ch.it4user.foodsharing.openapi.model.FoodsharingRequestAutomationRequest;
+import ch.it4user.foodsharing.openapi.model.FoodsharingRequestAutomationOverview;
 import ch.it4user.foodsharing.openapi.model.FoodsharingRunRequest;
 import ch.it4user.foodsharing.openapi.model.FoodsharingRunResult;
 import ch.it4user.foodsharing.openapi.model.FoodsharingManagedStore;
@@ -170,27 +172,27 @@ public class AdminController implements AdminApi {
 
     @Override
     public ResponseEntity<FoodsharingConnectionStatus> connectFoodsharing(FoodsharingConnectRequest request) {
-        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATIONS);
+        currentActorService.requireAutomationUser();
         return ResponseEntity.ok(toFoodsharingConnectionStatus(
                 foodsharingPickupAutomationService.connect(request.getEmail(), request.getPassword(), request.getTelegramBotToken())));
     }
 
     @Override
     public ResponseEntity<Void> disconnectFoodsharing() {
-        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATIONS);
+        currentActorService.requireAutomationUser();
         foodsharingPickupAutomationService.disconnect();
         return ResponseEntity.noContent().build();
     }
 
     @Override
     public ResponseEntity<FoodsharingConnectionStatus> getFoodsharingStatus() {
-        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATIONS);
+        currentActorService.requireAutomationUser();
         return ResponseEntity.ok(toFoodsharingConnectionStatus(foodsharingPickupAutomationService.status()));
     }
 
     @Override
     public ResponseEntity<FoodsharingStoreAutomationOverview> getFoodsharingStores() {
-        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATIONS);
+        currentActorService.requireAutomationUser();
         FoodsharingPickupAutomationService.StoreOverviewView overview = foodsharingPickupAutomationService.stores();
         FoodsharingStoreAutomationOverview response = new FoodsharingStoreAutomationOverview();
         response.setAutomations(overview.automations().stream()
@@ -220,15 +222,43 @@ public class AdminController implements AdminApi {
 
     @Override
     public ResponseEntity<FoodsharingRunResult> runFoodsharingAutomation(FoodsharingRunRequest request) {
-        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATIONS);
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
         return ResponseEntity.ok(toFoodsharingRunResult(
                 foodsharingPickupAutomationService.run(Boolean.TRUE.equals(request.getDryRun()))));
     }
 
     @Override
+    public ResponseEntity<FoodsharingRequestAutomationOverview> getFoodsharingRequestAutomationOverview() {
+        currentActorService.requireAutomationUser();
+        return ResponseEntity.ok(toFoodsharingRequestAutomationOverview(foodsharingPickupAutomationService.requestAutomationOverview()));
+    }
+
+    @Override
+    public ResponseEntity<FoodsharingOpenSlotAdvertisementOverview> getFoodsharingOpenSlotAdvertisementOverview() {
+        currentActorService.requireAutomationUser();
+        return ResponseEntity.ok(toFoodsharingOpenSlotAdvertisementOverview(foodsharingPickupAutomationService.openSlotAdvertisementOverview()));
+    }
+
+    @Override
     public ResponseEntity<FoodsharingExtraAutomationOverview> getFoodsharingExtraAutomationOverview() {
-        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATIONS);
+        currentActorService.requireAutomationUser();
         return ResponseEntity.ok(toFoodsharingExtraAutomationOverview(foodsharingPickupAutomationService.extraAutomationOverview()));
+    }
+
+    @Override
+    public ResponseEntity<List<FoodsharingExtraAutomationAudit>> getFoodsharingRequestAutomationAudit() {
+        currentActorService.requirePermission(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS);
+        return ResponseEntity.ok(foodsharingPickupAutomationService.requestAutomationAudit().stream()
+                .map(this::toFoodsharingExtraAutomationAudit)
+                .toList());
+    }
+
+    @Override
+    public ResponseEntity<List<FoodsharingExtraAutomationAudit>> getFoodsharingOpenSlotAdvertisementAudit() {
+        currentActorService.requirePermission(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS);
+        return ResponseEntity.ok(foodsharingPickupAutomationService.openSlotAdvertisementAudit().stream()
+                .map(this::toFoodsharingExtraAutomationAudit)
+                .toList());
     }
 
     @Override
@@ -273,7 +303,9 @@ public class AdminController implements AdminApi {
                 new FoodsharingPickupAutomationService.RequestAutomationRequest(
                         request.getStoreName(),
                         Boolean.TRUE.equals(request.getEnabled()),
-                        Boolean.TRUE.equals(request.getDryRunEnabled()));
+                        Boolean.TRUE.equals(request.getDryRunEnabled()),
+                        Boolean.TRUE.equals(request.getDistanceRuleEnabled()),
+                        request.getMaximumDistanceKm());
         return ResponseEntity.ok(toFoodsharingRequestAutomation(
                 foodsharingPickupAutomationService.saveRequestAutomation(storeId, serviceRequest)));
     }
@@ -382,6 +414,22 @@ public class AdminController implements AdminApi {
         return response;
     }
 
+    private FoodsharingRequestAutomationOverview toFoodsharingRequestAutomationOverview(List<FoodsharingPickupAutomationService.RequestAutomationView> requests) {
+        FoodsharingRequestAutomationOverview response = new FoodsharingRequestAutomationOverview();
+        response.setRequestAutomations(requests.stream()
+                .map(this::toFoodsharingRequestAutomation)
+                .toList());
+        return response;
+    }
+
+    private FoodsharingOpenSlotAdvertisementOverview toFoodsharingOpenSlotAdvertisementOverview(List<FoodsharingPickupAutomationService.AdvertisementAutomationView> advertisements) {
+        FoodsharingOpenSlotAdvertisementOverview response = new FoodsharingOpenSlotAdvertisementOverview();
+        response.setAdvertisementAutomations(advertisements.stream()
+                .map(this::toFoodsharingOpenSlotAdvertisementAutomation)
+                .toList());
+        return response;
+    }
+
     private FoodsharingExtraAutomationOverview toFoodsharingExtraAutomationOverview(FoodsharingPickupAutomationService.ExtraAutomationOverviewView overview) {
         FoodsharingExtraAutomationOverview response = new FoodsharingExtraAutomationOverview();
         response.setRequestAutomations(overview.requestAutomations().stream()
@@ -399,6 +447,8 @@ public class AdminController implements AdminApi {
         response.setStoreName(requestAutomation.storeName());
         response.setEnabled(requestAutomation.enabled());
         response.setDryRunEnabled(requestAutomation.dryRunEnabled());
+        response.setDistanceRuleEnabled(requestAutomation.distanceRuleEnabled());
+        response.setMaximumDistanceKm(requestAutomation.maximumDistanceKm());
         response.setEditable(requestAutomation.editable());
         return response;
     }

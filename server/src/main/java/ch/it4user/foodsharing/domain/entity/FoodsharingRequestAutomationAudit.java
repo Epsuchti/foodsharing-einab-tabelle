@@ -23,6 +23,9 @@ public class FoodsharingRequestAutomationAudit extends BaseEntity {
     @Column(nullable = false)
     private long storeId;
 
+    @Column(nullable = false, length = 255)
+    private String storeName = "";
+
     @Column(nullable = false, length = 100)
     private String foodsharingUserId;
 
@@ -37,6 +40,9 @@ public class FoodsharingRequestAutomationAudit extends BaseEntity {
 
     @Column(nullable = false, length = 1000)
     private String reason;
+
+    @Column(length = 32600)
+    private String message;
 
     @Column(length = 32600)
     private String error;

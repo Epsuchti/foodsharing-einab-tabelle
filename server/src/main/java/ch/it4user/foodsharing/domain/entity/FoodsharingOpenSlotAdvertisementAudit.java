@@ -24,6 +24,9 @@ public class FoodsharingOpenSlotAdvertisementAudit extends BaseEntity {
     @Column(nullable = false)
     private long storeId;
 
+    @Column(nullable = false, length = 255)
+    private String storeName = "";
+
     @Column(nullable = false)
     private Instant pickupDate;
 

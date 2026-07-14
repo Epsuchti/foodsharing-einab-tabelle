@@ -34,4 +34,10 @@ public class FoodsharingRequestAutomation extends BaseEntity {
 
     @Column(nullable = false)
     private boolean dryRunEnabled = true;
+
+    @Column(name = "distance_rule_enabled", nullable = false)
+    private boolean distanceRuleEnabled = false;
+
+    @Column(name = "maximum_distance_km", nullable = false)
+    private double maximumDistanceKm = 0.0;
 }

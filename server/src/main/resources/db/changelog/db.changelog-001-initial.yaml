@@ -253,6 +253,8 @@ databaseChangeLog:
               - column: {name: store_name, type: VARCHAR(255), defaultValue: '', constraints: {nullable: false}}
               - column: {name: enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
               - column: {name: dry_run_enabled, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+              - column: {name: distance_rule_enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: maximum_distance_km, type: DOUBLE PRECISION, defaultValueNumeric: 0, constraints: {nullable: false}}
               - column: {name: gap_rule_enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
               - column: {name: minimum_gap_days, type: INT, defaultValueNumeric: 0, constraints: {nullable: false}}
               - column: {name: cleaning_rule_enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
@@ -305,6 +307,8 @@ databaseChangeLog:
               - column: {name: store_name, type: VARCHAR(255), defaultValue: '', constraints: {nullable: false}}
               - column: {name: enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
               - column: {name: dry_run_enabled, type: BOOLEAN, defaultValueBoolean: true, constraints: {nullable: false}}
+              - column: {name: distance_rule_enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+              - column: {name: maximum_distance_km, type: DOUBLE PRECISION, defaultValueNumeric: 0, constraints: {nullable: false}}
         - addForeignKeyConstraint:
             baseTableName: foodsharing_request_automations
             baseColumnNames: admin_connection_id
@@ -324,11 +328,13 @@ databaseChangeLog:
               - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
               - column: {name: automation_id, type: UUID, constraints: {nullable: false}}
               - column: {name: store_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: store_name, type: VARCHAR(255), defaultValue: '', constraints: {nullable: false}}
               - column: {name: foodsharing_user_id, type: VARCHAR(100), constraints: {nullable: false}}
               - column: {name: foodsharing_user_name, type: VARCHAR(255)}
               - column: {name: dry_run, type: BOOLEAN, constraints: {nullable: false}}
               - column: {name: status, type: VARCHAR(32), constraints: {nullable: false}}
               - column: {name: reason, type: VARCHAR(1000), constraints: {nullable: false}}
+              - column: {name: message, type: VARCHAR(32600)}
               - column: {name: error, type: VARCHAR(32600)}
         - addForeignKeyConstraint:
             baseTableName: foodsharing_request_automation_audits
@@ -372,6 +378,7 @@ databaseChangeLog:
               - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
               - column: {name: automation_id, type: UUID, constraints: {nullable: false}}
               - column: {name: store_id, type: BIGINT, constraints: {nullable: false}}
+              - column: {name: store_name, type: VARCHAR(255), defaultValue: '', constraints: {nullable: false}}
               - column: {name: pickup_date, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
               - column: {name: trigger_hours_before, type: INT, constraints: {nullable: false}}
               - column: {name: telegram_message_id, type: INT}

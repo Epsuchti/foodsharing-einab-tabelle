@@ -26,12 +26,6 @@
             <th>{{ i18n.t('common.status') }}</th>
             <th>{{ i18n.t('admin.requested') }}</th>
             <th>{{ i18n.t('admin.pickups') }}</th>
-            <th>{{ i18n.t('permission.canGiveEinAbs') }}</th>
-            <th>{{ i18n.t('permission.canManageUsers') }}</th>
-            <th>{{ i18n.t('permission.canUseAutomations') }}</th>
-            <th>{{ i18n.t('permission.canSeeUserPickupCountGrouping') }}</th>
-            <th>{{ i18n.t('permission.canUseAutomationSlotApproval') }}</th>
-            <th>{{ i18n.t('permission.canSeeAllAutomationDecisions') }}</th>
             <th>{{ i18n.t('common.actions') }}</th>
           </tr>
         </ng-template>
@@ -63,14 +57,7 @@
               </p-tag>
             </td>
             <td>{{ user.pickupCount }}</td>
-            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canGiveEinAbs"></p-checkbox></td>
-            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canManageUsers"></p-checkbox></td>
-            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomations"></p-checkbox></td>
-            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeUserPickupCountGrouping"></p-checkbox></td>
-            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationSlotApproval"></p-checkbox></td>
-            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeAllAutomationDecisions"></p-checkbox></td>
             <td class="actions-cell">
-              <button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveUserPermissions(user)"></button>
               @if (user.user.active) {
                 <button pButton type="button" size="small" severity="danger" [label]="i18n.t('admin.disableBookingUser')" (click)="disableBookingUser(user)"></button>
               } @else {
@@ -80,7 +67,7 @@
           </tr>
           @if (isUserExpanded(user)) {
             <tr>
-              <td [attr.colspan]="14">
+              <td [attr.colspan]="8">
                 <div class="page-stack">
                   <div>
                     <h4>{{ i18n.t('admin.userPickups') }}</h4>
@@ -151,6 +138,39 @@
     } @else {
       <p class="empty-state">{{ i18n.t('admin.noUsers') }}</p>
     }
+  </p-card>
+
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('admin.userPermissions') }}</ng-template>
+    <p>{{ i18n.t('admin.userPermissionsHelp') }}</p>
+    <p-table [value]="userPanels()" dataKey="user.id" [scrollable]="true">
+      <ng-template pTemplate="header">
+        <tr>
+          <th pFrozenColumn>{{ i18n.t('common.name') }}</th>
+          <th>{{ i18n.t('permission.canGiveEinAbs') }}</th>
+          <th>{{ i18n.t('permission.canManageUsers') }}</th>
+          <th>{{ i18n.t('permission.canSeeUserPickupCountGrouping') }}</th>
+          <th>{{ i18n.t('permission.canUseAutomationSlotApproval') }}</th>
+          <th>{{ i18n.t('permission.canUseAutomationRequestApproval') }}</th>
+          <th>{{ i18n.t('permission.canUseAutomationOpenSlotAdvertising') }}</th>
+          <th>{{ i18n.t('permission.canSeeAllAutomationDecisions') }}</th>
+          <th>{{ i18n.t('common.actions') }}</th>
+        </tr>
+      </ng-template>
+      <ng-template pTemplate="body" let-user>
+        <tr>
+          <td pFrozenColumn>{{ user.user.name }}</td>
+          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canGiveEinAbs"></p-checkbox></td>
+          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canManageUsers"></p-checkbox></td>
+          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeUserPickupCountGrouping"></p-checkbox></td>
+          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationSlotApproval"></p-checkbox></td>
+          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationRequestApproval"></p-checkbox></td>
+          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationOpenSlotAdvertising"></p-checkbox></td>
+          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeAllAutomationDecisions"></p-checkbox></td>
+          <td><button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveUserPermissions(user)"></button></td>
+        </tr>
+      </ng-template>
+    </p-table>
   </p-card>
 
   <p-card>

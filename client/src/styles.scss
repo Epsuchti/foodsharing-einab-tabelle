@@ -331,6 +331,7 @@ p {
   .p-paginator {
     flex-wrap: wrap;
     gap: 0.5rem;
+    border-radius: 0 !important;
   }
 
   .p-paginator .p-paginator-current,

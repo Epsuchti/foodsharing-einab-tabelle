@@ -114,6 +114,31 @@
   margin-top: 0.75rem;
 }
 
+.automation-help__decision-table {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.automation-help__decision-table th,
+.automation-help__decision-table td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #d9e0ea;
+  vertical-align: top;
+  text-align: left;
+}
+
+.automation-help__decision-table th {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.automation-help__note {
+  margin-top: 0.75rem;
+  color: #475569;
+}
+
 .automation-help__list {
   margin-bottom: 0;
   padding-left: 1.25rem;

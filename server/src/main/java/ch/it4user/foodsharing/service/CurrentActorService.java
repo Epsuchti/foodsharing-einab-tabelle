@@ -48,7 +48,10 @@ public class CurrentActorService {
     public User requireAutomationUser() {
         return userRepository.findByFoodsharingIdIgnoreCase(requireFoodsharingId())
                 .filter(user -> hasPermission(user, UserPermission.CAN_USE_AUTOMATIONS)
-                        || hasPermission(user, UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL))
+                        || hasPermission(user, UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL)
+                        || hasPermission(user, UserPermission.CAN_USE_AUTOMATION_REQUEST_APPROVAL)
+                        || hasPermission(user, UserPermission.CAN_USE_AUTOMATION_OPEN_SLOT_ADVERTISING)
+                        || hasPermission(user, UserPermission.CAN_SEE_USER_PICKUP_COUNT_GROUPING))
                 .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ACCESS_DENIED));
     }
 

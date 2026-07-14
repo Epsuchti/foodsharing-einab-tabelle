@@ -831,10 +831,37 @@ paths:
           $ref: '#/components/responses/Forbidden'
 
 
+  /api/admin/foodsharing/request-automation-overview:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingRequestAutomationOverview
+      responses:
+        '200':
+          description: Request automation settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingRequestAutomationOverview'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/open-slot-advertisements-overview:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingOpenSlotAdvertisementOverview
+      responses:
+        '200':
+          description: Open-slot advertisement automation settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingOpenSlotAdvertisementOverview'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/foodsharing/extra-automation-overview:
     get:
       tags: [admin]
       operationId: getFoodsharingExtraAutomationOverview
+      deprecated: true
       responses:
         '200':
           description: Request and advertisement automation settings
@@ -886,10 +913,41 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /api/admin/foodsharing/request-automation-audit:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingRequestAutomationAudit
+      responses:
+        '200':
+          description: Request automation audit entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodsharingExtraAutomationAudit'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/open-slot-advertisements-audit:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingOpenSlotAdvertisementAudit
+      responses:
+        '200':
+          description: Open-slot advertisement audit entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodsharingExtraAutomationAudit'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /api/admin/foodsharing/extra-automation-audit:
     get:
       tags: [admin]
       operationId: getFoodsharingExtraAutomationAudit
+      deprecated: true
       responses:
         '200':
           description: Request and advertisement automation audit entries
@@ -1362,7 +1420,7 @@ components:
           type: string
     FoodsharingRequestAutomationRequest:
       type: object
-      required: [storeName, enabled, dryRunEnabled]
+      required: [storeName, enabled, dryRunEnabled, distanceRuleEnabled, maximumDistanceKm]
       properties:
         storeName:
           type: string
@@ -1370,6 +1428,11 @@ components:
           type: boolean
         dryRunEnabled:
           type: boolean
+        distanceRuleEnabled:
+          type: boolean
+        maximumDistanceKm:
+          type: number
+          format: double
     FoodsharingOpenSlotAdvertisementAutomationRequest:
       type: object
       required: [storeName, enabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, messages]
@@ -1393,7 +1456,7 @@ components:
             type: string
     FoodsharingRequestAutomation:
       type: object
-      required: [storeId, storeName, enabled, dryRunEnabled, editable]
+      required: [storeId, storeName, enabled, dryRunEnabled, distanceRuleEnabled, maximumDistanceKm, editable]
       properties:
         storeId:
           type: integer
@@ -1404,6 +1467,11 @@ components:
           type: boolean
         dryRunEnabled:
           type: boolean
+        distanceRuleEnabled:
+          type: boolean
+        maximumDistanceKm:
+          type: number
+          format: double
         editable:
           type: boolean
     FoodsharingOpenSlotAdvertisementAutomation:
@@ -1443,6 +1511,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FoodsharingRequestAutomation'
+        advertisementAutomations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodsharingOpenSlotAdvertisementAutomation'
+    FoodsharingRequestAutomationOverview:
+      type: object
+      required: [requestAutomations]
+      properties:
+        requestAutomations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodsharingRequestAutomation'
+    FoodsharingOpenSlotAdvertisementOverview:
+      type: object
+      required: [advertisementAutomations]
+      properties:
         advertisementAutomations:
           type: array
           items:
