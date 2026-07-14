@@ -19,6 +19,7 @@ import {
   UserPermission
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
+import { BezirkContextService } from '../../core/bezirk-context.service';
 import { I18nService } from '../../core/i18n.service';
 import { SessionService } from '../../core/session.service';
 import { ButtonModule } from 'primeng/button';
@@ -65,6 +66,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly advertisementAutomationAudit = signal<FoodsharingExtraAutomationAudit[]>([]);
   protected readonly foodsharingFuturePickupUsers = signal<FoodsharingFuturePickupUser[]>([]);
   protected readonly cleaningRuleExemptions = signal<FoodsharingCleaningRuleExemption[]>([]);
+  protected readonly cleaningStoreConfigured = signal<boolean | null>(null);
   protected readonly foodsharingEmail = signal('');
   protected readonly cleaningExemptionFoodsharingId = signal('');
   protected readonly cleaningExemptionReason = signal('');
@@ -100,6 +102,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected foodsharingPassword = '';
 
   private readonly adminApi = inject(AdminService);
+  private readonly bezirkContext = inject(BezirkContextService);
   protected readonly sessionService = inject(SessionService);
   private readonly messageService = inject(MessageService);
 
@@ -109,6 +112,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       : this.sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)
         ? 'slots'
         : this.sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising) ? 'advertisements' : 'statistics');
+    this.loadBezirkSettings();
     this.loadFoodsharingStatus();
   }
 
@@ -374,6 +378,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
 
   saveFoodsharingStore(store: FoodsharingStoreAutomation): void {
     this.adminApi.saveFoodsharingStoreAutomation({
+      bezirkSlug: this.bezirkContext.currentSlug(),
       storeId: store.storeId,
       foodsharingStoreAutomationRequest: store
     }).subscribe({
@@ -391,7 +396,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     if (!window.confirm(this.i18n.t('common.deleteConfirm'))) {
       return;
     }
-    this.adminApi.deleteFoodsharingStoreAutomation({ storeId: store.storeId }).subscribe({
+    this.adminApi.deleteFoodsharingStoreAutomation({ bezirkSlug: this.bezirkContext.currentSlug(), storeId: store.storeId }).subscribe({
       next: () => this.reloadActiveAutomationTab(),
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
@@ -442,6 +447,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       return;
     }
     this.adminApi.saveFoodsharingStoreAutomation({
+      bezirkSlug: this.bezirkContext.currentSlug(),
       storeId: store.storeId,
       foodsharingStoreAutomationRequest: {
         storeName: store.storeName,
@@ -496,7 +502,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   runFoodsharingDryRun(): void {
-    this.adminApi.runFoodsharingAutomation({ foodsharingRunRequest: { dryRun: true } }).subscribe({
+    this.adminApi.runFoodsharingAutomation({ bezirkSlug: this.bezirkContext.currentSlug(), foodsharingRunRequest: { dryRun: true } }).subscribe({
       next: (result) => {
         this.slotRunResult.set(result);
         this.loadFoodsharingAuditIfActive();
@@ -508,6 +514,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
 
   saveCleaningRuleExemption(): void {
     this.adminApi.saveFoodsharingCleaningRuleExemption({
+      bezirkSlug: this.bezirkContext.currentSlug(),
       foodsharingCleaningRuleExemptionRequest: {
         foodsharingId: this.cleaningExemptionFoodsharingId(),
         reason: this.cleaningExemptionReason()
@@ -523,7 +530,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   deleteCleaningRuleExemption(exemption: FoodsharingCleaningRuleExemption): void {
-    this.adminApi.deleteFoodsharingCleaningRuleExemption({ exemptionId: exemption.id }).subscribe({
+    this.adminApi.deleteFoodsharingCleaningRuleExemption({ bezirkSlug: this.bezirkContext.currentSlug(), exemptionId: exemption.id }).subscribe({
       next: () => this.loadCleaningRuleExemptions(),
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
@@ -546,6 +553,13 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
         }
       },
       error: () => undefined
+    });
+  }
+
+  private loadBezirkSettings(): void {
+    this.adminApi.getAdminBezirk({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
+      next: (bezirk) => this.cleaningStoreConfigured.set(bezirk.cleaningStoreId != null),
+      error: () => this.cleaningStoreConfigured.set(null)
     });
   }
 
@@ -580,7 +594,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   private loadStoreAutomation(options: { loadRequestOverview: boolean; loadAdvertisementOverview: boolean }): void {
-    this.adminApi.getFoodsharingStores().subscribe({
+    this.adminApi.getFoodsharingStores({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
       next: (overview: FoodsharingStoreAutomationOverview) => {
         const stores: FoodsharingStoreAutomation[] = overview.automations
           .map((store) => ({ ...store, slotApprovalConfigured: true } as FoodsharingStoreAutomation & Record<string, unknown>));
@@ -616,7 +630,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   private loadFoodsharingFuturePickupUsers(): void {
-    this.adminApi.getFoodsharingFuturePickupUsers().subscribe({
+    this.adminApi.getFoodsharingFuturePickupUsers({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
       next: (users) => this.foodsharingFuturePickupUsers.set(users),
       error: () => undefined
     });
@@ -721,14 +735,14 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       this.cleaningRuleExemptions.set([]);
       return;
     }
-    this.adminApi.getFoodsharingCleaningRuleExemptions().subscribe({
+    this.adminApi.getFoodsharingCleaningRuleExemptions({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
       next: (exemptions) => this.cleaningRuleExemptions.set(exemptions),
       error: () => undefined
     });
   }
 
   private loadFoodsharingAudit(): void {
-    this.adminApi.getFoodsharingAutomationAudit().subscribe({
+    this.adminApi.getFoodsharingAutomationAudit({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
       next: (audit) => this.foodsharingAudit.set(audit),
       error: () => undefined
     });

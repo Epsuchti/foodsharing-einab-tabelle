@@ -11,9 +11,9 @@ export class AuthFacadeService {
     private readonly sessionService: SessionService
   ) {}
 
-  requestLogin(foodsharingId: string): Observable<MessageResponse> {
+  requestLogin(bezirkSlug: string, foodsharingId: string): Observable<MessageResponse> {
     const loginRequest: LoginRequest = { foodsharingId };
-    return this.authApi.requestLogin({ loginRequest });
+    return this.authApi.requestLogin({ bezirkSlug, loginRequest });
   }
 
   verifyToken(token: string): Observable<AuthResponse> {

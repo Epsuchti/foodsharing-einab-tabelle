@@ -1,5 +1,24 @@
 <section class="page-stack">
   <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('admin.bezirkSettings') }}: {{ bezirkSettings()?.name }}</ng-template>
+    <div class="stack-form">
+      <label>
+        {{ i18n.t('admin.cleaningStoreId') }}
+        <p-inputNumber
+          [ngModel]="cleaningStoreId()"
+          (ngModelChange)="cleaningStoreId.set($event)"
+          [useGrouping]="false"
+          [min]="1"
+          [placeholder]="i18n.t('admin.cleaningStoreIdPlaceholder')">
+        </p-inputNumber>
+      </label>
+      <div class="dialog-actions">
+        <button pButton type="button" icon="pi pi-save" [label]="i18n.t('common.save')" [loading]="settingsSaving()" (click)="saveBezirkSettings()"></button>
+      </div>
+    </div>
+  </p-card>
+
+  <p-card>
     <ng-template pTemplate="title">{{ i18n.t('admin.users') }}</ng-template>
     <div class="admin-users-toolbar">
       <label class="filter-toggle">
@@ -9,6 +28,10 @@
       <label class="filter-toggle">
         <p-checkbox [binary]="true" [ngModel]="onlyThreePickups()" (onChange)="setOnlyThreePickups($event.checked)"></p-checkbox>
         <span>{{ i18n.t('admin.onlyThreePickups') }}</span>
+      </label>
+      <label class="filter-toggle">
+        <p-checkbox [binary]="true" [ngModel]="unassignedOnly()" (onChange)="setUnassignedOnly($event.checked)"></p-checkbox>
+        <span>{{ i18n.t('admin.onlyUnassignedUsers') }}</span>
       </label>
       <span class="admin-users-count">{{ usersPage()?.totalElements ?? 0 }} {{ i18n.t('admin.users') }}</span>
     </div>
@@ -21,6 +44,7 @@
           <tr>
             <th></th>
             <th>{{ i18n.t('common.name') }}</th>
+            <th>{{ i18n.t('bezirk.label') }}</th>
             <th>{{ i18n.t('common.foodsharingId') }}</th>
             <th>{{ i18n.t('common.phoneNumber') }}</th>
             <th>{{ i18n.t('common.status') }}</th>
@@ -42,6 +66,7 @@
               </button>
             </td>
             <td>{{ user.user.name }}</td>
+            <td>{{ user.user.bezirk?.name ?? i18n.t('bezirk.unassigned') }}</td>
             <td>{{ user.user.foodsharingId }}</td>
             <td>{{ user.user.phoneNumber ?? '-' }}</td>
             <td>
@@ -67,7 +92,7 @@
           </tr>
           @if (isUserExpanded(user)) {
             <tr>
-              <td [attr.colspan]="8">
+              <td [attr.colspan]="9">
                 <div class="page-stack">
                   <div>
                     <h4>{{ i18n.t('admin.userPickups') }}</h4>

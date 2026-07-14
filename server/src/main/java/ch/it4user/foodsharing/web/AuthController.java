@@ -19,8 +19,8 @@ public class AuthController implements AuthApi {
     }
 
     @Override
-    public ResponseEntity<MessageResponse> requestLogin(LoginRequest loginRequest) {
-        return ResponseEntity.ok(authService.requestLogin(loginRequest.getFoodsharingId()));
+    public ResponseEntity<MessageResponse> requestLogin(String bezirkSlug, LoginRequest loginRequest) {
+        return ResponseEntity.ok(authService.requestLogin(bezirkSlug, loginRequest.getFoodsharingId()));
     }
 
     @Override

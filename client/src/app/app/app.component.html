@@ -18,22 +18,24 @@
         (click)="toggleMobileMenu()"></button>
     </div>
     <nav class="nav-links nav-links--desktop">
-      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.slots') }}</a>
-      @if (!sessionService.isAuthenticated()) {
-        <a routerLink="/login" routerLinkActive="active">{{ i18n.t('nav.login') }}</a>
-      }
-      @if (sessionService.isAuthenticated()) {
-        <a routerLink="/my-bookings" routerLinkActive="active">{{ i18n.t('nav.bookings') }}</a>
-      }
-      @if (sessionService.hasPermission(UserPermission.CanGiveEinAbs)) {
-        <a routerLink="/teacher" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.teacher') }}</a>
-        <a routerLink="/teacher/bookings" routerLinkActive="active">{{ i18n.t('nav.teacherBookings') }}</a>
-      }
-      @if (sessionService.hasPermission(UserPermission.CanManageUsers)) {
-        <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.admin') }}</a>
-      }
-      @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising) || sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
-        <a routerLink="/admin/foodsharing-automation" routerLinkActive="active">{{ i18n.t('nav.adminAutomation') }}</a>
+      @if (bezirkContext.selectedBezirk()) {
+        <a [routerLink]="bezirkContext.route()" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.slots') }}</a>
+        @if (!sessionService.isAuthenticated()) {
+          <a [routerLink]="bezirkContext.route('login')" routerLinkActive="active">{{ i18n.t('nav.login') }}</a>
+        }
+        @if (sessionService.isAuthenticated()) {
+          <a [routerLink]="bezirkContext.route('my-bookings')" routerLinkActive="active">{{ i18n.t('nav.bookings') }}</a>
+        }
+        @if (sessionService.hasPermission(UserPermission.CanGiveEinAbs)) {
+          <a [routerLink]="bezirkContext.route('teacher')" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.teacher') }}</a>
+          <a [routerLink]="bezirkContext.route('teacher', 'bookings')" routerLinkActive="active">{{ i18n.t('nav.teacherBookings') }}</a>
+        }
+        @if (sessionService.hasPermission(UserPermission.CanManageUsers)) {
+          <a [routerLink]="bezirkContext.route('admin')" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.admin') }}</a>
+        }
+        @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising) || sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
+          <a [routerLink]="bezirkContext.route('admin', 'foodsharing-automation')" routerLinkActive="active">{{ i18n.t('nav.adminAutomation') }}</a>
+        }
       }
     </nav>
     <div class="header-actions header-actions--desktop">
@@ -42,6 +44,9 @@
         <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('lang.de')" (click)="setLanguage('de'); closeMobileMenu()"></button>
         <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('lang.en')" (click)="setLanguage('en'); closeMobileMenu()"></button>
       </div>
+      @if (bezirkContext.selectedBezirk()) {
+        <button pButton type="button" severity="secondary" [label]="i18n.t('nav.switchBezirk')" (click)="switchBezirk()"></button>
+      }
       @if (sessionService.isAuthenticated()) {
         <button pButton type="button" severity="contrast" icon="pi pi-sign-out" [label]="i18n.t('nav.logout')" (click)="sessionService.clearSession(); closeMobileMenu()"></button>
       }
@@ -50,22 +55,24 @@
   @if (mobileMenuOpen()) {
     <div class="mobile-menu">
       <nav class="nav-links nav-links--mobile">
-        <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">{{ i18n.t('nav.slots') }}</a>
-        @if (!sessionService.isAuthenticated()) {
-          <a routerLink="/login" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.login') }}</a>
-        }
-        @if (sessionService.isAuthenticated()) {
-          <a routerLink="/my-bookings" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.bookings') }}</a>
-        }
-        @if (sessionService.hasPermission(UserPermission.CanGiveEinAbs)) {
-          <a routerLink="/teacher" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">{{ i18n.t('nav.teacher') }}</a>
-          <a routerLink="/teacher/bookings" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.teacherBookings') }}</a>
-        }
-        @if (sessionService.hasPermission(UserPermission.CanManageUsers)) {
-          <a routerLink="/admin" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">{{ i18n.t('nav.admin') }}</a>
-        }
-        @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising) || sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
-          <a routerLink="/admin/foodsharing-automation" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.adminAutomation') }}</a>
+        @if (bezirkContext.selectedBezirk()) {
+          <a [routerLink]="bezirkContext.route()" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">{{ i18n.t('nav.slots') }}</a>
+          @if (!sessionService.isAuthenticated()) {
+            <a [routerLink]="bezirkContext.route('login')" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.login') }}</a>
+          }
+          @if (sessionService.isAuthenticated()) {
+            <a [routerLink]="bezirkContext.route('my-bookings')" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.bookings') }}</a>
+          }
+          @if (sessionService.hasPermission(UserPermission.CanGiveEinAbs)) {
+            <a [routerLink]="bezirkContext.route('teacher')" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">{{ i18n.t('nav.teacher') }}</a>
+            <a [routerLink]="bezirkContext.route('teacher', 'bookings')" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.teacherBookings') }}</a>
+          }
+          @if (sessionService.hasPermission(UserPermission.CanManageUsers)) {
+            <a [routerLink]="bezirkContext.route('admin')" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">{{ i18n.t('nav.admin') }}</a>
+          }
+          @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising) || sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
+            <a [routerLink]="bezirkContext.route('admin', 'foodsharing-automation')" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.adminAutomation') }}</a>
+          }
         }
       </nav>
       <div class="header-actions header-actions--mobile">
@@ -74,6 +81,9 @@
           <button pButton type="button" size="small" severity="secondary" class="mobile-menu-chip" [label]="i18n.t('lang.de')" (click)="setLanguage('de'); closeMobileMenu()"></button>
           <button pButton type="button" size="small" severity="secondary" class="mobile-menu-chip" [label]="i18n.t('lang.en')" (click)="setLanguage('en'); closeMobileMenu()"></button>
         </div>
+        @if (bezirkContext.selectedBezirk()) {
+          <button pButton type="button" severity="secondary" class="mobile-switch-bezirk" [label]="i18n.t('nav.switchBezirk')" (click)="switchBezirk()"></button>
+        }
         @if (sessionService.isAuthenticated()) {
           <button pButton type="button" severity="contrast" icon="pi pi-sign-out" [label]="i18n.t('nav.logout')" (click)="sessionService.clearSession(); closeMobileMenu()"></button>
         }

@@ -3,6 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 
 import { BookingDetailResponse, BookingListResponse, SlotStatus, UserService } from '../../api';
 import { resolveApiError } from '../../core/api-error';
+import { BezirkContextService } from '../../core/bezirk-context.service';
 import { I18nService } from '../../core/i18n.service';
 import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 import { CardModule } from 'primeng/card';
@@ -26,6 +27,7 @@ export class MyBookingsPageComponent implements OnInit {
   protected readonly pageSize = 20;
 
   private readonly userApi = inject(UserService);
+  private readonly bezirkContext = inject(BezirkContextService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
 
@@ -37,7 +39,7 @@ export class MyBookingsPageComponent implements OnInit {
     this.confirmationService.confirm({
       message: this.i18n.t('confirm.cancelBooking'),
       accept: () => {
-        this.userApi.cancelMyBooking({ slotId }).subscribe({
+        this.userApi.cancelMyBooking({ bezirkSlug: this.bezirkContext.currentSlug(), slotId }).subscribe({
           next: () => this.reload(),
           error: (error) =>
             this.messageService.add({ severity: 'error', summary: resolveApiError(error, this.i18n) })
@@ -55,7 +57,7 @@ export class MyBookingsPageComponent implements OnInit {
   }
 
   private loadPage(page: number): void {
-    this.userApi.getMyBookings({ page, size: this.pageSize }).subscribe({
+    this.userApi.getMyBookings({ bezirkSlug: this.bezirkContext.currentSlug(), page, size: this.pageSize }).subscribe({
       next: (response) => {
         this.bookings.set(response.bookings);
         this.bookingsPage.set(response);

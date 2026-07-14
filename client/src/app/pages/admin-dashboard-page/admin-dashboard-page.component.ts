@@ -3,6 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import {
+  AdminBezirkResponse,
   AdminEinAbListResponse,
   AdminBookingUserPageResponse,
   AdminBookingUserResponse,
@@ -12,12 +13,14 @@ import {
   AdminService
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
+import { BezirkContextService } from '../../core/bezirk-context.service';
 import { I18nService } from '../../core/i18n.service';
 import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { PaginatorModule } from 'primeng/paginator';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -34,6 +37,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     ButtonModule,
     CheckboxModule,
     ConfirmDialogModule,
+    InputNumberModule,
     PaginatorModule,
     TableModule,
     TagModule
@@ -48,30 +52,37 @@ export class AdminDashboardPageComponent implements OnInit {
   protected readonly bookings = signal<BookingDetailResponse[]>([]);
   protected readonly bookingsPage = signal<BookingListResponse | null>(null);
   protected readonly usersPage = signal<AdminBookingUserPageResponse | null>(null);
+  protected readonly bezirkSettings = signal<AdminBezirkResponse | null>(null);
+  protected readonly cleaningStoreId = signal<number | null>(null);
+  protected readonly settingsSaving = signal(false);
   protected readonly onlyThreePickups = signal(false);
   protected readonly activeOnly = signal(true);
+  protected readonly unassignedOnly = signal(false);
   protected readonly usersLoading = signal(true);
   protected readonly expandedUserIds = signal<Record<string, boolean>>({});
 
   protected readonly pageSize = 20;
 
   private readonly adminApi = inject(AdminService);
+  private readonly bezirkContext = inject(BezirkContextService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
 
   ngOnInit(): void {
+    this.loadBezirkSettings();
     this.reload();
   }
 
   reload(): void {
-    this.adminApi.getAdminEinAbs({ page: this.einAbsPage()?.page ?? 0, size: this.pageSize }).subscribe({
+    const bezirkSlug = this.bezirkContext.currentSlug();
+    this.adminApi.getAdminEinAbs({ bezirkSlug, page: this.einAbsPage()?.page ?? 0, size: this.pageSize }).subscribe({
       next: (response) => {
         this.einAbs.set(response.einAbs);
         this.einAbsPage.set(response);
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
-    this.adminApi.getAdminBookings({ page: this.bookingsPage()?.page ?? 0, size: this.pageSize }).subscribe({
+    this.adminApi.getAdminBookings({ bezirkSlug, page: this.bookingsPage()?.page ?? 0, size: this.pageSize }).subscribe({
       next: (response) => {
         this.bookings.set(response.bookings);
         this.bookingsPage.set(response);
@@ -84,10 +95,12 @@ export class AdminDashboardPageComponent implements OnInit {
   loadUsersPage(page: number): void {
     this.usersLoading.set(true);
     this.adminApi.getAdminUsers({
+      bezirkSlug: this.bezirkContext.currentSlug(),
       page,
       size: this.pageSize,
       threePickupsOnly: this.onlyThreePickups(),
-      activeOnly: this.activeOnly()
+      activeOnly: this.activeOnly(),
+      unassigned: this.unassignedOnly()
     }).subscribe({
       next: (response) => {
         this.usersPage.set(response);
@@ -122,6 +135,30 @@ export class AdminDashboardPageComponent implements OnInit {
   setActiveOnly(checked: boolean): void {
     this.activeOnly.set(checked);
     this.loadUsersPage(0);
+  }
+
+  setUnassignedOnly(checked: boolean): void {
+    this.unassignedOnly.set(checked);
+    this.loadUsersPage(0);
+  }
+
+  saveBezirkSettings(): void {
+    this.settingsSaving.set(true);
+    this.adminApi.updateAdminBezirk({
+      bezirkSlug: this.bezirkContext.currentSlug(),
+      updateBezirkRequest: { cleaningStoreId: this.cleaningStoreId() }
+    }).subscribe({
+      next: (response) => {
+        this.bezirkSettings.set(response);
+        this.cleaningStoreId.set(response.cleaningStoreId ?? null);
+        this.settingsSaving.set(false);
+        this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') });
+      },
+      error: (error) => {
+        this.settingsSaving.set(false);
+        this.toastError(resolveApiError(error, this.i18n));
+      }
+    });
   }
 
 
@@ -188,6 +225,16 @@ export class AdminDashboardPageComponent implements OnInit {
 
   isUserExpanded(user: AdminBookingUserResponse): boolean {
     return !!this.expandedUserIds()[user.user.id];
+  }
+
+  private loadBezirkSettings(): void {
+    this.adminApi.getAdminBezirk({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
+      next: (response) => {
+        this.bezirkSettings.set(response);
+        this.cleaningStoreId.set(response.cleaningStoreId ?? null);
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
   }
 
   private toastError(detail: string): void {

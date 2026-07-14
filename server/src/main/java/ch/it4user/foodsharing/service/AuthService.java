@@ -1,11 +1,13 @@
 package ch.it4user.foodsharing.service;
 
 import ch.it4user.foodsharing.domain.entity.AuthSession;
+import ch.it4user.foodsharing.domain.entity.Bezirk;
 import ch.it4user.foodsharing.domain.entity.LoginToken;
 import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.domain.enumtype.UserPermission;
 import ch.it4user.foodsharing.openapi.model.AuthResponse;
+import ch.it4user.foodsharing.openapi.model.BezirkResponse;
 import ch.it4user.foodsharing.openapi.model.MessageResponse;
 import ch.it4user.foodsharing.repository.AuthSessionRepository;
 import ch.it4user.foodsharing.repository.LoginTokenRepository;
@@ -35,6 +37,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final BookingUserService bookingUserService;
     private final FoodsharingClient foodsharingClient;
+    private final BezirkService bezirkService;
 
     public AuthService(LoginTokenRepository loginTokenRepository,
                        AuthSessionRepository authSessionRepository,
@@ -45,7 +48,8 @@ public class AuthService {
                        AppProperties appProperties,
                        UserRepository userRepository,
                        BookingUserService bookingUserService,
-                       FoodsharingClient foodsharingClient) {
+                       FoodsharingClient foodsharingClient,
+                       BezirkService bezirkService) {
         this.loginTokenRepository = loginTokenRepository;
         this.authSessionRepository = authSessionRepository;
         this.permissionResolutionService = permissionResolutionService;
@@ -56,11 +60,13 @@ public class AuthService {
         this.userRepository = userRepository;
         this.bookingUserService = bookingUserService;
         this.foodsharingClient = foodsharingClient;
+        this.bezirkService = bezirkService;
     }
 
     @Transactional
-    public MessageResponse requestLogin(String foodsharingId) {
-        LoginTarget loginTarget = resolveLoginTarget(foodsharingId);
+    public MessageResponse requestLogin(String bezirkSlug, String foodsharingId) {
+        Bezirk selectedBezirk = bezirkService.requireActive(bezirkSlug);
+        LoginTarget loginTarget = resolveLoginTarget(foodsharingId, selectedBezirk);
         String rawToken = tokenService.generateToken();
         LoginToken loginToken = new LoginToken();
         loginToken.setFoodsharingId(loginTarget.foodsharingId());
@@ -68,7 +74,8 @@ public class AuthService {
         loginToken.setExpiresAt(Instant.now().plus(appProperties.getAuth().getLoginTokenValidityMinutes(), ChronoUnit.MINUTES));
         loginTokenRepository.save(loginToken);
 
-        String loginLink = appProperties.getFrontend().getBaseUrl() + "/verify-login?token=" + rawToken;
+        String loginLink = appProperties.getFrontend().getBaseUrl()
+                + "/bezirke/" + loginTarget.bezirkSlug() + "/verify-login?token=" + rawToken;
         messageService.send(
                 loginTarget.foodsharingId(),
                 messageTemplateService.loginSubject(loginTarget.language()),
@@ -103,12 +110,16 @@ public class AuthService {
         }
     }
 
-    private LoginTarget resolveLoginTarget(String foodsharingId) {
+    private LoginTarget resolveLoginTarget(String foodsharingId, Bezirk selectedBezirk) {
         String normalizedFoodsharingId = foodsharingId.trim();
         User user = userRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(normalizedFoodsharingId)
                 .map(this::refreshPhoneNumber)
                 .orElseGet(() -> bookingUserService.getOrCreate(normalizedFoodsharingId, LanguageCode.DE));
-        return new LoginTarget(user.getFoodsharingId(), user.getPreferredLanguage());
+        if (!user.isActive()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ACCOUNT_NOT_FOUND);
+        }
+        String targetBezirkSlug = user.getBezirk() == null ? selectedBezirk.getSlug() : user.getBezirk().getSlug();
+        return new LoginTarget(user.getFoodsharingId(), user.getPreferredLanguage(), targetBezirkSlug);
     }
 
     private User refreshPhoneNumber(User user) {
@@ -123,7 +134,7 @@ public class AuthService {
         Set<UserPermission> permissions = permissionResolutionService.resolvePermissions(foodsharingId);
         User loginUser = userRepository.findByFoodsharingIdIgnoreCase(foodsharingId)
                 .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ACCOUNT_NOT_FOUND));
-        if (!loginUser.isActive() && permissions.isEmpty()) {
+        if (!loginUser.isActive()) {
             throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ACCOUNT_NOT_FOUND);
         }
 
@@ -145,6 +156,7 @@ public class AuthService {
         response.setEmail(null);
         response.setFoodsharingId(authSession.getFoodsharingId());
         response.setDisplayName(displayName);
+        response.setBezirk(toBezirkResponse(loginUser.getBezirk()));
         response.setPermissions(permissions.stream()
                 .sorted(Comparator.comparing(Enum::name))
                 .map(permission -> ch.it4user.foodsharing.openapi.model.UserPermission.fromValue(permission.name()))
@@ -152,6 +164,17 @@ public class AuthService {
         return response;
     }
 
-    private record LoginTarget(String foodsharingId, LanguageCode language) {
+    private BezirkResponse toBezirkResponse(Bezirk bezirk) {
+        if (bezirk == null) {
+            return null;
+        }
+        BezirkResponse response = new BezirkResponse();
+        response.setId(bezirk.getId());
+        response.setName(bezirk.getName());
+        response.setSlug(bezirk.getSlug());
+        return response;
+    }
+
+    private record LoginTarget(String foodsharingId, LanguageCode language, String bezirkSlug) {
     }
 }

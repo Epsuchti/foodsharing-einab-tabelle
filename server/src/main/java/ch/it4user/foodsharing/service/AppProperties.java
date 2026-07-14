@@ -104,7 +104,6 @@ public class AppProperties {
     public static class Automation {
         private boolean enabled = true;
         private boolean dryRun = true;
-        private long cleaningStoreId = 0;
         private int cleaningBackCheckMonths = 6;
         private String pollInterval = "PT5M";
         private String futurePickupCacheTtl = "PT15M";
@@ -117,8 +116,6 @@ public class AppProperties {
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
         public boolean isDryRun() { return dryRun; }
         public void setDryRun(boolean dryRun) { this.dryRun = dryRun; }
-        public long getCleaningStoreId() { return cleaningStoreId; }
-        public void setCleaningStoreId(long cleaningStoreId) { this.cleaningStoreId = cleaningStoreId; }
         public int getCleaningBackCheckMonths() { return cleaningBackCheckMonths; }
         public void setCleaningBackCheckMonths(int cleaningBackCheckMonths) { this.cleaningBackCheckMonths = cleaningBackCheckMonths; }
         public String getPollInterval() { return pollInterval; }

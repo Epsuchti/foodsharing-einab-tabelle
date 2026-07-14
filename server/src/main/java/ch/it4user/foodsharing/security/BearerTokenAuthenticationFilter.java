@@ -2,6 +2,7 @@ package ch.it4user.foodsharing.security;
 
 import ch.it4user.foodsharing.domain.entity.AuthSession;
 import ch.it4user.foodsharing.repository.AuthSessionRepository;
+import ch.it4user.foodsharing.repository.UserRepository;
 import ch.it4user.foodsharing.service.TokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,10 +22,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
 
     private final AuthSessionRepository authSessionRepository;
+    private final UserRepository userRepository;
     private final TokenService tokenService;
 
-    public BearerTokenAuthenticationFilter(AuthSessionRepository authSessionRepository, TokenService tokenService) {
+    public BearerTokenAuthenticationFilter(AuthSessionRepository authSessionRepository,
+                                           UserRepository userRepository,
+                                           TokenService tokenService) {
         this.authSessionRepository = authSessionRepository;
+        this.userRepository = userRepository;
         this.tokenService = tokenService;
     }
 
@@ -43,6 +48,9 @@ public class BearerTokenAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private void authenticate(AuthSession session) {
+        if (userRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(session.getFoodsharingId()).isEmpty()) {
+            return;
+        }
         var authorities = Arrays.stream(session.getPermissions().split(","))
                 .filter(permission -> !permission.isBlank())
                 .map(SimpleGrantedAuthority::new)

@@ -14,7 +14,7 @@
         [text]="true"
         icon="pi pi-question-circle"
         [label]="i18n.t('common.foodsharingIdHelpLink')"
-        routerLink="/foodsharing-id"
+        [routerLink]="bezirkContext.route('foodsharing-id')"
         class="foodsharing-id-help-link"></a>
     </div>
     <button pButton type="submit" icon="pi pi-envelope" [label]="i18n.t('login.submit')" [disabled]="form.invalid || loading()" [loading]="loading()"></button>
@@ -25,6 +25,6 @@
     </div>
   }
   <div class="dialog-actions login-actions">
-    <a pButton severity="secondary" icon="pi pi-user-plus" [label]="i18n.t('login.teacherSignup')" routerLink="/teacher-signup"></a>
+    <a pButton severity="secondary" icon="pi pi-user-plus" [label]="i18n.t('login.teacherSignup')" [routerLink]="bezirkContext.route('teacher-signup')"></a>
   </div>
 </p-card>

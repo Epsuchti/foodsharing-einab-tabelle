@@ -173,6 +173,11 @@
     align-items: stretch;
   }
 
+  .mobile-switch-bezirk,
+  .p-button.mobile-switch-bezirk {
+    width: 100%;
+  }
+
   .header-actions--mobile .language-switch {
     width: 100%;
     flex-direction: row;

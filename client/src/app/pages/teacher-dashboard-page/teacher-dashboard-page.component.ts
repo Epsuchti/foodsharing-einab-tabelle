@@ -18,6 +18,7 @@ import {
   UpsertEinAbRequest
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
+import { BezirkContextService } from '../../core/bezirk-context.service';
 import { I18nService } from '../../core/i18n.service';
 import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 import { ButtonModule } from 'primeng/button';
@@ -93,6 +94,7 @@ export class TeacherDashboardPageComponent implements OnInit {
   });
 
   private readonly teacherApi = inject(TeacherService);
+  private readonly bezirkContext = inject(BezirkContextService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
 
@@ -111,7 +113,7 @@ export class TeacherDashboardPageComponent implements OnInit {
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
-    this.teacherApi.getTeacherEinAbs({ page: this.einAbsPage()?.page ?? 0, size: this.pageSize }).subscribe({
+    this.teacherApi.getTeacherEinAbs({ bezirkSlug: this.bezirkContext.currentSlug(), page: this.einAbsPage()?.page ?? 0, size: this.pageSize }).subscribe({
       next: (response) => {
         this.einAbs.set(response.einAbs);
         this.einAbsPage.set(response);
@@ -250,8 +252,8 @@ export class TeacherDashboardPageComponent implements OnInit {
     };
 
     const request$ = this.editingEinAb()
-      ? this.teacherApi.updateTeacherEinAb({ einAbId: this.editingEinAb()!.id, upsertEinAbRequest })
-      : this.teacherApi.createTeacherEinAb({ upsertEinAbRequest });
+      ? this.teacherApi.updateTeacherEinAb({ bezirkSlug: this.bezirkContext.currentSlug(), einAbId: this.editingEinAb()!.id, upsertEinAbRequest })
+      : this.teacherApi.createTeacherEinAb({ bezirkSlug: this.bezirkContext.currentSlug(), upsertEinAbRequest });
 
     request$.pipe(finalize(() => this.saveLoading.set(false))).subscribe({
       next: () => {
@@ -266,7 +268,7 @@ export class TeacherDashboardPageComponent implements OnInit {
     this.confirmationService.confirm({
       message: this.i18n.t('confirm.deleteEinab'),
       accept: () => {
-        this.teacherApi.deleteTeacherEinAb({ einAbId: einab.id }).subscribe({
+        this.teacherApi.deleteTeacherEinAb({ bezirkSlug: this.bezirkContext.currentSlug(), einAbId: einab.id }).subscribe({
           next: () => this.reload(),
           error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });
@@ -278,7 +280,7 @@ export class TeacherDashboardPageComponent implements OnInit {
     this.confirmationService.confirm({
       message: this.i18n.t('confirm.cancelTeacherBooking'),
       accept: () => {
-        this.teacherApi.cancelTeacherSlotBooking({ slotId: slot.id }).subscribe({
+        this.teacherApi.cancelTeacherSlotBooking({ bezirkSlug: this.bezirkContext.currentSlug(), slotId: slot.id }).subscribe({
           next: () => this.reload(),
           error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });

@@ -11,11 +11,23 @@ tags:
   - name: teacher
   - name: admin
 paths:
-  /api/public/slots/available:
+  /api/public/bezirke:
+    get:
+      tags: [public]
+      operationId: getBezirke
+      responses:
+        '200':
+          description: Active Bezirke
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BezirkListResponse'
+  /api/public/bezirke/{bezirkSlug}/slots/available:
     get:
       tags: [public]
       operationId: getAvailableSlots
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: search
           in: query
           schema:
@@ -45,11 +57,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AvailableSlotListResponse'
-  /api/public/slots/{slotId}/book:
+  /api/public/bezirke/{bezirkSlug}/slots/{slotId}/book:
     post:
       tags: [public]
       operationId: bookSlot
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - $ref: '#/components/parameters/SlotId'
       requestBody:
         required: true
@@ -92,10 +105,12 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/public/teachers/signup:
+  /api/public/bezirke/{bezirkSlug}/teachers/signup:
     post:
       tags: [public]
       operationId: signupTeacher
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
       requestBody:
         required: true
         content:
@@ -113,10 +128,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/public/notifications/subscribe:
+  /api/public/bezirke/{bezirkSlug}/notifications/subscribe:
     post:
       tags: [public]
       operationId: subscribeNotifications
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
       requestBody:
         required: true
         content:
@@ -151,10 +168,12 @@ paths:
                 $ref: '#/components/schemas/NotificationSubscriptionResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
-  /api/auth/request-login:
+  /api/auth/bezirke/{bezirkSlug}/request-login:
     post:
       tags: [auth]
       operationId: requestLogin
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
       requestBody:
         required: true
         content:
@@ -191,11 +210,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/user/bookings:
+  /api/user/bezirke/{bezirkSlug}/bookings:
     get:
       tags: [user]
       operationId: getMyBookings
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: page
           in: query
           schema:
@@ -230,11 +250,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/user/bookings/{slotId}:
+  /api/user/bezirke/{bezirkSlug}/bookings/{slotId}:
     delete:
       tags: [user]
       operationId: cancelMyBooking
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - $ref: '#/components/parameters/SlotId'
       responses:
         '204':
@@ -280,11 +301,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/teacher/einabs:
+  /api/teacher/bezirke/{bezirkSlug}/einabs:
     get:
       tags: [teacher]
       operationId: getTeacherEinAbs
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: page
           in: query
           schema:
@@ -305,6 +327,8 @@ paths:
     post:
       tags: [teacher]
       operationId: createTeacherEinAb
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
       requestBody:
         required: true
         content:
@@ -322,11 +346,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/teacher/einabs/{einAbId}:
+  /api/teacher/bezirke/{bezirkSlug}/einabs/{einAbId}:
     put:
       tags: [teacher]
       operationId: updateTeacherEinAb
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - $ref: '#/components/parameters/EinAbId'
       requestBody:
         required: true
@@ -353,6 +378,7 @@ paths:
       tags: [teacher]
       operationId: deleteTeacherEinAb
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - $ref: '#/components/parameters/EinAbId'
       responses:
         '204':
@@ -363,11 +389,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/teacher/bookings:
+  /api/teacher/bezirke/{bezirkSlug}/bookings:
     get:
       tags: [teacher]
       operationId: getTeacherBookings
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: page
           in: query
           schema:
@@ -385,11 +412,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BookingListResponse'
-  /api/teacher/bookings/{bookingUserId}/comments:
+  /api/teacher/bezirke/{bezirkSlug}/bookings/{bookingUserId}/comments:
     get:
       tags: [teacher]
       operationId: getTeacherBookingComments
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: bookingUserId
           in: path
           required: true
@@ -411,6 +439,7 @@ paths:
       tags: [teacher]
       operationId: addTeacherBookingComment
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: bookingUserId
           in: path
           required: true
@@ -458,11 +487,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IcalCandidateListResponse'
-  /api/teacher/slots/{slotId}/booking:
+  /api/teacher/bezirke/{bezirkSlug}/slots/{slotId}/booking:
     delete:
       tags: [teacher]
       operationId: cancelTeacherSlotBooking
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - $ref: '#/components/parameters/SlotId'
       responses:
         '200':
@@ -471,7 +501,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SlotResponse'
-  /api/admin/teachers:
+  /api/admin/bezirke/{bezirkSlug}/teachers:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     get:
       tags: [admin]
       operationId: getAdminTeachers
@@ -571,11 +603,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TeacherListResponse'
-  /api/admin/einabs:
+  /api/admin/bezirke/{bezirkSlug}:
+    get:
+      tags: [admin]
+      operationId: getAdminBezirk
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
+      responses:
+        '200':
+          description: Bezirk settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminBezirkResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [admin]
+      operationId: updateAdminBezirk
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBezirkRequest'
+      responses:
+        '200':
+          description: Updated Bezirk settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminBezirkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/bezirke/{bezirkSlug}/einabs:
     get:
       tags: [admin]
       operationId: getAdminEinAbs
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: page
           in: query
           schema:
@@ -593,11 +665,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminEinAbListResponse'
-  /api/admin/bookings:
+  /api/admin/bezirke/{bezirkSlug}/bookings:
     get:
       tags: [admin]
       operationId: getAdminBookings
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: page
           in: query
           schema:
@@ -615,11 +688,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BookingListResponse'
-  /api/admin/users:
+  /api/admin/bezirke/{bezirkSlug}/users:
     get:
       tags: [admin]
       operationId: getAdminUsers
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: page
           in: query
           required: false
@@ -646,6 +720,12 @@ paths:
           schema:
             type: boolean
             default: true
+        - name: unassigned
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: All booking users
@@ -1091,7 +1171,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/admin/foodsharing/stores:
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/stores:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     get:
       tags: [admin]
       operationId: getFoodsharingStores
@@ -1106,7 +1188,9 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/admin/foodsharing/stores/{storeId}/automation:
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/stores/{storeId}/automation:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     put:
       tags: [admin]
       operationId: saveFoodsharingStoreAutomation
@@ -1151,7 +1235,9 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/admin/foodsharing/automation/run:
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/automation/run:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     post:
       tags: [admin]
       operationId: runFoodsharingAutomation
@@ -1173,7 +1259,9 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /api/admin/foodsharing/cleaning-rule-exemptions:
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/cleaning-rule-exemptions:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     get:
       tags: [admin]
       operationId: getFoodsharingCleaningRuleExemptions
@@ -1209,7 +1297,9 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /api/admin/foodsharing/cleaning-rule-exemptions/{exemptionId}:
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/cleaning-rule-exemptions/{exemptionId}:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     delete:
       tags: [admin]
       operationId: deleteFoodsharingCleaningRuleExemption
@@ -1228,7 +1318,9 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/admin/foodsharing/automation/audit:
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/automation/audit:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     get:
       tags: [admin]
       operationId: getFoodsharingAutomationAudit
@@ -1245,7 +1337,9 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/admin/foodsharing/future-pickup-users:
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/future-pickup-users:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     get:
       tags: [admin]
       operationId: getFoodsharingFuturePickupUsers
@@ -1264,6 +1358,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
 components:
   parameters:
+    BezirkSlug:
+      name: bezirkSlug
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[a-z0-9-]+$'
     SlotId:
       name: slotId
       in: path
@@ -1348,7 +1449,43 @@ components:
             type: string
     ErrorCode:
       type: string
-      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, INVALID_UNSUBSCRIBE_TOKEN, TEACHER_ACCOUNT_REQUIRED, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, EINAB_NOT_FOUND, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED, INVALID_BOOKING_CONFIRMATION_TOKEN, BOOKING_CONFIRMATION_EXPIRED]
+      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, BEZIRK_NOT_FOUND, USER_BEZIRK_MISMATCH, NOTIFICATION_SUBSCRIPTION_BEZIRK_MISMATCH, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, INVALID_UNSUBSCRIBE_TOKEN, TEACHER_ACCOUNT_REQUIRED, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, EINAB_NOT_FOUND, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED, INVALID_BOOKING_CONFIRMATION_TOKEN, BOOKING_CONFIRMATION_EXPIRED]
+    BezirkResponse:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+    BezirkListResponse:
+      type: object
+      required: [bezirke]
+      properties:
+        bezirke:
+          type: array
+          items:
+            $ref: '#/components/schemas/BezirkResponse'
+    AdminBezirkResponse:
+      allOf:
+        - $ref: '#/components/schemas/BezirkResponse'
+        - type: object
+          properties:
+            cleaningStoreId:
+              type: integer
+              format: int64
+              nullable: true
+    UpdateBezirkRequest:
+      type: object
+      properties:
+        cleaningStoreId:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
     Language:
       type: string
       enum: [de, en, gws]
@@ -1400,13 +1537,15 @@ components:
           minLength: 1
     NotificationSubscriptionResponse:
       type: object
-      required: [email, active]
+      required: [email, active, bezirk]
       properties:
         email:
           type: string
           format: email
         active:
           type: boolean
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
     LoginRequest:
       type: object
       required: [foodsharingId]
@@ -1437,6 +1576,8 @@ components:
           type: string
         displayName:
           type: string
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
         permissions:
           type: array
           items:
@@ -1898,6 +2039,8 @@ components:
         updatedAt:
           type: string
           format: date-time
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
     TeacherListResponse:
       type: object
       required: [teachers, page, size, totalElements, totalPages]
@@ -1986,6 +2129,8 @@ components:
         updatedAt:
           type: string
           format: date-time
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
     BookingUserListResponse:
       type: object
       required: [users]
@@ -2033,11 +2178,13 @@ components:
           type: boolean
     EinAbResponse:
       type: object
-      required: [id, category, startDateTime, publicLocation, teacher, visitFairteiler, slotCount, createdAt, updatedAt]
+      required: [id, bezirk, category, startDateTime, publicLocation, teacher, visitFairteiler, slotCount, createdAt, updatedAt]
       properties:
         id:
           type: string
           format: uuid
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
         category:
           $ref: '#/components/schemas/EinAbCategory'
         startDateTime:
@@ -2093,11 +2240,13 @@ components:
           format: date-time
     AvailableSlotResponse:
       type: object
-      required: [slotId, category, startDateTime, teacherName, visitFairteiler, status]
+      required: [slotId, bezirk, category, startDateTime, teacherName, visitFairteiler, status]
       properties:
         slotId:
           type: string
           format: uuid
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
         category:
           $ref: '#/components/schemas/EinAbCategory'
         startDateTime:
@@ -2141,7 +2290,7 @@ components:
           type: boolean
     BookingDetailResponse:
       type: object
-      required: [slotId, einAbId, category, startDateTime, teacherName, teacherPhoneNumber, status, bookingUser]
+      required: [slotId, einAbId, bezirk, category, startDateTime, teacherName, teacherPhoneNumber, status, bookingUser]
       properties:
         slotId:
           type: string
@@ -2149,6 +2298,8 @@ components:
         einAbId:
           type: string
           format: uuid
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
         category:
           $ref: '#/components/schemas/EinAbCategory'
         startDateTime:

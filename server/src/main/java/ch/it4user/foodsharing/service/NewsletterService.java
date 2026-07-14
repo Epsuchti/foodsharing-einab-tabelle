@@ -1,6 +1,7 @@
 package ch.it4user.foodsharing.service;
 
 import ch.it4user.foodsharing.domain.entity.EinAb;
+import ch.it4user.foodsharing.domain.entity.Bezirk;
 import ch.it4user.foodsharing.domain.entity.NotificationSubscription;
 import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.repository.EinAbRepository;
@@ -25,6 +26,7 @@ public class NewsletterService {
     private final NewsletterTemplateService newsletterTemplateService;
     private final AppProperties appProperties;
     private final ApplicationEventPublisher eventPublisher;
+    private final BezirkService bezirkService;
 
     public NewsletterService(NotificationSubscriptionRepository notificationSubscriptionRepository,
                              EinAbRepository einAbRepository,
@@ -32,7 +34,8 @@ public class NewsletterService {
                              EmailService emailService,
                              NewsletterTemplateService newsletterTemplateService,
                              AppProperties appProperties,
-                             ApplicationEventPublisher eventPublisher) {
+                             ApplicationEventPublisher eventPublisher,
+                             BezirkService bezirkService) {
         this.notificationSubscriptionRepository = notificationSubscriptionRepository;
         this.einAbRepository = einAbRepository;
         this.tokenService = tokenService;
@@ -40,17 +43,31 @@ public class NewsletterService {
         this.newsletterTemplateService = newsletterTemplateService;
         this.appProperties = appProperties;
         this.eventPublisher = eventPublisher;
+        this.bezirkService = bezirkService;
     }
 
     @Transactional
-    public NotificationSubscription subscribe(String email, LanguageCode language) {
+    public NotificationSubscription subscribe(String bezirkSlug, String email, LanguageCode language) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
         String normalizedEmail = normalizeEmail(email);
         LanguageCode normalizedLanguage = language == null ? LanguageCode.DE : language;
         return notificationSubscriptionRepository.findByEmailIgnoreCase(normalizedEmail)
                 .map(existing -> {
+                    boolean changedBezirk = !existing.getBezirk().getId().equals(bezirk.getId());
+                    boolean wasActive = existing.isActive();
+                    if (changedBezirk && wasActive) {
+                        throw new ApiException(
+                                HttpStatus.CONFLICT,
+                                ApiErrorCode.NOTIFICATION_SUBSCRIPTION_BEZIRK_MISMATCH);
+                    }
+                    if (changedBezirk) {
+                        existing.setBezirk(bezirk);
+                    }
                     existing.setActive(true);
                     existing.setLanguage(normalizedLanguage);
-                    if (existing.getUnsubscribeToken() == null || existing.getUnsubscribeToken().isBlank()) {
+                    if (changedBezirk || !wasActive
+                            || existing.getUnsubscribeToken() == null
+                            || existing.getUnsubscribeToken().isBlank()) {
                         existing.setUnsubscribeToken(tokenService.generateToken());
                     }
                     eventPublisher.publishEvent(new NotificationSubscriptionCreatedEvent(existing.getId()));
@@ -58,6 +75,7 @@ public class NewsletterService {
                 })
                 .orElseGet(() -> {
                     NotificationSubscription subscription = new NotificationSubscription();
+                    subscription.setBezirk(bezirk);
                     subscription.setEmail(normalizedEmail);
                     subscription.setLanguage(normalizedLanguage);
                     subscription.setActive(true);
@@ -83,8 +101,9 @@ public class NewsletterService {
             return;
         }
 
-        for (NotificationSubscription recipient : notificationSubscriptionRepository.findAllByActiveTrueOrderByCreatedAtAsc()) {
-            String unsubscribeUrl = appProperties.getFrontend().getBaseUrl() + "/unsubscribe?token=" + recipient.getUnsubscribeToken();
+        for (NotificationSubscription recipient : notificationSubscriptionRepository
+                .findAllByBezirkAndActiveTrueOrderByCreatedAtAsc(einAb.getBezirk())) {
+            String unsubscribeUrl = unsubscribeUrl(recipient);
             LanguageCode language = recipient.getLanguage() == null ? LanguageCode.DE : recipient.getLanguage();
             emailService.send(
                     recipient.getEmail(),
@@ -101,7 +120,7 @@ public class NewsletterService {
             return;
         }
         LanguageCode language = subscription.getLanguage() == null ? LanguageCode.DE : subscription.getLanguage();
-        String unsubscribeUrl = appProperties.getFrontend().getBaseUrl() + "/unsubscribe?token=" + subscription.getUnsubscribeToken();
+        String unsubscribeUrl = unsubscribeUrl(subscription);
         emailService.send(
                 subscription.getEmail(),
                 newsletterTemplateService.subscriptionConfirmationSubject(language),
@@ -120,5 +139,11 @@ public class NewsletterService {
             throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, java.util.List.of("Email is invalid."));
         }
         return normalizedEmail;
+    }
+
+    private String unsubscribeUrl(NotificationSubscription subscription) {
+        return appProperties.getFrontend().getBaseUrl()
+                + "/bezirke/" + subscription.getBezirk().getSlug()
+                + "/unsubscribe?token=" + subscription.getUnsubscribeToken();
     }
 }

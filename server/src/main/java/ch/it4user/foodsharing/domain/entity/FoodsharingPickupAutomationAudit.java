@@ -23,6 +23,10 @@ import org.hibernate.type.SqlTypes;
 @NoArgsConstructor
 public class FoodsharingPickupAutomationAudit extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "bezirk_id", nullable = false)
+    private Bezirk bezirk;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "admin_connection_id", nullable = false)
     private FoodsharingAdminConnection adminConnection;
 

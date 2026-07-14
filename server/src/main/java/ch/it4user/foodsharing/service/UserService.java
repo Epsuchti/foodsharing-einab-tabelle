@@ -1,5 +1,6 @@
 package ch.it4user.foodsharing.service;
 
+import ch.it4user.foodsharing.domain.entity.Bezirk;
 import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.entity.Slot;
 import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
@@ -16,19 +17,33 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserService {
 
     private final BookingUserService bookingUserService;
+    private final BezirkService bezirkService;
     private final SlotRepository slotRepository;
 
-    public UserService(BookingUserService bookingUserService, SlotRepository slotRepository) {
+    public UserService(BookingUserService bookingUserService,
+                       BezirkService bezirkService,
+                       SlotRepository slotRepository) {
         this.bookingUserService = bookingUserService;
+        this.bezirkService = bezirkService;
         this.slotRepository = slotRepository;
     }
 
-    public Page<Slot> getBookingsByFoodsharingId(String foodsharingId, int page, int size) {
+    public Page<Slot> getBookingsByFoodsharingId(String bezirkSlug, String foodsharingId, int page, int size) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
         User bookingUser = bookingUserService.getByFoodsharingId(foodsharingId);
-        return slotRepository.findAllByBookingUserAndStatuses(
+        ensureUserCanUseBezirk(bookingUser, bezirk);
+        return slotRepository.findAllByBookingUserAndStatusesAndBezirk(
                 bookingUser,
                 Set.of(SlotStatus.BOOKED, SlotStatus.DONE),
+                bezirk,
                 PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
+    }
+
+    public User getProfileByFoodsharingId(String bezirkSlug, String foodsharingId) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        User bookingUser = bookingUserService.getByFoodsharingId(foodsharingId);
+        ensureUserCanUseBezirk(bookingUser, bezirk);
+        return bookingUser;
     }
 
     public User getProfileByFoodsharingId(String foodsharingId) {
@@ -36,8 +51,11 @@ public class UserService {
     }
 
     @Transactional
-    public Slot cancelBooking(String foodsharingId, UUID slotId) {
-        Slot slot = slotRepository.findForUpdateById(slotId)
+    public Slot cancelBooking(String bezirkSlug, String foodsharingId, UUID slotId) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        User bookingUser = bookingUserService.getByFoodsharingId(foodsharingId);
+        ensureUserCanUseBezirk(bookingUser, bezirk);
+        Slot slot = slotRepository.findForUpdateByIdAndBezirk(slotId, bezirk)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_NOT_FOUND));
         if (slot.getBookingUser() == null || !foodsharingId.equalsIgnoreCase(slot.getBookingUser().getFoodsharingId())) {
             throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ONLY_OWN_BOOKINGS_CANCELLABLE);
@@ -50,5 +68,11 @@ public class UserService {
         slot.setBookedAt(null);
         slot.setDoneAt(null);
         return slot;
+    }
+
+    private void ensureUserCanUseBezirk(User bookingUser, Bezirk bezirk) {
+        if (bookingUser.getBezirk() != null && !bookingUser.getBezirk().getId().equals(bezirk.getId())) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_BEZIRK_MISMATCH);
+        }
     }
 }

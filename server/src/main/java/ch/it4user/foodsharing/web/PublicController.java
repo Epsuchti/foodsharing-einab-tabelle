@@ -5,6 +5,7 @@ import ch.it4user.foodsharing.openapi.model.AvailableSlotListResponse;
 import ch.it4user.foodsharing.openapi.model.BookSlotRequest;
 import ch.it4user.foodsharing.openapi.model.BookingDetailResponse;
 import ch.it4user.foodsharing.openapi.model.AuthResponse;
+import ch.it4user.foodsharing.openapi.model.BezirkListResponse;
 import ch.it4user.foodsharing.openapi.model.EinAbCategory;
 import ch.it4user.foodsharing.openapi.model.Language;
 import ch.it4user.foodsharing.openapi.model.NotificationSubscriptionRequest;
@@ -13,6 +14,7 @@ import ch.it4user.foodsharing.openapi.model.NotificationUnsubscribeRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSignupRequest;
 import ch.it4user.foodsharing.service.AuthService;
+import ch.it4user.foodsharing.service.BezirkService;
 import ch.it4user.foodsharing.service.PublicService;
 import ch.it4user.foodsharing.service.NewsletterService;
 import ch.it4user.foodsharing.service.TeacherService;
@@ -30,35 +32,46 @@ public class PublicController implements PublicApi {
     private final TeacherService teacherService;
     private final NewsletterService newsletterService;
     private final AuthService authService;
+    private final BezirkService bezirkService;
     private final ApiModelMapper mapper;
 
     public PublicController(PublicService publicService,
                             TeacherService teacherService,
                             NewsletterService newsletterService,
                             AuthService authService,
+                            BezirkService bezirkService,
                             ApiModelMapper mapper) {
         this.publicService = publicService;
         this.teacherService = teacherService;
         this.newsletterService = newsletterService;
         this.authService = authService;
+        this.bezirkService = bezirkService;
         this.mapper = mapper;
     }
 
     @Override
+    public ResponseEntity<BezirkListResponse> getBezirke() {
+        return ResponseEntity.ok(mapper.toBezirkListResponse(bezirkService.findAllActive()));
+    }
+
+    @Override
     public ResponseEntity<AvailableSlotListResponse> getAvailableSlots(
+            String bezirkSlug,
             String search,
             EinAbCategory category,
             Boolean visitFairteiler,
             Integer page,
             Integer size) {
         return ResponseEntity.ok(mapper.toAvailableSlotListResponse(
-                publicService.findAvailableSlots(search, mapCategory(category), visitFairteiler, page == null ? 0 : page, size == null ? 20 : size)));
+                publicService.findAvailableSlots(bezirkSlug, search, mapCategory(category), visitFairteiler,
+                        page == null ? 0 : page, size == null ? 20 : size)));
     }
 
     @Override
-    public ResponseEntity<BookingDetailResponse> bookSlot(UUID slotId, BookSlotRequest bookSlotRequest) {
+    public ResponseEntity<BookingDetailResponse> bookSlot(String bezirkSlug, UUID slotId, BookSlotRequest bookSlotRequest) {
         return ResponseEntity.ok(mapper.toBookingDetailResponse(
                 publicService.bookSlot(
+                        bezirkSlug,
                         slotId,
                         bookSlotRequest.getFoodsharingId(),
                         mapLanguage(bookSlotRequest.getLanguage()))));
@@ -75,12 +88,14 @@ public class PublicController implements PublicApi {
                 .header("X-Auth-Expires-At", auth.getExpiresAt().toString())
                 .header("X-Auth-Foodsharing-Id", auth.getFoodsharingId())
                 .header("X-Auth-Permissions", String.join(",", auth.getPermissions().stream().map(Enum::name).toList()))
-                .header("X-Auth-Display-Name", auth.getDisplayName() == null ? "" : auth.getDisplayName()));
+                .header("X-Auth-Display-Name", auth.getDisplayName() == null ? "" : auth.getDisplayName())
+                .header("X-Auth-Bezirk-Slug", auth.getBezirk() == null ? "" : auth.getBezirk().getSlug()));
         return response.body(mapper.toBookingDetailResponse(slot));
     }
     @Override
-    public ResponseEntity<TeacherResponse> signupTeacher(TeacherSignupRequest teacherSignupRequest) {
+    public ResponseEntity<TeacherResponse> signupTeacher(String bezirkSlug, TeacherSignupRequest teacherSignupRequest) {
         TeacherResponse response = mapper.toTeacherResponse(teacherService.signup(
+                bezirkSlug,
                 teacherSignupRequest.getFoodsharingId(),
                 teacherSignupRequest.getIcalLink() == null ? null : teacherSignupRequest.getIcalLink().toString()
                 ,
@@ -90,9 +105,12 @@ public class PublicController implements PublicApi {
     }
 
     @Override
-    public ResponseEntity<NotificationSubscriptionResponse> subscribeNotifications(@Valid NotificationSubscriptionRequest notificationSubscriptionRequest) {
+    public ResponseEntity<NotificationSubscriptionResponse> subscribeNotifications(
+            String bezirkSlug,
+            NotificationSubscriptionRequest notificationSubscriptionRequest) {
         return ResponseEntity.ok(mapper.toNotificationSubscriptionResponse(
-                newsletterService.subscribe(notificationSubscriptionRequest.getEmail(), mapLanguage(notificationSubscriptionRequest.getLanguage()))));
+                newsletterService.subscribe(bezirkSlug, notificationSubscriptionRequest.getEmail(),
+                        mapLanguage(notificationSubscriptionRequest.getLanguage()))));
     }
 
     @Override

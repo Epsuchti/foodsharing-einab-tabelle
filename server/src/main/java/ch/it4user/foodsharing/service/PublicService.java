@@ -1,5 +1,6 @@
 package ch.it4user.foodsharing.service;
 
+import ch.it4user.foodsharing.domain.entity.Bezirk;
 import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.entity.Slot;
 import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
@@ -20,6 +21,7 @@ public class PublicService {
     private static final Set<SlotStatus> ACTIVE_BOOKING_STATUSES = Set.of(SlotStatus.PENDING_CONFIRMATION, SlotStatus.BOOKED, SlotStatus.DONE);
 
     private final SlotRepository slotRepository;
+    private final BezirkService bezirkService;
     private final BookingUserService bookingUserService;
     private final FoodsharingMessageService messageService;
     private final MessageTemplateService messageTemplateService;
@@ -27,12 +29,14 @@ public class PublicService {
     private final AppProperties appProperties;
 
     public PublicService(SlotRepository slotRepository,
+                         BezirkService bezirkService,
                          BookingUserService bookingUserService,
                          FoodsharingMessageService messageService,
                          MessageTemplateService messageTemplateService,
                          TokenService tokenService,
                          AppProperties appProperties) {
         this.slotRepository = slotRepository;
+        this.bezirkService = bezirkService;
         this.bookingUserService = bookingUserService;
         this.messageService = messageService;
         this.messageTemplateService = messageTemplateService;
@@ -40,8 +44,10 @@ public class PublicService {
         this.appProperties = appProperties;
     }
 
-    public Page<Slot> findAvailableSlots(String search, EinAbCategory category, Boolean visitFairteiler, int page, int size) {
+    public Page<Slot> findAvailableSlots(String bezirkSlug, String search, EinAbCategory category, Boolean visitFairteiler, int page, int size) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
         return slotRepository.findAvailableSlots(
+                bezirk,
                 normalizeSearch(search),
                 category,
                 visitFairteiler,
@@ -49,25 +55,33 @@ public class PublicService {
     }
 
     @Transactional
-    public Slot bookSlot(UUID slotId, String foodsharingId, LanguageCode language) {
-        Slot slot = slotRepository.findForUpdateById(slotId)
+    public Slot bookSlot(String bezirkSlug, UUID slotId, String foodsharingId, LanguageCode language) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        User bookingUser = bookingUserService.getOrCreate(foodsharingId, language);
+        if (!bookingUser.isActive()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.BOOKING_USER_DISABLED);
+        }
+        if (slotRepository.existsOpenPendingConfirmationInDifferentBezirk(bookingUser, bezirk)) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_BEZIRK_MISMATCH);
+        }
+        bookingUserService.assignToBezirk(bookingUser, bezirk);
+
+        Slot slot = slotRepository.findForUpdateByIdAndBezirk(slotId, bezirk)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.SLOT_NOT_FOUND));
         if (slot.getStatus() != SlotStatus.AVAILABLE) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.SLOT_NOT_AVAILABLE);
         }
-
-        User bookingUser = bookingUserService.getOrCreate(foodsharingId, language);
-        if (slotRepository.existsByBookingUserAndStatusInAndEinAbTeacher(
-                bookingUser, ACTIVE_BOOKING_STATUSES, slot.getEinAb().getTeacher())) {
+        if (slotRepository.existsByBookingUserAndStatusInAndEinAbTeacherAndEinAbBezirk(
+                bookingUser, ACTIVE_BOOKING_STATUSES, slot.getEinAb().getTeacher(), bezirk)) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_ALREADY_BOOKED_WITH_TEACHER);
         }
-        if (slotRepository.existsByBookingUserAndStatusInAndEinAbCategory(
-                bookingUser, ACTIVE_BOOKING_STATUSES, slot.getEinAb().getCategory())) {
+        if (slotRepository.existsByBookingUserAndStatusInAndEinAbCategoryAndEinAbBezirk(
+                bookingUser, ACTIVE_BOOKING_STATUSES, slot.getEinAb().getCategory(), bezirk)) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_ALREADY_BOOKED_IN_CATEGORY);
         }
         Integer minimumPickupCount = slot.getEinAb().getMinimumPickupCount();
         if (minimumPickupCount != null
-                && slotRepository.countByBookingUserAndStatus(bookingUser, SlotStatus.DONE) < minimumPickupCount) {
+                && slotRepository.countByBookingUserAndStatusAndEinAbBezirk(bookingUser, SlotStatus.DONE, bezirk) < minimumPickupCount) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.MINIMUM_PICKUP_COUNT_NOT_REACHED);
         }
 
@@ -91,7 +105,9 @@ public class PublicService {
     }
 
     private void sendBookingConfirmationMessage(Slot slot, String rawToken, long confirmWithinMinutes) {
-        String confirmUrl = appProperties.getFrontend().getBaseUrl() + "/confirm-booking?token=" + rawToken;
+        String confirmUrl = appProperties.getFrontend().getBaseUrl()
+                + "/bezirke/" + slot.getEinAb().getBezirk().getSlug()
+                + "/confirm-booking?token=" + rawToken;
         LanguageCode language = slot.getBookingUser().getPreferredLanguage();
         messageService.send(
                 slot.getBookingUser().getFoodsharingId(),

@@ -2,6 +2,7 @@ package ch.it4user.foodsharing.web;
 
 import ch.it4user.foodsharing.openapi.api.AdminApi;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
+import ch.it4user.foodsharing.openapi.model.AdminBezirkResponse;
 import ch.it4user.foodsharing.openapi.model.AdminEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.AutomationRunSummary;
 import ch.it4user.foodsharing.openapi.model.BookingListResponse;
@@ -33,8 +34,14 @@ import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.openapi.model.TelegramChat;
 import ch.it4user.foodsharing.openapi.model.TelegramTestMessageRequest;
 import ch.it4user.foodsharing.openapi.model.UserPermissionsRequest;
+import ch.it4user.foodsharing.openapi.model.UpdateBezirkRequest;
+import ch.it4user.foodsharing.domain.entity.Bezirk;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.enumtype.UserPermission;
 import ch.it4user.foodsharing.service.AdminService;
+import ch.it4user.foodsharing.service.ApiErrorCode;
+import ch.it4user.foodsharing.service.ApiException;
+import ch.it4user.foodsharing.service.BezirkService;
 import ch.it4user.foodsharing.service.CurrentActorService;
 import ch.it4user.foodsharing.service.FoodsharingPickupAutomationService;
 import java.time.Instant;
@@ -42,6 +49,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -52,18 +60,25 @@ public class AdminController implements AdminApi {
     private final ApiModelMapper mapper;
     private final FoodsharingPickupAutomationService foodsharingPickupAutomationService;
     private final CurrentActorService currentActorService;
+    private final BezirkService bezirkService;
 
-    public AdminController(AdminService adminService, ApiModelMapper mapper, FoodsharingPickupAutomationService foodsharingPickupAutomationService, CurrentActorService currentActorService) {
+    public AdminController(AdminService adminService,
+                           ApiModelMapper mapper,
+                           FoodsharingPickupAutomationService foodsharingPickupAutomationService,
+                           CurrentActorService currentActorService,
+                           BezirkService bezirkService) {
         this.adminService = adminService;
         this.mapper = mapper;
         this.foodsharingPickupAutomationService = foodsharingPickupAutomationService;
         this.currentActorService = currentActorService;
+        this.bezirkService = bezirkService;
     }
 
     @Override
-    public ResponseEntity<TeacherListResponse> getAdminTeachers(Integer page, Integer size) {
+    public ResponseEntity<TeacherListResponse> getAdminTeachers(String bezirkSlug, Integer page, Integer size) {
         currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
-        return ResponseEntity.ok(mapper.toTeacherListResponse(adminService.getTeachers(page == null ? 0 : page, size == null ? 20 : size)));
+        return ResponseEntity.ok(mapper.toTeacherListResponse(
+                adminService.getTeachers(bezirkSlug, page == null ? 0 : page, size == null ? 20 : size)));
     }
 
     @Override
@@ -97,26 +112,63 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<AdminEinAbListResponse> getAdminEinAbs(Integer page, Integer size) {
-        currentActorService.requirePermission(UserPermission.CAN_GIVE_EIN_ABS);
-        return ResponseEntity.ok(mapper.toAdminEinAbListResponse(adminService.getEinAbs(page == null ? 0 : page, size == null ? 20 : size)));
+    public ResponseEntity<AdminEinAbListResponse> getAdminEinAbs(String bezirkSlug, Integer page, Integer size) {
+        currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
+        return ResponseEntity.ok(mapper.toAdminEinAbListResponse(
+                adminService.getEinAbs(bezirkSlug, page == null ? 0 : page, size == null ? 20 : size)));
     }
 
     @Override
-    public ResponseEntity<BookingListResponse> getAdminBookings(Integer page, Integer size) {
-        currentActorService.requirePermission(UserPermission.CAN_GIVE_EIN_ABS);
-        return ResponseEntity.ok(mapper.toBookingListResponse(adminService.getBookings(page == null ? 0 : page, size == null ? 20 : size)));
+    public ResponseEntity<BookingListResponse> getAdminBookings(String bezirkSlug, Integer page, Integer size) {
+        currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
+        return ResponseEntity.ok(mapper.toBookingListResponse(
+                adminService.getBookings(bezirkSlug, page == null ? 0 : page, size == null ? 20 : size)));
     }
 
     @Override
-    public ResponseEntity<AdminBookingUserPageResponse> getAdminUsers(Integer page, Integer size, Boolean threePickupsOnly, Boolean activeOnly) {
+    public ResponseEntity<AdminBookingUserPageResponse> getAdminUsers(
+            String bezirkSlug,
+            Integer page,
+            Integer size,
+            Boolean threePickupsOnly,
+            Boolean activeOnly,
+            Boolean unassigned) {
         currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
         int resolvedPage = page == null ? 0 : page;
         int resolvedSize = size == null ? 50 : size;
         boolean resolvedThreePickupsOnly = threePickupsOnly != null && threePickupsOnly;
         boolean resolvedActiveOnly = activeOnly == null || activeOnly;
         return ResponseEntity.ok(mapper.toAdminBookingUserPageResponse(
-                adminService.getUsers(resolvedPage, resolvedSize, resolvedThreePickupsOnly, resolvedActiveOnly)));
+                adminService.getUsers(
+                        bezirkSlug,
+                        Boolean.TRUE.equals(unassigned),
+                        resolvedPage,
+                        resolvedSize,
+                        resolvedThreePickupsOnly,
+                        resolvedActiveOnly)));
+    }
+
+    @Override
+    public ResponseEntity<AdminBezirkResponse> getAdminBezirk(String bezirkSlug) {
+        User automationUser = null;
+        if (!currentActorService.hasPermission(UserPermission.CAN_MANAGE_USERS)) {
+            automationUser = currentActorService.requireAutomationUser();
+        }
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        if (automationUser != null && (automationUser.getBezirk() == null
+                || !automationUser.getBezirk().getId().equals(bezirk.getId()))) {
+            throw new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.BEZIRK_NOT_FOUND);
+        }
+        return ResponseEntity.ok(mapper.toAdminBezirkResponse(bezirk));
+    }
+
+    @Override
+    public ResponseEntity<AdminBezirkResponse> updateAdminBezirk(
+            String bezirkSlug,
+            UpdateBezirkRequest updateBezirkRequest) {
+        currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
+        return ResponseEntity.ok(mapper.toAdminBezirkResponse(
+                bezirkService.updateCleaningStoreId(bezirkSlug, updateBezirkRequest.getCleaningStoreId())));
     }
 
     @Override
@@ -199,9 +251,9 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<FoodsharingStoreAutomationOverview> getFoodsharingStores() {
+    public ResponseEntity<FoodsharingStoreAutomationOverview> getFoodsharingStores(String bezirkSlug) {
         currentActorService.requireAutomationUser();
-        FoodsharingPickupAutomationService.StoreOverviewView overview = foodsharingPickupAutomationService.stores();
+        FoodsharingPickupAutomationService.StoreOverviewView overview = foodsharingPickupAutomationService.stores(bezirkSlug);
         FoodsharingStoreAutomationOverview response = new FoodsharingStoreAutomationOverview();
         response.setAutomations(overview.automations().stream()
                 .map(this::toFoodsharingStoreAutomation)
@@ -213,7 +265,10 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<FoodsharingStoreAutomation> saveFoodsharingStoreAutomation(Long storeId, FoodsharingStoreAutomationRequest request) {
+    public ResponseEntity<FoodsharingStoreAutomation> saveFoodsharingStoreAutomation(
+            String bezirkSlug,
+            Long storeId,
+            FoodsharingStoreAutomationRequest request) {
         currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
         FoodsharingPickupAutomationService.StoreAutomationRequest serviceRequest =
                 new FoodsharingPickupAutomationService.StoreAutomationRequest(
@@ -225,21 +280,21 @@ public class AdminController implements AdminApi {
                         Boolean.TRUE.equals(request.getCleaningRuleEnabled()),
                         Boolean.TRUE.equals(request.getExperienceRuleEnabled()));
         return ResponseEntity.ok(toFoodsharingStoreAutomation(
-                foodsharingPickupAutomationService.save(storeId, serviceRequest)));
+                foodsharingPickupAutomationService.save(bezirkSlug, storeId, serviceRequest)));
     }
 
     @Override
-    public ResponseEntity<Void> deleteFoodsharingStoreAutomation(Long storeId) {
+    public ResponseEntity<Void> deleteFoodsharingStoreAutomation(String bezirkSlug, Long storeId) {
         currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
-        foodsharingPickupAutomationService.delete(storeId);
+        foodsharingPickupAutomationService.delete(bezirkSlug, storeId);
         return ResponseEntity.noContent().build();
     }
 
     @Override
-    public ResponseEntity<FoodsharingRunResult> runFoodsharingAutomation(FoodsharingRunRequest request) {
+    public ResponseEntity<FoodsharingRunResult> runFoodsharingAutomation(String bezirkSlug, FoodsharingRunRequest request) {
         currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
         return ResponseEntity.ok(toFoodsharingRunResult(
-                foodsharingPickupAutomationService.run(Boolean.TRUE.equals(request.getDryRun()))));
+                foodsharingPickupAutomationService.run(bezirkSlug, Boolean.TRUE.equals(request.getDryRun()))));
     }
 
     @Override
@@ -360,40 +415,43 @@ public class AdminController implements AdminApi {
 
 
     @Override
-    public ResponseEntity<List<FoodsharingCleaningRuleExemption>> getFoodsharingCleaningRuleExemptions() {
+    public ResponseEntity<List<FoodsharingCleaningRuleExemption>> getFoodsharingCleaningRuleExemptions(String bezirkSlug) {
         currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
-        return ResponseEntity.ok(foodsharingPickupAutomationService.cleaningRuleExemptions().stream()
+        return ResponseEntity.ok(foodsharingPickupAutomationService.cleaningRuleExemptions(bezirkSlug).stream()
                 .map(this::toFoodsharingCleaningRuleExemption)
                 .toList());
     }
 
     @Override
-    public ResponseEntity<FoodsharingCleaningRuleExemption> saveFoodsharingCleaningRuleExemption(FoodsharingCleaningRuleExemptionRequest request) {
+    public ResponseEntity<FoodsharingCleaningRuleExemption> saveFoodsharingCleaningRuleExemption(
+            String bezirkSlug,
+            FoodsharingCleaningRuleExemptionRequest request) {
         currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
         FoodsharingPickupAutomationService.CleaningRuleExemptionRequest serviceRequest =
                 new FoodsharingPickupAutomationService.CleaningRuleExemptionRequest(request.getFoodsharingId(), request.getReason());
-        return ResponseEntity.ok(toFoodsharingCleaningRuleExemption(foodsharingPickupAutomationService.saveCleaningRuleExemption(serviceRequest)));
+        return ResponseEntity.ok(toFoodsharingCleaningRuleExemption(
+                foodsharingPickupAutomationService.saveCleaningRuleExemption(bezirkSlug, serviceRequest)));
     }
 
     @Override
-    public ResponseEntity<Void> deleteFoodsharingCleaningRuleExemption(UUID exemptionId) {
+    public ResponseEntity<Void> deleteFoodsharingCleaningRuleExemption(String bezirkSlug, UUID exemptionId) {
         currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
-        foodsharingPickupAutomationService.deleteCleaningRuleExemption(exemptionId);
+        foodsharingPickupAutomationService.deleteCleaningRuleExemption(bezirkSlug, exemptionId);
         return ResponseEntity.noContent().build();
     }
 
     @Override
-    public ResponseEntity<List<FoodsharingAutomationAudit>> getFoodsharingAutomationAudit() {
+    public ResponseEntity<List<FoodsharingAutomationAudit>> getFoodsharingAutomationAudit(String bezirkSlug) {
         currentActorService.requirePermission(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS);
-        return ResponseEntity.ok(foodsharingPickupAutomationService.audit().stream()
+        return ResponseEntity.ok(foodsharingPickupAutomationService.audit(bezirkSlug).stream()
                 .map(this::toFoodsharingAutomationAudit)
                 .toList());
     }
 
     @Override
-    public ResponseEntity<List<FoodsharingFuturePickupUser>> getFoodsharingFuturePickupUsers() {
+    public ResponseEntity<List<FoodsharingFuturePickupUser>> getFoodsharingFuturePickupUsers(String bezirkSlug) {
         currentActorService.requirePermission(UserPermission.CAN_SEE_USER_PICKUP_COUNT_GROUPING);
-        return ResponseEntity.ok(foodsharingPickupAutomationService.futurePickupUsers().stream()
+        return ResponseEntity.ok(foodsharingPickupAutomationService.futurePickupUsers(bezirkSlug).stream()
                 .map(this::toFoodsharingFuturePickupUser)
                 .toList());
     }

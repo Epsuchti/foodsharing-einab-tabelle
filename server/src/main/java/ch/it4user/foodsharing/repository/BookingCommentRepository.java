@@ -10,9 +10,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BookingCommentRepository extends JpaRepository<BookingComment, UUID> {
 
-    @EntityGraph(attributePaths = {"teacher"})
+    @EntityGraph(attributePaths = {"teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     List<BookingComment> findAllByBookingUserOrderByCreatedAtAsc(User bookingUser);
 
-    @EntityGraph(attributePaths = {"teacher"})
+    @EntityGraph(attributePaths = {"teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     List<BookingComment> findAllByBookingUserInOrderByCreatedAtAsc(Collection<User> bookingUsers);
 }
