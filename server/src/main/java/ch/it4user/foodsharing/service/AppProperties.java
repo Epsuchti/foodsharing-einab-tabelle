@@ -105,6 +105,7 @@ public class AppProperties {
         private boolean enabled = true;
         private boolean dryRun = true;
         private int cleaningBackCheckMonths = 6;
+        private int minimumFreeCleaningSlots = 4;
         private String pollInterval = "PT5M";
         private String futurePickupCacheTtl = "PT15M";
         private String storePickupCacheTtl = "PT1M";
@@ -118,6 +119,8 @@ public class AppProperties {
         public void setDryRun(boolean dryRun) { this.dryRun = dryRun; }
         public int getCleaningBackCheckMonths() { return cleaningBackCheckMonths; }
         public void setCleaningBackCheckMonths(int cleaningBackCheckMonths) { this.cleaningBackCheckMonths = cleaningBackCheckMonths; }
+        public int getMinimumFreeCleaningSlots() { return minimumFreeCleaningSlots; }
+        public void setMinimumFreeCleaningSlots(int minimumFreeCleaningSlots) { this.minimumFreeCleaningSlots = minimumFreeCleaningSlots; }
         public String getPollInterval() { return pollInterval; }
         public void setPollInterval(String pollInterval) { this.pollInterval = pollInterval; }
         public String getFuturePickupCacheTtl() { return futurePickupCacheTtl; }

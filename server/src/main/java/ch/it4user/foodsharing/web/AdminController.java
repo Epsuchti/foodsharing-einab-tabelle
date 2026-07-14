@@ -3,9 +3,7 @@ package ch.it4user.foodsharing.web;
 import ch.it4user.foodsharing.openapi.api.AdminApi;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
 import ch.it4user.foodsharing.openapi.model.AdminBezirkResponse;
-import ch.it4user.foodsharing.openapi.model.AdminEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.AutomationRunSummary;
-import ch.it4user.foodsharing.openapi.model.BookingListResponse;
 import ch.it4user.foodsharing.openapi.model.BookingUserResponse;
 import ch.it4user.foodsharing.openapi.model.FoodsharingAutomationAudit;
 import ch.it4user.foodsharing.openapi.model.FoodsharingCleaningRuleExemption;
@@ -109,20 +107,6 @@ public class AdminController implements AdminApi {
     public ResponseEntity<TeacherResponse> revokeAdminTeacher(UUID teacherId) {
         currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
         return ResponseEntity.ok(mapper.toTeacherResponse(adminService.setTeacherAdmin(teacherId, false)));
-    }
-
-    @Override
-    public ResponseEntity<AdminEinAbListResponse> getAdminEinAbs(String bezirkSlug, Integer page, Integer size) {
-        currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
-        return ResponseEntity.ok(mapper.toAdminEinAbListResponse(
-                adminService.getEinAbs(bezirkSlug, page == null ? 0 : page, size == null ? 20 : size)));
-    }
-
-    @Override
-    public ResponseEntity<BookingListResponse> getAdminBookings(String bezirkSlug, Integer page, Integer size) {
-        currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
-        return ResponseEntity.ok(mapper.toBookingListResponse(
-                adminService.getBookings(bezirkSlug, page == null ? 0 : page, size == null ? 20 : size)));
     }
 
     @Override

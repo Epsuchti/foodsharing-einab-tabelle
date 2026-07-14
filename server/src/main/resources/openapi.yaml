@@ -642,52 +642,6 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/admin/bezirke/{bezirkSlug}/einabs:
-    get:
-      tags: [admin]
-      operationId: getAdminEinAbs
-      parameters:
-        - $ref: '#/components/parameters/BezirkSlug'
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 0
-        - name: size
-          in: query
-          schema:
-            type: integer
-            default: 20
-      responses:
-        '200':
-          description: All EinAbs
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AdminEinAbListResponse'
-  /api/admin/bezirke/{bezirkSlug}/bookings:
-    get:
-      tags: [admin]
-      operationId: getAdminBookings
-      parameters:
-        - $ref: '#/components/parameters/BezirkSlug'
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 0
-        - name: size
-          in: query
-          schema:
-            type: integer
-            default: 20
-      responses:
-        '200':
-          description: All bookings
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/BookingListResponse'
   /api/admin/bezirke/{bezirkSlug}/users:
     get:
       tags: [admin]

@@ -976,7 +976,7 @@ public class FoodsharingPickupAutomationService {
                             .count();
                     String openCleaningSlots = formatOpenCleaningSlots(cleaningPickups, now);
                     String cleaningOverrideMessage = "Du warst schon länger nicht mehr einen Fairteiler putzen. Wir haben dir den Slot im Betrieb " + a.getStoreName() + " am " + formatSwissDateTime(pickupDate) + " erlaubt, da es aktuell nur " + freeCleaningSlots + " freie Reinigungsslots gibt bei der Fairteilerreinigung. Buch dir doch einen der freien Reinigungsslots: " + openCleaningSlots + ".";
-                    if (freeCleaningSlots < 4) {
+                    if (freeCleaningSlots < appProperties.getFoodsharing().getAutomation().getMinimumFreeCleaningSlots()) {
                         reasons.add(cleaningOverrideMessage);
                     } else {
                         String historyText;
@@ -986,7 +986,7 @@ public class FoodsharingPickupAutomationService {
                             long lastCleaningMonths = monthsAgo(lastCleaning, now);
                             historyText = "Deine letzte Reinigung ist " + lastCleaningMonths + monthSuffix(lastCleaningMonths) + " her.";
                         }
-                        reasons.add("Du hast in den letzten " + backCheckMonths + monthSuffix(backCheckMonths) + " keinen Fairteiler geputzt. " + historyText + " Zudem hast du keine zukünftige Reinigung geplant. Bitte trage dich für eine Reinigung im Betrieb " + a.getStoreName() + " am " + formatSwissDateTime(pickupDate) + " ein, damit weitere Abholungen geplant werden können. Buch dir doch einen der freien Reinigungsslots: " + openCleaningSlots + ".");
+                        reasons.add("Du hast in den letzten " + backCheckMonths + monthSuffix(backCheckMonths) + " keinen Fairteiler geputzt. " + historyText + " Zudem hast du keine zukünftige Reinigung geplant. Bitte trage dich für eine Reinigung im Betrieb " + a.getStoreName() + " ein, damit weitere Abholungen geplant werden können. Buch dir doch einen der freien Reinigungsslots: " + openCleaningSlots + ".");
                     }
                 }
             }

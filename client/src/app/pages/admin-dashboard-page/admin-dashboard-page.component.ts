@@ -4,12 +4,8 @@ import { FormsModule } from '@angular/forms';
 
 import {
   AdminBezirkResponse,
-  AdminEinAbListResponse,
   AdminBookingUserPageResponse,
   AdminBookingUserResponse,
-  BookingListResponse,
-  BookingDetailResponse,
-  EinAbResponse,
   AdminService
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
@@ -47,10 +43,6 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 export class AdminDashboardPageComponent implements OnInit {
   readonly i18n = inject(I18nService);
 
-  protected readonly einAbs = signal<EinAbResponse[]>([]);
-  protected readonly einAbsPage = signal<AdminEinAbListResponse | null>(null);
-  protected readonly bookings = signal<BookingDetailResponse[]>([]);
-  protected readonly bookingsPage = signal<BookingListResponse | null>(null);
   protected readonly usersPage = signal<AdminBookingUserPageResponse | null>(null);
   protected readonly bezirkSettings = signal<AdminBezirkResponse | null>(null);
   protected readonly cleaningStoreId = signal<number | null>(null);
@@ -70,25 +62,6 @@ export class AdminDashboardPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadBezirkSettings();
-    this.reload();
-  }
-
-  reload(): void {
-    const bezirkSlug = this.bezirkContext.currentSlug();
-    this.adminApi.getAdminEinAbs({ bezirkSlug, page: this.einAbsPage()?.page ?? 0, size: this.pageSize }).subscribe({
-      next: (response) => {
-        this.einAbs.set(response.einAbs);
-        this.einAbsPage.set(response);
-      },
-      error: (error) => this.toastError(resolveApiError(error, this.i18n))
-    });
-    this.adminApi.getAdminBookings({ bezirkSlug, page: this.bookingsPage()?.page ?? 0, size: this.pageSize }).subscribe({
-      next: (response) => {
-        this.bookings.set(response.bookings);
-        this.bookingsPage.set(response);
-      },
-      error: (error) => this.toastError(resolveApiError(error, this.i18n))
-    });
     this.loadUsersPage(this.usersPage()?.page ?? 0);
   }
 
@@ -111,16 +84,6 @@ export class AdminDashboardPageComponent implements OnInit {
         this.toastError(resolveApiError(error, this.i18n));
       }
     });
-  }
-
-  onEinAbsPageChange(event: { page?: number }): void {
-    this.einAbsPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
-    this.reload();
-  }
-
-  onBookingsPageChange(event: { page?: number }): void {
-    this.bookingsPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
-    this.reload();
   }
 
   onUsersPageChange(event: { page?: number }): void {
@@ -187,7 +150,7 @@ export class AdminDashboardPageComponent implements OnInit {
       accept: () => {
         this.confirmationService.close();
         this.adminApi.disableAdminBookingUser({ bookingUserId: user.user.id }).subscribe({
-          next: () => this.reload(),
+          next: () => this.loadUsersPage(this.usersPage()?.page ?? 0),
           error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });
       }
@@ -200,7 +163,7 @@ export class AdminDashboardPageComponent implements OnInit {
       accept: () => {
         this.confirmationService.close();
         this.adminApi.enableAdminBookingUser({ bookingUserId: user.user.id }).subscribe({
-          next: () => this.reload(),
+          next: () => this.loadUsersPage(this.usersPage()?.page ?? 0),
           error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });
       }
