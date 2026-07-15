@@ -9,4 +9,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface FoodsharingRequestAutomationAuditRepository extends JpaRepository<FoodsharingRequestAutomationAudit, UUID> {
     List<FoodsharingRequestAutomationAudit> findTop100ByOrderByCreatedAtDesc();
     void deleteAllByAutomation(FoodsharingRequestAutomation automation);
+    void deleteAllByCreatedAtBefore(java.time.Instant createdAt);
 }

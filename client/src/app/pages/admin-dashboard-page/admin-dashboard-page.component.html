@@ -21,6 +21,17 @@
   <p-card>
     <ng-template pTemplate="title">{{ i18n.t('admin.users') }}</ng-template>
     <div class="admin-users-toolbar">
+      <label>
+        {{ i18n.t('bezirk.label') }}
+        <p-select
+          [options]="userFilterOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="selectedBezirkFilter()"
+          (ngModelChange)="setBezirkFilter($event)"
+          appendTo="body">
+        </p-select>
+      </label>
       <label class="filter-toggle">
         <p-checkbox [binary]="true" [ngModel]="activeOnly()" (onChange)="setActiveOnly($event.checked)"></p-checkbox>
         <span>{{ i18n.t('admin.onlyActiveUsers') }}</span>
@@ -28,10 +39,6 @@
       <label class="filter-toggle">
         <p-checkbox [binary]="true" [ngModel]="onlyThreePickups()" (onChange)="setOnlyThreePickups($event.checked)"></p-checkbox>
         <span>{{ i18n.t('admin.onlyThreePickups') }}</span>
-      </label>
-      <label class="filter-toggle">
-        <p-checkbox [binary]="true" [ngModel]="unassignedOnly()" (onChange)="setUnassignedOnly($event.checked)"></p-checkbox>
-        <span>{{ i18n.t('admin.onlyUnassignedUsers') }}</span>
       </label>
       <span class="admin-users-count">{{ usersPage()?.totalElements ?? 0 }} {{ i18n.t('admin.users') }}</span>
     </div>
@@ -45,6 +52,7 @@
             <th></th>
             <th>{{ i18n.t('common.name') }}</th>
             <th>{{ i18n.t('bezirk.label') }}</th>
+            <th>{{ i18n.t('admin.changeBezirk') }}</th>
             <th>{{ i18n.t('common.foodsharingId') }}</th>
             <th>{{ i18n.t('common.phoneNumber') }}</th>
             <th>{{ i18n.t('common.status') }}</th>
@@ -67,6 +75,16 @@
             </td>
             <td>{{ user.user.name }}</td>
             <td>{{ user.user.bezirk?.name ?? i18n.t('bezirk.unassigned') }}</td>
+            <td>
+              <p-select
+                [options]="bezirkOptions()"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="selectedBezirkSlug(user)"
+                (ngModelChange)="setSelectedBezirkSlug(user, $event)"
+                appendTo="body">
+              </p-select>
+            </td>
             <td>{{ user.user.foodsharingId }}</td>
             <td>{{ user.user.phoneNumber ?? '-' }}</td>
             <td>
@@ -88,12 +106,29 @@
               } @else {
                 <button pButton type="button" size="small" severity="contrast" [label]="i18n.t('admin.enableBookingUser')" (click)="enableBookingUser(user)"></button>
               }
+              <button pButton type="button" size="small" [label]="i18n.t('admin.saveBezirk')" (click)="saveUserBezirk(user)"></button>
             </td>
           </tr>
           @if (isUserExpanded(user)) {
             <tr>
-              <td [attr.colspan]="9">
+              <td [attr.colspan]="10">
                 <div class="page-stack">
+                  <div>
+                    <h4>{{ i18n.t('admin.userPermissions') }}</h4>
+                    <p>{{ i18n.t('admin.userPermissionsHelp') }}</p>
+                    <div class="user-permissions-form">
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canGiveEinAbs"></p-checkbox><span>{{ i18n.t('permission.canGiveEinAbs') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canManageUsers"></p-checkbox><span>{{ i18n.t('permission.canManageUsers') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomations"></p-checkbox><span>{{ i18n.t('permission.canUseAutomations') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeUserPickupCountGrouping"></p-checkbox><span>{{ i18n.t('permission.canSeeUserPickupCountGrouping') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationSlotApproval"></p-checkbox><span>{{ i18n.t('permission.canUseAutomationSlotApproval') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationRequestApproval"></p-checkbox><span>{{ i18n.t('permission.canUseAutomationRequestApproval') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationOpenSlotAdvertising"></p-checkbox><span>{{ i18n.t('permission.canUseAutomationOpenSlotAdvertising') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeAllAutomationDecisions"></p-checkbox><span>{{ i18n.t('permission.canSeeAllAutomationDecisions') }}</span></label>
+                      <div class="dialog-actions"><button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveUserPermissions(user)"></button></div>
+                    </div>
+                  </div>
+
                   <div>
                     <h4>{{ i18n.t('admin.userPickups') }}</h4>
                     @if (user.bookings.length) {
@@ -163,39 +198,6 @@
     } @else {
       <p class="empty-state">{{ i18n.t('admin.noUsers') }}</p>
     }
-  </p-card>
-
-  <p-card>
-    <ng-template pTemplate="title">{{ i18n.t('admin.userPermissions') }}</ng-template>
-    <p>{{ i18n.t('admin.userPermissionsHelp') }}</p>
-    <p-table [value]="userPanels()" dataKey="user.id" [scrollable]="true">
-      <ng-template pTemplate="header">
-        <tr>
-          <th pFrozenColumn>{{ i18n.t('common.name') }}</th>
-          <th>{{ i18n.t('permission.canGiveEinAbs') }}</th>
-          <th>{{ i18n.t('permission.canManageUsers') }}</th>
-          <th>{{ i18n.t('permission.canSeeUserPickupCountGrouping') }}</th>
-          <th>{{ i18n.t('permission.canUseAutomationSlotApproval') }}</th>
-          <th>{{ i18n.t('permission.canUseAutomationRequestApproval') }}</th>
-          <th>{{ i18n.t('permission.canUseAutomationOpenSlotAdvertising') }}</th>
-          <th>{{ i18n.t('permission.canSeeAllAutomationDecisions') }}</th>
-          <th>{{ i18n.t('common.actions') }}</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-user>
-        <tr>
-          <td pFrozenColumn>{{ user.user.name }}</td>
-          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canGiveEinAbs"></p-checkbox></td>
-          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canManageUsers"></p-checkbox></td>
-          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeUserPickupCountGrouping"></p-checkbox></td>
-          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationSlotApproval"></p-checkbox></td>
-          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationRequestApproval"></p-checkbox></td>
-          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationOpenSlotAdvertising"></p-checkbox></td>
-          <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeAllAutomationDecisions"></p-checkbox></td>
-          <td><button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveUserPermissions(user)"></button></td>
-        </tr>
-      </ng-template>
-    </p-table>
   </p-card>
 
 </section>

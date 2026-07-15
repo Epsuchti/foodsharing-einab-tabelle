@@ -85,6 +85,17 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
     @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""
         select s from Slot s
+        where s.bookingUser in :users
+          and s.status in :statuses
+          and s.bookingUser.active = true
+        order by s.einAb.startDateTime desc
+        """)
+    List<Slot> findAllByActiveBookingUsersAndStatuses(@Param("users") Collection<User> users,
+                                                      @Param("statuses") Collection<SlotStatus> statuses);
+
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
+    @Query("""
+        select s from Slot s
         where s.bookingUser = :bookingUser
           and s.status in :statuses
           and s.einAb.bezirk = :bezirk

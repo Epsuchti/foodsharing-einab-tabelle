@@ -184,7 +184,62 @@
               @if (advertisementRunResult(); as result) { <div class="automation-run-result"><strong>{{ i18n.t('adminAutomation.dryRunSummary') }}</strong>: {{ result.evaluated }} {{ i18n.t('automation.evaluated') }}, {{ result.confirmed }} {{ i18n.t('automation.wouldAct') }}, {{ result.declined }} {{ i18n.t('automation.skipped') }}.</div> }
               @for (store of advertisementAutomationStores(); track store.storeId) { <p-card><ng-template pTemplate="title">{{ store.storeName }}</ng-template>
                 @if (advertisementNumbers(store).length === 0) { <p class="empty-state">{{ i18n.t('automation.noAdvertisements') }}</p> }
-                @for (advertNumber of advertisementNumbers(store); track advertNumber) { <div class="advert-config"><h4>{{ i18n.t('automation.alert') }} {{ advertNumber }}</h4><label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertEnabled' + advertNumber]"></p-checkbox> {{ i18n.t('adminAutomation.enabled') }}</label><p-inputNumber [(ngModel)]="$any(store)['advertHoursBefore' + advertNumber]" [min]="1" [max]="168" [suffix]="' ' + i18n.t('automation.hoursBefore')"></p-inputNumber><label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendToStoreChat' + advertNumber]"></p-checkbox> {{ i18n.t('automation.storeChat') }}</label><label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendToTelegram' + advertNumber]"></p-checkbox> {{ i18n.t('automation.telegram') }}</label><p-select [options]="telegramChatOptions()" [(ngModel)]="$any(store)['advertTelegramChatId' + advertNumber]" [editable]="true" [placeholder]="i18n.t('automation.telegramChat')" appendTo="body"></p-select><div class="advert-messages"><div class="advert-messages__header"><strong>{{ i18n.t('automation.messages') }}</strong><button pButton type="button" size="small" icon="pi pi-plus" [label]="i18n.t('automation.addMessage')" (click)="addAdvertisementMessage(store, advertNumber)"></button></div><div class="advert-messages__note">{{ i18n.t('automation.messagesRandomizedNote') }}</div><div class="advert-message-list">@for (message of advertisementMessages(store, advertNumber); track $index) { <div class="advert-message-row"><textarea pInputText rows="4" [ngModel]="message" (ngModelChange)="updateAdvertisementMessage(store, advertNumber, $index, $event)" [placeholder]="i18n.t('automation.messageTemplatePlaceholder')"></textarea><button pButton type="button" size="small" severity="secondary" [label]="i18n.t('common.delete')" (click)="removeAdvertisementMessage(store, advertNumber, $index)" [disabled]="advertisementMessages(store, advertNumber).length === 1"></button></div> }</div></div><div class="advert-preview"><strong>{{ i18n.t('automation.preview') }}:</strong> {{ previewOpenSlotAdvertisement(store, advertNumber) }}</div><div class="actions-cell"><button pButton type="button" size="small" severity="secondary" [label]="i18n.t('automation.sendTelegramTest')" (click)="sendTelegramTestMessage(store, advertNumber)"></button><button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveOpenSlotAdvertisement(store, advertNumber)"></button><button pButton type="button" size="small" severity="danger" [label]="i18n.t('common.delete')" (click)="deleteAdvertisementAutomation(store, advertNumber)"></button></div></div> }
+                @for (advertNumber of advertisementNumbers(store); track advertNumber) {
+                  <div class="advert-config">
+                    <h4>{{ i18n.t('automation.alert') }} {{ advertNumber }}</h4>
+                    <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertEnabled' + advertNumber]"></p-checkbox> {{ i18n.t('adminAutomation.enabled') }}</label>
+                    <p-inputNumber [(ngModel)]="$any(store)['advertHoursBefore' + advertNumber]" [min]="1" [max]="168" [suffix]="' ' + i18n.t('automation.hoursBefore')"></p-inputNumber>
+                    <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendToStoreChat' + advertNumber]"></p-checkbox> {{ i18n.t('automation.storeChat') }}</label>
+                    <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendToTelegram' + advertNumber]"></p-checkbox> {{ i18n.t('automation.telegram') }}</label>
+                    <p-select [options]="telegramChatOptions()" [(ngModel)]="$any(store)['advertTelegramChatId' + advertNumber]" [editable]="true" [placeholder]="i18n.t('automation.telegramChat')" appendTo="body"></p-select>
+
+                    <div class="advert-messages">
+                      <div class="advert-messages__header">
+                        <strong>{{ i18n.t('automation.storeChatMessages') }}</strong>
+                        <button pButton type="button" size="small" icon="pi pi-plus" [label]="i18n.t('automation.addStoreChatMessage')" (click)="addAdvertisementMessage(store, advertNumber, 'store')"></button>
+                      </div>
+                      <div class="advert-messages__note">{{ i18n.t('automation.messagesRandomizedNote') }}</div>
+                      <div class="advert-message-list">
+                        @for (message of advertisementMessages(store, advertNumber, 'store'); track $index) {
+                          <div class="advert-message-row">
+                            <textarea pInputText rows="4" [ngModel]="message" (ngModelChange)="updateAdvertisementMessage(store, advertNumber, 'store', $index, $event)" [placeholder]="i18n.t('automation.messageTemplatePlaceholder')"></textarea>
+                            <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('common.delete')" (click)="removeAdvertisementMessage(store, advertNumber, 'store', $index)" [disabled]="advertisementMessages(store, advertNumber, 'store').length === 1"></button>
+                          </div>
+                        }
+                      </div>
+                    </div>
+
+                    <div class="advert-messages">
+                      <div class="advert-messages__header">
+                        <strong>{{ i18n.t('automation.telegramMessages') }}</strong>
+                        <button pButton type="button" size="small" icon="pi pi-plus" [label]="i18n.t('automation.addTelegramMessage')" (click)="addAdvertisementMessage(store, advertNumber, 'telegram')"></button>
+                      </div>
+                      <div class="advert-messages__note">{{ i18n.t('automation.messagesRandomizedNote') }}</div>
+                      <div class="advert-message-list">
+                        @for (message of advertisementMessages(store, advertNumber, 'telegram'); track $index) {
+                          <div class="advert-message-row">
+                            <textarea pInputText rows="4" [ngModel]="message" (ngModelChange)="updateAdvertisementMessage(store, advertNumber, 'telegram', $index, $event)" [placeholder]="i18n.t('automation.messageTemplatePlaceholder')"></textarea>
+                            <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('common.delete')" (click)="removeAdvertisementMessage(store, advertNumber, 'telegram', $index)" [disabled]="advertisementMessages(store, advertNumber, 'telegram').length === 1"></button>
+                          </div>
+                        }
+                      </div>
+                    </div>
+
+                    <div class="advert-preview">
+                      <strong>{{ i18n.t('automation.preview') }} {{ i18n.t('automation.storeChat') }}:</strong>
+                      {{ previewOpenSlotAdvertisement(store, advertNumber, 'store') }}
+                    </div>
+                    <div class="advert-preview">
+                      <strong>{{ i18n.t('automation.preview') }} {{ i18n.t('automation.telegram') }}:</strong>
+                      {{ previewOpenSlotAdvertisement(store, advertNumber, 'telegram') }}
+                    </div>
+                    <div class="actions-cell">
+                      <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('automation.sendTelegramTest')" (click)="sendTelegramTestMessage(store, advertNumber)"></button>
+                      <button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveOpenSlotAdvertisement(store, advertNumber)"></button>
+                      <button pButton type="button" size="small" severity="danger" [label]="i18n.t('common.delete')" (click)="deleteAdvertisementAutomation(store, advertNumber)"></button>
+                    </div>
+                  </div>
+                }
                 <button pButton type="button" icon="pi pi-plus" [label]="i18n.t('automation.createAlert')" [disabled]="advertisementNumbers(store).length >= 3" (click)="addAdvertisement(store)"></button>
               </p-card> }
               @if (sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) { <ng-container *ngTemplateOutlet="advertisementAudit; context: { entries: advertisementAutomationAudit() }"></ng-container> }

@@ -50,6 +50,10 @@ public class FoodsharingOpenSlotAdvertisementAutomation extends BaseEntity {
     private String telegramChatId;
 
     @JdbcTypeCode(SqlTypes.CLOB)
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String messagesJson = "[]";
+    @Column(name = "store_messages_json", nullable = false, columnDefinition = "TEXT")
+    private String storeMessagesJson = "[]";
+
+    @JdbcTypeCode(SqlTypes.CLOB)
+    @Column(name = "telegram_messages_json", nullable = false, columnDefinition = "TEXT")
+    private String telegramMessagesJson = "[]";
 }

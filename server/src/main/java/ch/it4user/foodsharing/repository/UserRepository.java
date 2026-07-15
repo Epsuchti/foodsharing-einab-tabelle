@@ -37,6 +37,10 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findAllByBezirkIsNull();
 
     @EntityGraph(attributePaths = {"bezirk"})
+    @Query("select u from User u")
+    List<User> findAllWithBezirk();
+
+    @EntityGraph(attributePaths = {"bezirk"})
     Page<User> findAllByCanManageUsersTrueOrderByNameAsc(Pageable pageable);
 
     @EntityGraph(attributePaths = {"bezirk"})

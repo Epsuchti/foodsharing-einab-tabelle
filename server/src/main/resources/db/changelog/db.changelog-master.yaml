@@ -2,3 +2,6 @@ databaseChangeLog:
   - include:
       file: db.changelog-001-initial.yaml
       relativeToChangelogFile: true
+  - include:
+      file: db.changelog-002-split-open-slot-advertisement-messages.yaml
+      relativeToChangelogFile: true

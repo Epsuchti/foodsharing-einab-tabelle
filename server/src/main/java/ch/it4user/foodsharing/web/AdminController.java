@@ -33,6 +33,7 @@ import ch.it4user.foodsharing.openapi.model.TelegramChat;
 import ch.it4user.foodsharing.openapi.model.TelegramTestMessageRequest;
 import ch.it4user.foodsharing.openapi.model.UserPermissionsRequest;
 import ch.it4user.foodsharing.openapi.model.UpdateBezirkRequest;
+import ch.it4user.foodsharing.openapi.model.UpdateUserBezirkRequest;
 import ch.it4user.foodsharing.domain.entity.Bezirk;
 import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.enumtype.UserPermission;
@@ -116,7 +117,8 @@ public class AdminController implements AdminApi {
             Integer size,
             Boolean threePickupsOnly,
             Boolean activeOnly,
-            Boolean unassigned) {
+            Boolean unassigned,
+            Boolean allBezirke) {
         currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
         int resolvedPage = page == null ? 0 : page;
         int resolvedSize = size == null ? 50 : size;
@@ -126,6 +128,7 @@ public class AdminController implements AdminApi {
                 adminService.getUsers(
                         bezirkSlug,
                         Boolean.TRUE.equals(unassigned),
+                        Boolean.TRUE.equals(allBezirke),
                         resolvedPage,
                         resolvedSize,
                         resolvedThreePickupsOnly,
@@ -205,6 +208,13 @@ public class AdminController implements AdminApi {
                 Boolean.TRUE.equals(request.getCanUseAutomationOpenSlotAdvertising()),
                 Boolean.TRUE.equals(request.getCanSeeAllAutomationDecisions()));
         return ResponseEntity.ok(mapper.toTeacherResponse(adminService.setUserPermissions(userId, permissions)));
+    }
+
+    @Override
+    public ResponseEntity<BookingUserResponse> updateAdminUserBezirk(UUID userId, UpdateUserBezirkRequest request) {
+        currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
+        return ResponseEntity.ok(mapper.toBookingUserResponse(
+                adminService.setUserBezirk(userId, request == null ? null : request.getBezirkSlug())));
     }
 
     @Override
@@ -385,7 +395,8 @@ public class AdminController implements AdminApi {
                         Boolean.TRUE.equals(request.getSendToStoreChat()),
                         Boolean.TRUE.equals(request.getSendToTelegram()),
                         request.getTelegramChatId(),
-                        request.getMessages() == null ? List.of() : request.getMessages());
+                        request.getStoreMessages() == null ? List.of() : request.getStoreMessages(),
+                        request.getTelegramMessages() == null ? List.of() : request.getTelegramMessages());
         return ResponseEntity.ok(toFoodsharingOpenSlotAdvertisementAutomation(
                 foodsharingPickupAutomationService.saveAdvertisementAutomation(storeId, advertNumber, serviceRequest)));
     }
@@ -535,7 +546,8 @@ public class AdminController implements AdminApi {
         response.setSendToStoreChat(advertisement.sendToStoreChat());
         response.setSendToTelegram(advertisement.sendToTelegram());
         response.setTelegramChatId(advertisement.telegramChatId());
-        response.setMessages(advertisement.messages());
+        response.setStoreMessages(advertisement.storeMessages());
+        response.setTelegramMessages(advertisement.telegramMessages());
         response.setEditable(advertisement.editable());
         return response;
     }

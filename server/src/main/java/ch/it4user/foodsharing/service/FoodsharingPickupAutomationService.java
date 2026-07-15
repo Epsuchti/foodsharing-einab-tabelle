@@ -267,8 +267,15 @@ public class FoodsharingPickupAutomationService {
         a.setStoreName(request.storeName() == null ? a.getStoreName() : request.storeName());
         a.setEnabled(request.enabled()); a.setTriggerHoursBefore(Math.max(1, request.triggerHoursBefore()));
         a.setSendToStoreChat(request.sendToStoreChat()); a.setSendToTelegram(request.sendToTelegram()); a.setTelegramChatId(blankToNull(request.telegramChatId()));
-        validateTemplateVariables(request.messages());
-        a.setMessagesJson(serializeMessages(request.messages()));
+        if (a.isSendToStoreChat() && isBlankMessages(request.storeMessages())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Store chat messages are required when store chat is enabled."));
+        }
+        if (a.isSendToTelegram() && isBlankMessages(request.telegramMessages())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Telegram messages are required when Telegram is enabled."));
+        }
+        validateTemplateVariables(request.storeMessages(), request.telegramMessages());
+        a.setStoreMessagesJson(serializeMessages(request.storeMessages()));
+        a.setTelegramMessagesJson(serializeMessages(request.telegramMessages()));
         a = advertisementAutomationRepository.save(a);
         return advertisementView(a, true);
     }
@@ -307,25 +314,22 @@ public class FoodsharingPickupAutomationService {
             if (requests.isEmpty()) {
                 skipped++;
                 String message = "No open requests for " + a.getStoreName() + " (" + a.getStoreId() + ").";
-                saveRequestAudit(a, (String) null, (String) null, dryRun, "SKIPPED", message, null, null);
                 messages.add(message);
             }
             for (FoodsharingPickupApiClient.RequestUser user : requests) {
                 if (acted >= maxApprovals) {
                     skipped++;
                     String message = "Request automation limit reached (" + maxApprovals + ").";
-                    saveRequestAudit(a, user, dryRun, "SKIPPED", message, null, null);
                     messages.add(message);
                     break;
                 }
                 evaluated++;
                 log.info("Foodsharing request automation approving dryRun={} storeId={} userId={} userName={}", dryRun, a.getStoreId(), user.id(), user.name());
-                if (user.id() == null || user.id().isBlank()) { skipped++; saveRequestAudit(a, user, dryRun, "SKIPPED", "Missing Foodsharing user id.", null, null); continue; }
+                if (user.id() == null || user.id().isBlank()) { skipped++; continue; }
                 if (a.isDistanceRuleEnabled()) {
                     Double distanceInKm = user.distanceInKm();
                     if (distanceInKm == null) {
                         skipped++;
-                        saveRequestAudit(a, user, dryRun, "SKIPPED", "Missing request distance.", null, null);
                         continue;
                     }
                     if (distanceInKm > a.getMaximumDistanceKm()) {
@@ -334,10 +338,9 @@ public class FoodsharingPickupAutomationService {
                             client.declineRequest(a.getAdminConnection(), a.getStoreId(), user.id(), message);
                             invalidateStoreCaches(a.getAdminConnection(), a.getStoreId());
                             acted++;
-                            saveRequestAudit(a, user, dryRun, "DECLINED", message, message, null);
+                            saveRequestAudit(a, user, "DECLINED", message, message, null);
                         } else {
                             skipped++;
-                            saveRequestAudit(a, user, dryRun, "WOULD_DECLINE", message, message, null);
                         }
                         messages.add((dryRun ? "Würde ablehnen: " : "Abgelehnt: ") + message);
                         continue;
@@ -347,11 +350,12 @@ public class FoodsharingPickupAutomationService {
                     if (!dryRun) { client.approveRequest(a.getAdminConnection(), a.getStoreId(), user.id()); invalidateStoreCaches(a.getAdminConnection(), a.getStoreId()); }
                     acted++;
                     String reason = (dryRun ? "Would approve request." : "Request approved.");
-                    saveRequestAudit(a, user, dryRun, dryRun ? "WOULD_APPROVE" : "APPROVED", reason, null, null);
+                    if (!dryRun) {
+                        saveRequestAudit(a, user, "APPROVED", reason, null, null);
+                    }
                     messages.add((dryRun ? "Would approve " : "Approved ") + user.name() + " (" + user.id() + ") for " + a.getStoreName() + ".");
                 } catch (RuntimeException ex) {
                     skipped++;
-                    saveRequestAudit(a, user, dryRun, "FAILED", "Request approval failed.", null, ex.getMessage());
                     messages.add("Failed to approve " + user.name() + " (" + user.id() + "): " + ex.getMessage());
                 }
             }
@@ -392,13 +396,14 @@ public class FoodsharingPickupAutomationService {
         int skipped = 0;
         int maxAdvertisements = Math.max(0, appProperties.getFoodsharing().getAutomation().getMaxAdvertisementsPerRun());
         for (FoodsharingOpenSlotAdvertisementAutomation a : advertisementAutomationRepository.findAllByEnabledTrue()) {
-            List<String> messages = deserializeMessages(a.getMessagesJson());
+            List<String> storeMessages = deserializeMessages(a.getStoreMessagesJson());
+            List<String> telegramMessages = deserializeMessages(a.getTelegramMessagesJson());
             int checkedSlots = 0;
             int automationActed = 0;
-            if (messages.isEmpty()) {
+            if ((a.isSendToStoreChat() && storeMessages.isEmpty()) || (a.isSendToTelegram() && telegramMessages.isEmpty())) {
                 skipped++;
                 if (dryRun) {
-                    saveAdvertisementRunSummaryAudit(a, now, true, 0, 0, 0, "Advertisement skipped: no messages configured.");
+                    saveAdvertisementRunSummaryAudit(a, now, true, 0, 0, 0, "Advertisement skipped: missing messages for a selected channel.");
                 }
                 continue;
             }
@@ -432,14 +437,19 @@ public class FoodsharingPickupAutomationService {
                     skipped++;
                     break;
                 }
-                String message = renderAdvertisement(messages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(messages.size())), p.date(), a.getAdminConnection().getFoodsharingUserId());
-                if (!dryRun && a.isSendToStoreChat()) client.sendStoreChatMessage(a.getAdminConnection(), a.getStoreId(), message);
+                String storeMessage = a.isSendToStoreChat()
+                        ? renderAdvertisement(storeMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(storeMessages.size())), p.date(), a.getAdminConnection().getFoodsharingUserId())
+                        : null;
+                String telegramMessage = a.isSendToTelegram()
+                        ? renderAdvertisement(telegramMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(telegramMessages.size())), p.date(), a.getAdminConnection().getFoodsharingUserId())
+                        : null;
+                if (!dryRun && storeMessage != null) client.sendStoreChatMessage(a.getAdminConnection(), a.getStoreId(), storeMessage);
                 Integer telegramMessageId = null;
-                if (!dryRun && a.isSendToTelegram() && a.getTelegramChatId() != null) telegramMessageId = sendTelegram(a, message);
+                if (!dryRun && telegramMessage != null && a.getTelegramChatId() != null) telegramMessageId = sendTelegram(a, telegramMessage);
                 if (dryRun) {
                     automationActed++;
                 } else {
-                    saveAdvertisementAudit(a, p.date(), false, "SENT", "Advertisement sent.", message, null, telegramMessageId);
+                    saveAdvertisementAudit(a, p.date(), false, "SENT", "Advertisement sent.", combineAdvertisementMessages(storeMessage, telegramMessage), null, telegramMessageId);
                 }
                 acted++;
             }
@@ -465,18 +475,18 @@ public class FoodsharingPickupAutomationService {
     }
 
 
-    private void saveRequestAudit(FoodsharingRequestAutomation automation, FoodsharingPickupApiClient.RequestUser user, boolean dryRun, String status, String reason, String message, String error) {
-        saveRequestAudit(automation, user.id(), user.name(), dryRun, status, reason, message, error);
+    private void saveRequestAudit(FoodsharingRequestAutomation automation, FoodsharingPickupApiClient.RequestUser user, String status, String reason, String message, String error) {
+        saveRequestAudit(automation, user.id(), user.name(), status, reason, message, error);
     }
 
-    private void saveRequestAudit(FoodsharingRequestAutomation automation, String foodsharingUserId, String foodsharingUserName, boolean dryRun, String status, String reason, String message, String error) {
+    private void saveRequestAudit(FoodsharingRequestAutomation automation, String foodsharingUserId, String foodsharingUserName, String status, String reason, String message, String error) {
         FoodsharingRequestAutomationAudit audit = new FoodsharingRequestAutomationAudit();
         audit.setAutomation(automation);
         audit.setStoreId(automation.getStoreId());
         audit.setStoreName(automation.getStoreName());
         audit.setFoodsharingUserId(foodsharingUserId == null || foodsharingUserId.isBlank() ? "unknown" : foodsharingUserId);
         audit.setFoodsharingUserName(foodsharingUserName);
-        audit.setDryRun(dryRun);
+        audit.setDryRun(false);
         audit.setStatus(status);
         audit.setReason(reason);
         audit.setMessage(message);
@@ -531,17 +541,33 @@ public class FoodsharingPickupAutomationService {
         return String.format(Locale.ROOT, "%.1f", value);
     }
 
-    private void validateTemplateVariables(List<String> messages) {
+    private void validateTemplateVariables(List<String>... messageGroups) {
         java.util.Set<String> allowed = java.util.Set.of("date", "dateDe", "weekday", "time", "datetime", "datetimeDe", "adminFoodsharingId", "adminProfileUrl");
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\{\\{\\s*([^}\\s]+)\\s*}} ".trim());
-        for (String message : messages == null ? List.<String>of() : messages) {
-            java.util.regex.Matcher matcher = pattern.matcher(message == null ? "" : message);
-            while (matcher.find()) {
-                if (!allowed.contains(matcher.group(1))) {
-                    throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Unknown template variable: {{" + matcher.group(1) + "}}"));
+        for (List<String> messages : messageGroups == null ? List.<List<String>>of() : java.util.Arrays.asList(messageGroups)) {
+            for (String message : messages == null ? List.<String>of() : messages) {
+                java.util.regex.Matcher matcher = pattern.matcher(message == null ? "" : message);
+                while (matcher.find()) {
+                    if (!allowed.contains(matcher.group(1))) {
+                        throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Unknown template variable: {{" + matcher.group(1) + "}}"));
+                    }
                 }
             }
         }
+    }
+
+    private String combineAdvertisementMessages(String storeMessage, String telegramMessage) {
+        if (storeMessage == null || storeMessage.isBlank()) {
+            return telegramMessage;
+        }
+        if (telegramMessage == null || telegramMessage.isBlank()) {
+            return storeMessage;
+        }
+        return "Store chat:\n" + storeMessage + "\n\nTelegram:\n" + telegramMessage;
+    }
+
+    private boolean isBlankMessages(List<String> messages) {
+        return messages == null || messages.stream().allMatch(message -> message == null || message.isBlank());
     }
 
     private void invalidateStoreCaches(FoodsharingAdminConnection connection, long storeId) {
@@ -1088,7 +1114,7 @@ public class FoodsharingPickupAutomationService {
 
     private CleaningRuleExemptionView view(FoodsharingCleaningRuleExemption exemption) { return new CleaningRuleExemptionView(exemption.getId(), exemption.getFoodsharingId(), exemption.getReason()); }
     private AdvertisementAutomationView advertisementView(FoodsharingOpenSlotAdvertisementAutomation a, boolean editable) {
-        return new AdvertisementAutomationView(a.getStoreId(), a.getStoreName(), a.getAdvertNumber(), a.isEnabled(), a.getTriggerHoursBefore(), a.isSendToStoreChat(), a.isSendToTelegram(), a.getTelegramChatId(), deserializeMessages(a.getMessagesJson()), editable);
+        return new AdvertisementAutomationView(a.getStoreId(), a.getStoreName(), a.getAdvertNumber(), a.isEnabled(), a.getTriggerHoursBefore(), a.isSendToStoreChat(), a.isSendToTelegram(), a.getTelegramChatId(), deserializeMessages(a.getStoreMessagesJson()), deserializeMessages(a.getTelegramMessagesJson()), editable);
     }
 
     private String serializeMessages(List<String> messages) {
@@ -1232,8 +1258,8 @@ public class FoodsharingPickupAutomationService {
 
     public record RequestAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled, boolean distanceRuleEnabled, Double maximumDistanceKm) {}
     public record RequestAutomationView(long storeId, String storeName, boolean enabled, boolean dryRunEnabled, boolean distanceRuleEnabled, double maximumDistanceKm, boolean editable) {}
-    public record AdvertisementAutomationRequest(String storeName, boolean enabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> messages) {}
-    public record AdvertisementAutomationView(long storeId, String storeName, int advertNumber, boolean enabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> messages, boolean editable) {}
+    public record AdvertisementAutomationRequest(String storeName, boolean enabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> storeMessages, List<String> telegramMessages) {}
+    public record AdvertisementAutomationView(long storeId, String storeName, int advertNumber, boolean enabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> storeMessages, List<String> telegramMessages, boolean editable) {}
     public record TelegramChatView(String id, String title, String type) {}
     public record AutomationRunSummary(int evaluated, int acted, int skipped, boolean dryRun, List<String> messages) {}
     public record ExtraAutomationOverviewView(List<RequestAutomationView> requestAutomations, List<AdvertisementAutomationView> advertisementAutomations) {}

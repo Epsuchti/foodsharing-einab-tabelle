@@ -76,17 +76,20 @@ public class AdminService {
 
     public AdminUsersView getUsers(String bezirkSlug,
                                    boolean unassigned,
+                                   boolean allBezirke,
                                    int page,
                                    int size,
                                    boolean threePickupsOnly,
                                    boolean activeOnly) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 100);
-        Bezirk bezirk = unassigned ? null : bezirkService.requireActive(bezirkSlug);
-        List<User> users = unassigned
+        Bezirk bezirk = unassigned || allBezirke ? null : bezirkService.requireActive(bezirkSlug);
+        List<User> users = allBezirke
+                ? userRepository.findAllWithBezirk()
+                : unassigned
                 ? userRepository.findAllByBezirkIsNull()
                 : userRepository.findAllByBezirk(bezirk);
-        Map<UUID, List<Slot>> bookingsByUser = groupBookings(users, bezirk);
+        Map<UUID, List<Slot>> bookingsByUser = groupBookings(users, bezirk, allBezirke);
         Map<UUID, List<BookingComment>> commentsByUser = groupComments(users);
         List<User> sortedUsers = users.stream()
                 .filter(user -> !activeOnly || user.isActive())
@@ -157,6 +160,14 @@ public class AdminService {
     }
 
     @Transactional
+    public User setUserBezirk(UUID userId, String bezirkSlug) {
+        User user = userRepository.findWithBezirkById(userId)
+                .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND));
+        user.setBezirk(bezirkSlug == null || bezirkSlug.isBlank() ? null : bezirkService.requireActive(bezirkSlug));
+        return user;
+    }
+
+    @Transactional
     public User setAdminAdmin(UUID adminUserId, boolean admin) {
         User adminUser = userRepository.findWithBezirkById(adminUserId)
                 .filter(User::isCanManageUsers)
@@ -168,14 +179,13 @@ public class AdminService {
         return adminUser;
     }
 
-    private Map<UUID, List<Slot>> groupBookings(Collection<User> users, Bezirk bezirk) {
-        if (users.isEmpty() || bezirk == null) {
+    private Map<UUID, List<Slot>> groupBookings(Collection<User> users, Bezirk bezirk, boolean allBezirke) {
+        if (users.isEmpty() || (!allBezirke && bezirk == null)) {
             return Map.of();
         }
-        List<Slot> bookings = slotRepository.findAllByActiveBookingUsersAndStatusesAndBezirk(
-                users,
-                ACTIVE_BOOKING_STATUSES,
-                bezirk);
+        List<Slot> bookings = allBezirke
+                ? slotRepository.findAllByActiveBookingUsersAndStatuses(users, ACTIVE_BOOKING_STATUSES)
+                : slotRepository.findAllByActiveBookingUsersAndStatusesAndBezirk(users, ACTIVE_BOOKING_STATUSES, bezirk);
         return bookings.stream().collect(Collectors.groupingBy(slot -> slot.getBookingUser().getId()));
     }
 

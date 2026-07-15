@@ -237,9 +237,8 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     });
   }
 
-  previewOpenSlotAdvertisement(store: FoodsharingStoreAutomation, advertNumber: number): string {
-    const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
-    const templates = String(data[`advertMessages${advertNumber}`] || '').split('\n---\n').map((message) => message.trim()).filter(Boolean);
+  previewOpenSlotAdvertisement(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram'): string {
+    const templates = this.advertisementMessages(store, advertNumber, channel).map((message) => message.trim()).filter(Boolean);
     if (templates.length === 0) {
       return this.i18n.t('automation.addAdvertMessagePreview');
     }
@@ -261,36 +260,38 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     ).join('\n\n---\n\n');
   }
 
-  advertisementMessages(store: FoodsharingStoreAutomation, advertNumber: number): string[] {
+  advertisementMessages(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram'): string[] {
     const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
-    const messages = String(data[`advertMessages${advertNumber}`] || '').split('\n---\n').map((message) => message.trim());
+    const propertyName = channel === 'store' ? `advertStoreMessages${advertNumber}` : `advertTelegramMessages${advertNumber}`;
+    const messages = String(data[propertyName] || '').split('\n---\n').map((message) => message.trim());
     return messages.length > 0 ? messages : [''];
   }
 
-  updateAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number, index: number, value: string): void {
-    const messages = this.advertisementMessages(store, advertNumber);
+  updateAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram', index: number, value: string): void {
+    const messages = this.advertisementMessages(store, advertNumber, channel);
     messages[index] = value;
-    this.setAdvertisementMessages(store, advertNumber, messages);
+    this.setAdvertisementMessages(store, advertNumber, channel, messages);
   }
 
-  addAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number): void {
-    const messages = this.advertisementMessages(store, advertNumber);
+  addAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram'): void {
+    const messages = this.advertisementMessages(store, advertNumber, channel);
     messages.push('');
-    this.setAdvertisementMessages(store, advertNumber, messages);
+    this.setAdvertisementMessages(store, advertNumber, channel, messages);
   }
 
-  removeAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number, index: number): void {
-    const messages = this.advertisementMessages(store, advertNumber);
+  removeAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram', index: number): void {
+    const messages = this.advertisementMessages(store, advertNumber, channel);
     if (messages.length === 1) {
       return;
     }
     messages.splice(index, 1);
-    this.setAdvertisementMessages(store, advertNumber, messages);
+    this.setAdvertisementMessages(store, advertNumber, channel, messages);
   }
 
   saveOpenSlotAdvertisement(store: FoodsharingStoreAutomation, advertNumber: number): void {
     const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
-    const messages = this.advertisementMessages(store, advertNumber).map((message) => message.trim()).filter(Boolean);
+    const storeMessages = this.advertisementMessages(store, advertNumber, 'store').map((message) => message.trim()).filter(Boolean);
+    const telegramMessages = this.advertisementMessages(store, advertNumber, 'telegram').map((message) => message.trim()).filter(Boolean);
     const sendToStoreChat = Boolean(data[`advertSendToStoreChat${advertNumber}`]);
     const sendToTelegram = Boolean(data[`advertSendToTelegram${advertNumber}`]);
     const telegramChatId = String(data[`advertTelegramChatId${advertNumber}`] || '').trim();
@@ -298,12 +299,16 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       this.toastError(this.i18n.t('automation.selectDestination'));
       return;
     }
+    if (sendToStoreChat && storeMessages.length === 0) {
+      this.toastError(this.i18n.t('automation.addStoreChatMessage'));
+      return;
+    }
     if (sendToTelegram && !telegramChatId) {
       this.toastError(this.i18n.t('automation.selectTelegramChat'));
       return;
     }
-    if (messages.length === 0) {
-      this.toastError(this.i18n.t('automation.addAdvertMessage'));
+    if (sendToTelegram && telegramMessages.length === 0) {
+      this.toastError(this.i18n.t('automation.addTelegramMessage'));
       return;
     }
     this.adminApi.saveFoodsharingOpenSlotAdvertisementAutomation({
@@ -316,7 +321,8 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
         sendToStoreChat,
         sendToTelegram,
         telegramChatId: telegramChatId || undefined,
-        messages
+        storeMessages,
+        telegramMessages
       }
     }).subscribe({ next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') }), error: (error) => this.toastError(resolveApiError(error, this.i18n)) });
   }
@@ -331,9 +337,10 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     });
   }
 
-  private setAdvertisementMessages(store: FoodsharingStoreAutomation, advertNumber: number, messages: string[]): void {
+  private setAdvertisementMessages(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram', messages: string[]): void {
     const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
-    data[`advertMessages${advertNumber}`] = messages.join('\n---\n');
+    const propertyName = channel === 'store' ? `advertStoreMessages${advertNumber}` : `advertTelegramMessages${advertNumber}`;
+    data[propertyName] = messages.join('\n---\n');
     this.foodsharingStores.update((stores) => [...stores]);
   }
 
@@ -368,7 +375,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     this.adminApi.sendFoodsharingTelegramTestMessage({
       telegramTestMessageRequest: {
         chatId,
-        message: this.previewOpenSlotAdvertisement(store, advertNumber)
+        message: this.previewOpenSlotAdvertisement(store, advertNumber, 'telegram')
       }
     }).subscribe({
       next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('automation.telegramTestSent') }),
@@ -404,12 +411,12 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
 
   advertisementNumbers(store: FoodsharingStoreAutomation): number[] {
     const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
-    return [1, 2, 3].filter((number) => data[`advertConfigured${number}`] || data[`advertMessages${number}`] !== undefined);
+    return [1, 2, 3].filter((number) => data[`advertConfigured${number}`] || data[`advertStoreMessages${number}`] !== undefined || data[`advertTelegramMessages${number}`] !== undefined);
   }
 
   addAdvertisement(store: FoodsharingStoreAutomation): void {
     const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
-    const advertNumber = [1, 2, 3].find((number) => !data[`advertConfigured${number}`] && data[`advertMessages${number}`] === undefined);
+    const advertNumber = [1, 2, 3].find((number) => !data[`advertConfigured${number}`] && data[`advertStoreMessages${number}`] === undefined && data[`advertTelegramMessages${number}`] === undefined);
     if (!advertNumber) {
       return;
     }
@@ -418,7 +425,8 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     data[`advertHoursBefore${advertNumber}`] = advertNumber === 1 ? 24 : advertNumber === 2 ? 12 : 3;
     data[`advertSendToStoreChat${advertNumber}`] = false;
     data[`advertSendToTelegram${advertNumber}`] = false;
-    data[`advertMessages${advertNumber}`] = '';
+    data[`advertStoreMessages${advertNumber}`] = '';
+    data[`advertTelegramMessages${advertNumber}`] = '';
     this.foodsharingStores.update((stores) => [...stores]);
   }
 
@@ -671,7 +679,8 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
             store[`advertSendToStoreChat${number}`] = advert.sendToStoreChat;
             store[`advertSendToTelegram${number}`] = advert.sendToTelegram;
             store[`advertTelegramChatId${number}`] = advert.telegramChatId;
-            store[`advertMessages${number}`] = (advert.messages || []).join('\n---\n');
+            store[`advertStoreMessages${number}`] = (advert.storeMessages || []).join('\n---\n');
+            store[`advertTelegramMessages${number}`] = (advert.telegramMessages || []).join('\n---\n');
           }
         }
         this.foodsharingStores.set(stores as FoodsharingStoreAutomation[]);

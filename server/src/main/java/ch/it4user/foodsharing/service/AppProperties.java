@@ -112,6 +112,7 @@ public class AppProperties {
         private String storeMembersCacheTtl = "PT1M";
         private int maxRequestApprovalsPerRun = 50;
         private int maxAdvertisementsPerRun = 50;
+        private int auditRetentionDays = 7;
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
@@ -133,6 +134,8 @@ public class AppProperties {
         public void setMaxRequestApprovalsPerRun(int maxRequestApprovalsPerRun) { this.maxRequestApprovalsPerRun = maxRequestApprovalsPerRun; }
         public int getMaxAdvertisementsPerRun() { return maxAdvertisementsPerRun; }
         public void setMaxAdvertisementsPerRun(int maxAdvertisementsPerRun) { this.maxAdvertisementsPerRun = maxAdvertisementsPerRun; }
+        public int getAuditRetentionDays() { return auditRetentionDays; }
+        public void setAuditRetentionDays(int auditRetentionDays) { this.auditRetentionDays = auditRetentionDays; }
     }
 
     public static class Mail {

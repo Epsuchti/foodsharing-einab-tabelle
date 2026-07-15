@@ -10,6 +10,7 @@ import ch.it4user.foodsharing.openapi.model.CreateBookingCommentRequest;
 import ch.it4user.foodsharing.openapi.model.IcalCandidateListResponse;
 import ch.it4user.foodsharing.openapi.model.SlotResponse;
 import ch.it4user.foodsharing.openapi.model.UpdateTeacherMeRequest;
+import ch.it4user.foodsharing.openapi.model.AssignTeacherBezirkRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSelfResponse;
@@ -49,21 +50,27 @@ public class TeacherController implements TeacherApi {
         User teacher = currentActorService.requireTeacher();
         return ResponseEntity.ok(mapper.toTeacherSelfResponse(
                 teacher,
-                teacherService.getIcalCandidates(requireTeacherBezirkSlug(teacher), teacher)));
+                teacherService.getIcalCandidates(teacher)));
     }
 
     @Override
     public ResponseEntity<TeacherSelfResponse> updateTeacherMe(UpdateTeacherMeRequest updateTeacherMeRequest) {
         User teacher = currentActorService.requireTeacher();
         User updated = teacherService.updateProfile(
-                requireTeacherBezirkSlug(teacher),
                 teacher,
                 updateTeacherMeRequest.getPhoneNumber(),
                 updateTeacherMeRequest.getIcalLink(),
                 mapLanguage(updateTeacherMeRequest.getLanguage()));
         return ResponseEntity.ok(mapper.toTeacherSelfResponse(
                 updated,
-                teacherService.getIcalCandidates(requireTeacherBezirkSlug(updated), updated)));
+                teacherService.getIcalCandidates(updated)));
+    }
+
+    @Override
+    public ResponseEntity<ch.it4user.foodsharing.openapi.model.TeacherResponse> assignTeacherBezirk(
+            AssignTeacherBezirkRequest request) {
+        return ResponseEntity.ok(mapper.toTeacherResponse(
+                teacherService.assignBezirk(currentActorService.requireTeacher(), request.getBezirkSlug())));
     }
 
     @Override
@@ -164,8 +171,7 @@ public class TeacherController implements TeacherApi {
             Integer page,
             Integer size) {
         User teacher = currentActorService.requireTeacher();
-        List<ch.it4user.foodsharing.openapi.model.IcalCandidate> candidates = teacherService.getIcalCandidates(
-                requireTeacherBezirkSlug(teacher), teacher);
+        List<ch.it4user.foodsharing.openapi.model.IcalCandidate> candidates = teacherService.getIcalCandidates(teacher);
         int safePage = page == null ? 0 : Math.max(page, 0);
         int safeSize = size == null ? 20 : Math.min(Math.max(size, 1), 100);
         int fromIndex = Math.min(safePage * safeSize, candidates.size());
@@ -217,12 +223,4 @@ public class TeacherController implements TeacherApi {
         return value == null ? null : value.toInstant();
     }
 
-    private String requireTeacherBezirkSlug(User teacher) {
-        if (teacher.getBezirk() == null) {
-            throw new ch.it4user.foodsharing.service.ApiException(
-                    org.springframework.http.HttpStatus.CONFLICT,
-                    ch.it4user.foodsharing.service.ApiErrorCode.USER_BEZIRK_MISMATCH);
-        }
-        return teacher.getBezirk().getSlug();
-    }
 }

@@ -88,6 +88,18 @@ public class TeacherService {
         return managedTeacher;
     }
 
+    @Transactional
+    public User assignBezirk(User teacher, String bezirkSlug) {
+        User managedTeacher = userRepository.findWithBezirkById(teacher.getId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
+        if (managedTeacher.getBezirk() != null) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_BEZIRK_MISMATCH);
+        }
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        bookingUserService.assignToBezirk(managedTeacher, bezirk);
+        return managedTeacher;
+    }
+
     public Page<EinAb> findTeacherEinAbs(String bezirkSlug, User teacher, int page, int size) {
         Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
         ensureTeacherBezirk(teacher, bezirk);

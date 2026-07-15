@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-split-open-slot-advertisement-messages
+      author: codex
+      changes:
+        - addColumn:
+            tableName: foodsharing_open_slot_advertisement_automations
+            columns:
+              - column:
+                  name: store_messages_json
+                  type: TEXT
+                  defaultValue: '[]'
+                  constraints:
+                    nullable: false
+              - column:
+                  name: telegram_messages_json
+                  type: TEXT
+                  defaultValue: '[]'
+                  constraints:
+                    nullable: false
+        - sql:
+            sql: |
+              update foodsharing_open_slot_advertisement_automations
+              set store_messages_json = messages_json,
+                  telegram_messages_json = messages_json
+              where store_messages_json = '[]' and telegram_messages_json = '[]'

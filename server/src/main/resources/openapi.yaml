@@ -301,6 +301,27 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /api/teacher/bezirke:
+    put:
+      tags: [teacher]
+      operationId: assignTeacherBezirk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignTeacherBezirkRequest'
+      responses:
+        '200':
+          description: Updated teacher profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/teacher/bezirke/{bezirkSlug}/einabs:
     get:
       tags: [teacher]
@@ -680,6 +701,12 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: allBezirke
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: All booking users
@@ -726,6 +753,32 @@ paths:
       responses:
         '200':
           description: Granted admin to user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingUserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/users/{userId}/bezirk:
+    put:
+      tags: [admin]
+      operationId: updateAdminUserBezirk
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserBezirkRequest'
+      responses:
+        '200':
+          description: Updated user bezirk
           content:
             application/json:
               schema:
@@ -1440,6 +1493,12 @@ components:
           format: int64
           minimum: 1
           nullable: true
+    UpdateUserBezirkRequest:
+      type: object
+      properties:
+        bezirkSlug:
+          type: string
+          nullable: true
     Language:
       type: string
       enum: [de, en, gws]
@@ -1602,7 +1661,7 @@ components:
           format: double
     FoodsharingOpenSlotAdvertisementAutomationRequest:
       type: object
-      required: [storeName, enabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, messages]
+      required: [storeName, enabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages]
       properties:
         storeName:
           type: string
@@ -1617,7 +1676,11 @@ components:
           type: boolean
         telegramChatId:
           type: string
-        messages:
+        storeMessages:
+          type: array
+          items:
+            type: string
+        telegramMessages:
           type: array
           items:
             type: string
@@ -1643,7 +1706,7 @@ components:
           type: boolean
     FoodsharingOpenSlotAdvertisementAutomation:
       type: object
-      required: [storeId, storeName, advertNumber, enabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, messages, editable]
+      required: [storeId, storeName, advertNumber, enabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages, editable]
       properties:
         storeId:
           type: integer
@@ -1664,7 +1727,11 @@ components:
           type: boolean
         telegramChatId:
           type: string
-        messages:
+        storeMessages:
+          type: array
+          items:
+            type: string
+        telegramMessages:
           type: array
           items:
             type: string
@@ -2039,6 +2106,12 @@ components:
           maxLength: 2000
         language:
           $ref: '#/components/schemas/Language'
+    AssignTeacherBezirkRequest:
+      type: object
+      required: [bezirkSlug]
+      properties:
+        bezirkSlug:
+          type: string
     BookingUserResponse:
       type: object
       required: [id, name, foodsharingId, language, active, createdAt, updatedAt, canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canUseAutomationRequestApproval, canUseAutomationOpenSlotAdvertising, canSeeAllAutomationDecisions]

@@ -19,4 +19,5 @@ public interface FoodsharingOpenSlotAdvertisementAuditRepository extends JpaRepo
             @Param("triggerHoursBefore") int triggerHoursBefore);
     java.util.List<FoodsharingOpenSlotAdvertisementAudit> findAllByAutomationAndPickupDateAndTelegramMessageIdIsNotNullAndTelegramDeletedAtIsNull(FoodsharingOpenSlotAdvertisementAutomation automation, Instant pickupDate);
     void deleteAllByAutomation(FoodsharingOpenSlotAdvertisementAutomation automation);
+    void deleteAllByCreatedAtBefore(Instant createdAt);
 }
