@@ -33,7 +33,7 @@
         @if (sessionService.hasPermission(UserPermission.CanManageUsers)) {
           <a [routerLink]="bezirkContext.route('admin')" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.admin') }}</a>
         }
-        @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising) || sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
+        @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising) || sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping) || sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) {
           <a [routerLink]="bezirkContext.route('admin', 'foodsharing-automation')" routerLinkActive="active">{{ i18n.t('nav.adminAutomation') }}</a>
         }
       }
@@ -70,7 +70,7 @@
           @if (sessionService.hasPermission(UserPermission.CanManageUsers)) {
             <a [routerLink]="bezirkContext.route('admin')" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">{{ i18n.t('nav.admin') }}</a>
           }
-          @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising) || sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
+          @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval) || sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising) || sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping) || sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) {
             <a [routerLink]="bezirkContext.route('admin', 'foodsharing-automation')" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.adminAutomation') }}</a>
           }
         }

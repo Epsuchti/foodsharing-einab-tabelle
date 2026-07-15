@@ -9,10 +9,13 @@
   margin: 0;
   display: grid;
   gap: 0.5rem;
+  justify-items: center;
 }
 
 .foodsharing-id-help__image {
-  width: 100%;
+  width: min(100%, 760px);
+  max-height: min(56vw, 420px);
+  object-fit: contain;
   border-radius: 8px;
   border: 1px solid #d9e0ea;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);

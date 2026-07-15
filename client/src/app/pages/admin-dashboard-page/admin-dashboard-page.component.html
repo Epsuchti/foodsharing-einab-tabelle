@@ -58,6 +58,11 @@
             <th>{{ i18n.t('common.status') }}</th>
             <th>{{ i18n.t('admin.requested') }}</th>
             <th>{{ i18n.t('admin.pickups') }}</th>
+            <th>{{ i18n.t('permission.canGiveEinAbs') }}</th>
+            <th>{{ i18n.t('permission.canManageUsers') }}</th>
+            <th>{{ i18n.t('permission.canSeeUserPickupCountGrouping') }}</th>
+            <th>{{ i18n.t('permission.canUseAutomationSlotApproval') }}</th>
+            <th>{{ i18n.t('permission.canSeeAllAutomationDecisions') }}</th>
             <th>{{ i18n.t('common.actions') }}</th>
           </tr>
         </ng-template>
@@ -100,6 +105,11 @@
               </p-tag>
             </td>
             <td>{{ user.pickupCount }}</td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canGiveEinAbs"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canManageUsers"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeUserPickupCountGrouping"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationSlotApproval"></p-checkbox></td>
+            <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeAllAutomationDecisions"></p-checkbox></td>
             <td class="actions-cell">
               @if (user.user.active) {
                 <button pButton type="button" size="small" severity="danger" [label]="i18n.t('admin.disableBookingUser')" (click)="disableBookingUser(user)"></button>
@@ -111,7 +121,7 @@
           </tr>
           @if (isUserExpanded(user)) {
             <tr>
-              <td [attr.colspan]="10">
+              <td [attr.colspan]="15">
                 <div class="page-stack">
                   <div>
                     <h4>{{ i18n.t('admin.userPermissions') }}</h4>

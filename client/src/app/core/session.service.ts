@@ -50,7 +50,7 @@ export class SessionService {
     if (this.hasPermission(UserPermission.CanManageUsers)) {
       return `${prefix}/admin`;
     }
-    if (this.hasPermission(UserPermission.CanUseAutomations) || this.hasPermission(UserPermission.CanUseAutomationSlotApproval)) {
+    if (this.hasPermission(UserPermission.CanUseAutomations) || this.hasPermission(UserPermission.CanUseAutomationSlotApproval) || this.hasPermission(UserPermission.CanSeeAllAutomationDecisions) || this.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
       return `${prefix}/admin/foodsharing-automation`;
     }
     if (this.hasPermission(UserPermission.CanGiveEinAbs)) {

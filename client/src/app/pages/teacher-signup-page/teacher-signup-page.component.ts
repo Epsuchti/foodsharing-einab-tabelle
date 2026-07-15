@@ -23,8 +23,7 @@ export class TeacherSignupPageComponent {
   protected readonly bezirkContext = inject(BezirkContextService);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
-    foodsharingId: ['', [Validators.required, Validators.pattern('^\\d+$')]],
-    icalLink: ['']
+    foodsharingId: ['', [Validators.required, Validators.pattern('^\\d+$')]]
   });
 
   private readonly publicApi = inject(PublicService);
@@ -36,7 +35,6 @@ export class TeacherSignupPageComponent {
     }
     const teacherSignupRequest: TeacherSignupRequest = {
       foodsharingId: this.form.getRawValue().foodsharingId,
-      icalLink: this.form.getRawValue().icalLink || undefined,
       language: this.i18n.apiLanguage()
     };
     this.publicApi.signupTeacher({

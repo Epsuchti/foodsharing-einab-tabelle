@@ -1,25 +1,30 @@
 <section class="teacher-top-stack">
-  <p-card>
+  <p-card styleClass="teacher-profile-card">
     <ng-template pTemplate="title">{{ i18n.t('teacher.profile') }}</ng-template>
-    <div class="info-grid">
-      <div><strong>{{ teacher()?.name }}</strong></div>
-      <div>{{ teacher()?.phoneNumber }}</div>
-      <div>{{ teacher()?.icalLink ?? '-' }}</div>
-      <div>
+    <div class="teacher-profile-summary">
+      <div class="teacher-profile-summary__identity">
+        <div class="teacher-profile-summary__name">{{ teacher()?.name }}</div>
+        <div class="teacher-profile-summary__meta">{{ teacher()?.foodsharingId }}</div>
+      </div>
+      <div class="teacher-profile-summary__status">
         <p-tag [severity]="teacher()?.active ? 'success' : 'warn'" [value]="teacher()?.active ? i18n.t('common.active') : i18n.t('common.inactive')"></p-tag>
       </div>
     </div>
-    <form class="stack-form" [formGroup]="teacherProfileForm">
-      <label>
-        <span>{{ i18n.t('common.phoneNumber') }}</span>
-        <input pInputText type="text" formControlName="phoneNumber" />
-      </label>
-      <label>
-        <span>{{ i18n.t('common.icalLink') }}</span>
+
+    <div class="teacher-profile-facts">
+      <div class="teacher-profile-fact">
+        <span class="teacher-profile-fact__label">{{ i18n.t('common.phoneNumber') }}</span>
+        <span class="teacher-profile-fact__value">{{ teacher()?.phoneNumber || '-' }}</span>
+      </div>
+    </div>
+
+    <form class="teacher-profile-form" [formGroup]="teacherProfileForm">
+      <label class="teacher-profile-form__field teacher-profile-form__field--wide">
+        <span class="teacher-profile-form__label">{{ i18n.t('common.icalLink') }}</span>
         <input pInputText type="url" formControlName="icalLink" />
       </label>
-      <p class="empty-state">{{ i18n.t('teacher.icalTutorial') }}</p>
-      <div class="dialog-actions">
+      <p class="teacher-profile-form__hint">{{ i18n.t('teacher.icalTutorial') }}</p>
+      <div class="teacher-profile-form__actions">
         <button
           pButton
           type="button"
@@ -30,7 +35,7 @@
       </div>
     </form>
     @if (!teacher()?.active) {
-      <p class="empty-state">{{ i18n.t('teacher.inactiveHint') }}</p>
+      <p class="teacher-profile-form__inactive">{{ i18n.t('teacher.inactiveHint') }}</p>
     }
     @if (!teacher()?.bezirk) {
       <p class="empty-state">{{ i18n.t('teacher.unassignedHint') }}</p>
@@ -172,12 +177,12 @@
   [header]="editingEinAb() ? i18n.t('teacher.editEinab') : i18n.t('teacher.newEinab')">
   <form class="stack-form" [formGroup]="einabForm">
     <label>
-      <span>{{ i18n.t('slots.category') }}</span>
+      <span>{{ i18n.t('slots.category') }} *</span>
       <p-select [options]="categoryOptions()" formControlName="category" optionLabel="label" optionValue="value"></p-select>
     </label>
 
     <label>
-      <span>{{ i18n.t('slots.date') }}</span>
+      <span>{{ i18n.t('slots.date') }} *</span>
       <p-datepicker formControlName="startDateTime" [showIcon]="true" [showTime]="true" hourFormat="24"></p-datepicker>
     </label>
 
@@ -187,7 +192,7 @@
     </label>
 
     <label>
-      <span>{{ i18n.t('common.publicLocation') }}</span>
+      <span>{{ i18n.t('common.publicLocation') }} *</span>
       <input pInputText type="text" formControlName="publicLocation" />
     </label>
 
@@ -207,7 +212,7 @@
     </label>
 
     <label>
-      <span>{{ i18n.t('common.slotCount') }}</span>
+      <span>{{ i18n.t('common.slotCount') }} *</span>
       <p-select [options]="slotCountOptions" formControlName="slotCount" optionLabel="label" optionValue="value"></p-select>
     </label>
 
