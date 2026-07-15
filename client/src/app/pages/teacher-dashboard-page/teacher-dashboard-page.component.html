@@ -37,6 +37,17 @@
     @if (!teacher()?.active) {
       <p class="teacher-profile-form__inactive">{{ i18n.t('teacher.inactiveHint') }}</p>
     }
+    @if (!teacher()?.bezirk) {
+      <p class="empty-state">{{ i18n.t('teacher.unassignedHint') }}</p>
+      <div class="dialog-actions">
+        <select [disabled]="bezirkSaveLoading()" (change)="assignBezirk($any($event.target).value)">
+          <option value="">{{ i18n.t('teacher.chooseBezirk') }}</option>
+          @for (bezirk of bezirke(); track bezirk.id) {
+            <option [value]="bezirk.slug">{{ bezirk.name }}</option>
+          }
+        </select>
+      </div>
+    }
   </p-card>
 
   <p-card>
@@ -78,8 +89,11 @@
 
 <p-card>
   <ng-template pTemplate="title">{{ i18n.t('teacher.einabs') }}</ng-template>
+  @if (!teacher()?.bezirk) {
+    <p class="empty-state">{{ i18n.t('teacher.unassignedHint') }}</p>
+  }
   <div class="toolbar-row">
-    <button pButton icon="pi pi-plus" [label]="i18n.t('teacher.newEinab')" (click)="openCreate()"></button>
+    <button pButton icon="pi pi-plus" [label]="i18n.t('teacher.newEinab')" [disabled]="!teacher()?.bezirk" (click)="openCreate()"></button>
   </div>
   <p-table [value]="einAbs()">
     <ng-template pTemplate="header">

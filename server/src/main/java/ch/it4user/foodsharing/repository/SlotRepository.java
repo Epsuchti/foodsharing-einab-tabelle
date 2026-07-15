@@ -1,5 +1,6 @@
 package ch.it4user.foodsharing.repository;
 
+import ch.it4user.foodsharing.domain.entity.Bezirk;
 import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.Slot;
 import ch.it4user.foodsharing.domain.entity.User;
@@ -20,10 +21,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface SlotRepository extends JpaRepository<Slot, UUID> {
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.teacher"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk"})
     @Query("""
         select s from Slot s
         where s.status = ch.it4user.foodsharing.domain.enumtype.SlotStatus.AVAILABLE
+          and s.einAb.bezirk = :bezirk
           and s.einAb.startDateTime > current_timestamp
           and (:category is null or s.einAb.category = :category)
           and (:visitFairteiler is null or s.einAb.visitFairteiler = :visitFairteiler)
@@ -35,39 +37,52 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
           )
         order by s.einAb.startDateTime asc
         """)
-    Page<Slot> findAvailableSlots(@Param("searchPattern") String searchPattern,
+    Page<Slot> findAvailableSlots(@Param("bezirk") Bezirk bezirk,
+                                  @Param("searchPattern") String searchPattern,
                                   @Param("category") EinAbCategory category,
                                   @Param("visitFairteiler") Boolean visitFairteiler,
                                   Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
-    @Query("select s from Slot s where s.id = :id")
-    Optional<Slot> findForUpdateById(@Param("id") UUID id);
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
+    @Query("""
+        select s from Slot s
+        where s.id = :id
+          and exists (
+            select e.id from EinAb e
+            where e = s.einAb and e.bezirk = :bezirk
+          )
+        """)
+    Optional<Slot> findForUpdateByIdAndBezirk(@Param("id") UUID id, @Param("bezirk") Bezirk bezirk);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     List<Slot> findAllByEinAbInOrderByEinAbStartDateTimeAsc(Collection<EinAb> einAbs);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""
         select s from Slot s
         where s.status in :statuses
+          and s.einAb.bezirk = :bezirk
         order by s.einAb.startDateTime asc
         """)
-    Page<Slot> findAllByStatusInOrderByEinAbStartDateTimeAsc(@Param("statuses") Collection<SlotStatus> statuses,
-                                                             Pageable pageable);
+    Page<Slot> findAllByStatusInAndBezirkOrderByEinAbStartDateTimeAsc(@Param("statuses") Collection<SlotStatus> statuses,
+                                                                     @Param("bezirk") Bezirk bezirk,
+                                                                     Pageable pageable);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""
         select s from Slot s
         where s.bookingUser in :users
           and s.status in :statuses
+          and s.bookingUser.active = true
+          and s.einAb.bezirk = :bezirk
         order by s.einAb.startDateTime desc
         """)
-    List<Slot> findAllByBookingUsersAndStatuses(@Param("users") Collection<User> users,
-                                                @Param("statuses") Collection<SlotStatus> statuses);
+    List<Slot> findAllByActiveBookingUsersAndStatusesAndBezirk(@Param("users") Collection<User> users,
+                                                               @Param("statuses") Collection<SlotStatus> statuses,
+                                                               @Param("bezirk") Bezirk bezirk);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""
         select s from Slot s
         where s.bookingUser in :users
@@ -78,45 +93,59 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
     List<Slot> findAllByActiveBookingUsersAndStatuses(@Param("users") Collection<User> users,
                                                       @Param("statuses") Collection<SlotStatus> statuses);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""
         select s from Slot s
         where s.bookingUser = :bookingUser
           and s.status in :statuses
+          and s.einAb.bezirk = :bezirk
         order by s.einAb.startDateTime desc
         """)
-    Page<Slot> findAllByBookingUserAndStatuses(@Param("bookingUser") User bookingUser,
-                                               @Param("statuses") Collection<SlotStatus> statuses,
-                                               Pageable pageable);
+    Page<Slot> findAllByBookingUserAndStatusesAndBezirk(@Param("bookingUser") User bookingUser,
+                                                        @Param("statuses") Collection<SlotStatus> statuses,
+                                                        @Param("bezirk") Bezirk bezirk,
+                                                        Pageable pageable);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""
         select s from Slot s
         where s.einAb.teacher = :teacher
+          and s.einAb.bezirk = :bezirk
           and s.status in :statuses
         order by s.einAb.startDateTime desc
         """)
-    Page<Slot> findAllByTeacherAndStatuses(@Param("teacher") User teacher,
-                                           @Param("statuses") Collection<SlotStatus> statuses,
-                                           Pageable pageable);
+    Page<Slot> findAllByTeacherAndStatusesAndBezirk(@Param("teacher") User teacher,
+                                                    @Param("statuses") Collection<SlotStatus> statuses,
+                                                    @Param("bezirk") Bezirk bezirk,
+                                                    Pageable pageable);
 
-    long countByBookingUserAndStatusIn(User bookingUser, Collection<SlotStatus> statuses);
+    long countByBookingUserAndStatusAndEinAbBezirk(User bookingUser, SlotStatus status, Bezirk bezirk);
 
-    boolean existsByBookingUserAndStatusInAndEinAbTeacher(User bookingUser,
-                                                           Collection<SlotStatus> statuses,
-                                                           User teacher);
+    @Query("""
+        select (count(s) > 0) from Slot s
+        where s.bookingUser = :bookingUser
+          and s.status = ch.it4user.foodsharing.domain.enumtype.SlotStatus.PENDING_CONFIRMATION
+          and s.einAb.bezirk <> :bezirk
+          and s.pendingConfirmationExpiresAt > current_timestamp
+        """)
+    boolean existsOpenPendingConfirmationInDifferentBezirk(@Param("bookingUser") User bookingUser,
+                                                            @Param("bezirk") Bezirk bezirk);
 
-    boolean existsByBookingUserAndStatusInAndEinAbCategory(User bookingUser,
-                                                           Collection<SlotStatus> statuses,
-                                                           EinAbCategory category);
+    boolean existsByBookingUserAndStatusInAndEinAbTeacherAndEinAbBezirk(User bookingUser,
+                                                                        Collection<SlotStatus> statuses,
+                                                                        User teacher,
+                                                                        Bezirk bezirk);
 
-    long countByBookingUserAndStatus(User bookingUser, SlotStatus status);
+    boolean existsByBookingUserAndStatusInAndEinAbCategoryAndEinAbBezirk(User bookingUser,
+                                                                         Collection<SlotStatus> statuses,
+                                                                         EinAbCategory category,
+                                                                         Bezirk bezirk);
 
     boolean existsByEinAbAndStatusIn(EinAb einAb, Collection<SlotStatus> statuses);
 
     List<Slot> findAllByEinAbOrderByCreatedAtAsc(EinAb einAb);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.teacher", "bookingUser"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     Optional<Slot> findByPendingConfirmationTokenHash(String tokenHash);
 
     List<Slot> findAllByStatusAndPendingConfirmationExpiresAtBefore(SlotStatus status, java.time.Instant expiresAt);

@@ -104,21 +104,24 @@ public class AppProperties {
     public static class Automation {
         private boolean enabled = true;
         private boolean dryRun = true;
-        private long cleaningStoreId = 0;
         private int cleaningBackCheckMonths = 6;
+        private int minimumFreeCleaningSlots = 4;
         private String pollInterval = "PT5M";
         private String futurePickupCacheTtl = "PT15M";
         private String storePickupCacheTtl = "PT1M";
         private String storeMembersCacheTtl = "PT1M";
+        private int maxRequestApprovalsPerRun = 50;
+        private int maxAdvertisementsPerRun = 50;
+        private int auditRetentionDays = 7;
 
         public boolean isEnabled() { return enabled; }
         public void setEnabled(boolean enabled) { this.enabled = enabled; }
         public boolean isDryRun() { return dryRun; }
         public void setDryRun(boolean dryRun) { this.dryRun = dryRun; }
-        public long getCleaningStoreId() { return cleaningStoreId; }
-        public void setCleaningStoreId(long cleaningStoreId) { this.cleaningStoreId = cleaningStoreId; }
         public int getCleaningBackCheckMonths() { return cleaningBackCheckMonths; }
         public void setCleaningBackCheckMonths(int cleaningBackCheckMonths) { this.cleaningBackCheckMonths = cleaningBackCheckMonths; }
+        public int getMinimumFreeCleaningSlots() { return minimumFreeCleaningSlots; }
+        public void setMinimumFreeCleaningSlots(int minimumFreeCleaningSlots) { this.minimumFreeCleaningSlots = minimumFreeCleaningSlots; }
         public String getPollInterval() { return pollInterval; }
         public void setPollInterval(String pollInterval) { this.pollInterval = pollInterval; }
         public String getFuturePickupCacheTtl() { return futurePickupCacheTtl; }
@@ -127,6 +130,12 @@ public class AppProperties {
         public void setStorePickupCacheTtl(String storePickupCacheTtl) { this.storePickupCacheTtl = storePickupCacheTtl; }
         public String getStoreMembersCacheTtl() { return storeMembersCacheTtl; }
         public void setStoreMembersCacheTtl(String storeMembersCacheTtl) { this.storeMembersCacheTtl = storeMembersCacheTtl; }
+        public int getMaxRequestApprovalsPerRun() { return maxRequestApprovalsPerRun; }
+        public void setMaxRequestApprovalsPerRun(int maxRequestApprovalsPerRun) { this.maxRequestApprovalsPerRun = maxRequestApprovalsPerRun; }
+        public int getMaxAdvertisementsPerRun() { return maxAdvertisementsPerRun; }
+        public void setMaxAdvertisementsPerRun(int maxAdvertisementsPerRun) { this.maxAdvertisementsPerRun = maxAdvertisementsPerRun; }
+        public int getAuditRetentionDays() { return auditRetentionDays; }
+        public void setAuditRetentionDays(int auditRetentionDays) { this.auditRetentionDays = auditRetentionDays; }
     }
 
     public static class Mail {

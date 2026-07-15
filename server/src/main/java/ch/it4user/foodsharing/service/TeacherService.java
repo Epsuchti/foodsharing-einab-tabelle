@@ -1,5 +1,6 @@
 package ch.it4user.foodsharing.service;
 
+import ch.it4user.foodsharing.domain.entity.Bezirk;
 import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.BookingComment;
 import ch.it4user.foodsharing.domain.entity.User;
@@ -34,7 +35,8 @@ public class TeacherService {
     private final SlotRepository slotRepository;
     private final BookingCommentRepository bookingCommentRepository;
     private final IcalImportService icalImportService;
-    private final FoodsharingClient foodsharingClient;
+    private final BezirkService bezirkService;
+    private final BookingUserService bookingUserService;
     private final ApplicationEventPublisher eventPublisher;
 
     public TeacherService(UserRepository userRepository,
@@ -42,57 +44,85 @@ public class TeacherService {
                           SlotRepository slotRepository,
                           BookingCommentRepository bookingCommentRepository,
                           IcalImportService icalImportService,
-                          FoodsharingClient foodsharingClient,
+                          BezirkService bezirkService,
+                          BookingUserService bookingUserService,
                           ApplicationEventPublisher eventPublisher) {
         this.userRepository = userRepository;
         this.einAbRepository = einAbRepository;
         this.slotRepository = slotRepository;
         this.bookingCommentRepository = bookingCommentRepository;
         this.icalImportService = icalImportService;
-        this.foodsharingClient = foodsharingClient;
+        this.bezirkService = bezirkService;
+        this.bookingUserService = bookingUserService;
         this.eventPublisher = eventPublisher;
     }
 
     @Transactional
-    public User signup(String foodsharingId, LanguageCode language) {
-        String normalizedFoodsharingId = foodsharingId.trim();
-        FoodsharingUserInfo foodsharingUser = foodsharingClient.getUser(normalizedFoodsharingId);
-        User teacher = userRepository.findByFoodsharingIdIgnoreCase(normalizedFoodsharingId).orElseGet(User::new);
-        teacher.setFoodsharingId(foodsharingUser.foodsharingId());
-        teacher.setName(foodsharingUser.name());
-        if (foodsharingUser.phoneNumber() != null) {
-            teacher.setPhoneNumber(foodsharingUser.phoneNumber());
+    public User signup(String bezirkSlug, String foodsharingId, String icalLink, LanguageCode language) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        User teacher = bookingUserService.getOrCreate(foodsharingId, language);
+        if (!teacher.isActive()) {
+            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.TEACHER_INACTIVE);
         }
+        bookingUserService.assignToBezirk(teacher, bezirk);
         teacher.setWantsToBeTeacher(true);
         teacher.setActive(true);
-        teacher.setPreferredLanguage(language);
-        return userRepository.save(teacher);
+        teacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
+        return teacher;
     }
 
     @Transactional
-    public User updateProfile(User teacher, String icalLink, LanguageCode language) {
-        User managedTeacher = userRepository.findById(teacher.getId())
+    public User updateProfile(String bezirkSlug, User teacher, String phoneNumber, String icalLink, LanguageCode language) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        ensureTeacherBezirk(teacher, bezirk);
+        return updateProfile(teacher, phoneNumber, icalLink, language);
+    }
+
+    @Transactional
+    public User updateProfile(User teacher, String phoneNumber, String icalLink, LanguageCode language) {
+        User managedTeacher = userRepository.findWithBezirkById(teacher.getId())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
+        managedTeacher.setPhoneNumber(phoneNumber == null ? null : phoneNumber.trim());
         managedTeacher.setIcalLink(icalLink == null || icalLink.isBlank() ? null : icalLink.trim());
         managedTeacher.setPreferredLanguage(language);
         return managedTeacher;
     }
 
-    public Page<EinAb> findTeacherEinAbs(User teacher, int page, int size) {
-        return einAbRepository.findAllByTeacherOrderByStartDateTimeAsc(
+    @Transactional
+    public User assignBezirk(User teacher, String bezirkSlug) {
+        User managedTeacher = userRepository.findWithBezirkById(teacher.getId())
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
+        if (managedTeacher.getBezirk() != null) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_BEZIRK_MISMATCH);
+        }
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        bookingUserService.assignToBezirk(managedTeacher, bezirk);
+        return managedTeacher;
+    }
+
+    public Page<EinAb> findTeacherEinAbs(String bezirkSlug, User teacher, int page, int size) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        ensureTeacherBezirk(teacher, bezirk);
+        return einAbRepository.findAllByTeacherAndBezirkOrderByStartDateTimeAsc(
                 teacher,
+                bezirk,
                 PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
-    public Page<Slot> findTeacherBookings(User teacher, int page, int size) {
-        return slotRepository.findAllByTeacherAndStatuses(
+    public Page<Slot> findTeacherBookings(String bezirkSlug, User teacher, int page, int size) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        ensureTeacherBezirk(teacher, bezirk);
+        return slotRepository.findAllByTeacherAndStatusesAndBezirk(
                 teacher,
                 Set.of(SlotStatus.PENDING_CONFIRMATION, SlotStatus.BOOKED, SlotStatus.DONE),
+                bezirk,
                 PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
-    public List<BookingComment> findBookingComments(UUID bookingUserId) {
-        User bookingUser = requireBookingUser(bookingUserId);
+    public List<BookingComment> findBookingComments(String bezirkSlug, User teacher, UUID bookingUserId) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        ensureTeacherBezirk(teacher, bezirk);
+        User bookingUser = requireBookingUser(bookingUserId, bezirk);
         if (!bookingUser.isActive()) {
             return List.of();
         }
@@ -100,8 +130,10 @@ public class TeacherService {
     }
 
     @Transactional
-    public BookingComment addBookingComment(User teacher, UUID bookingUserId, String comment) {
-        User bookingUser = requireBookingUser(bookingUserId);
+    public BookingComment addBookingComment(String bezirkSlug, User teacher, UUID bookingUserId, String comment) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        ensureTeacherBezirk(teacher, bezirk);
+        User bookingUser = requireBookingUser(bookingUserId, bezirk);
         if (!bookingUser.isActive()) {
             throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.BOOKING_USER_DISABLED);
         }
@@ -112,12 +144,19 @@ public class TeacherService {
         return bookingCommentRepository.save(bookingComment);
     }
 
+    public List<ch.it4user.foodsharing.openapi.model.IcalCandidate> getIcalCandidates(String bezirkSlug, User teacher) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        ensureTeacherBezirk(teacher, bezirk);
+        return getIcalCandidates(teacher);
+    }
+
     public List<ch.it4user.foodsharing.openapi.model.IcalCandidate> getIcalCandidates(User teacher) {
         return icalImportService.loadCandidates(teacher.getIcalLink());
     }
 
     @Transactional
-    public EinAb createEinAb(User teacher,
+    public EinAb createEinAb(String bezirkSlug,
+                             User teacher,
                              EinAbCategory category,
                              Instant startDateTime,
                              String location,
@@ -127,9 +166,12 @@ public class TeacherService {
                              boolean visitFairteiler,
                              int slotCount,
                              Integer minimumPickupCount) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        ensureTeacherBezirk(teacher, bezirk);
         ensureTeacherActive(teacher);
         validateEinAb(slotCount, publicLocation, minimumPickupCount);
         EinAb einAb = new EinAb();
+        einAb.setBezirk(bezirk);
         einAb.setTeacher(teacher);
         einAb.setCategory(category);
         einAb.setStartDateTime(startDateTime);
@@ -142,13 +184,14 @@ public class TeacherService {
         einAb.setMinimumPickupCount(normalizeMinimumPickupCount(minimumPickupCount));
         EinAb savedEinAb = einAbRepository.save(einAb);
         createSlots(savedEinAb, slotCount);
-        EinAb reloadedEinAb = reloadEinAbWithTeacher(savedEinAb.getId());
+        EinAb reloadedEinAb = reloadEinAbWithTeacher(savedEinAb.getId(), bezirk);
         eventPublisher.publishEvent(new EinAbCreatedEvent(reloadedEinAb.getId()));
         return reloadedEinAb;
     }
 
     @Transactional
-    public EinAb updateEinAb(User teacher,
+    public EinAb updateEinAb(String bezirkSlug,
+                             User teacher,
                              UUID einAbId,
                              EinAbCategory category,
                              Instant startDateTime,
@@ -160,9 +203,11 @@ public class TeacherService {
                              int slotCount,
                              Integer minimumPickupCount,
                              boolean admin) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
         validateEinAb(slotCount, publicLocation, minimumPickupCount);
-        EinAb einAb = requireTeacherEinAb(teacher, einAbId, admin);
+        EinAb einAb = requireTeacherEinAb(teacher, einAbId, admin, bezirk);
         if (!admin) {
+            ensureTeacherBezirk(teacher, bezirk);
             ensureTeacherActive(teacher);
         }
         int existingSlots = slotRepository.findAllByEinAbOrderByCreatedAtAsc(einAb).size();
@@ -182,12 +227,16 @@ public class TeacherService {
         if (slotCount > existingSlots) {
             createSlots(einAb, slotCount - existingSlots);
         }
-        return reloadEinAbWithTeacher(einAb.getId());
+        return reloadEinAbWithTeacher(einAb.getId(), bezirk);
     }
 
     @Transactional
-    public void deleteEinAb(User teacher, UUID einAbId, boolean admin) {
-        EinAb einAb = requireTeacherEinAb(teacher, einAbId, admin);
+    public void deleteEinAb(String bezirkSlug, User teacher, UUID einAbId, boolean admin) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        if (!admin) {
+            ensureTeacherBezirk(teacher, bezirk);
+        }
+        EinAb einAb = requireTeacherEinAb(teacher, einAbId, admin, bezirk);
         if (slotRepository.existsByEinAbAndStatusIn(einAb, BLOCKING_STATUSES)) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.BOOKED_SLOTS_PREVENT_DELETE);
         }
@@ -196,17 +245,23 @@ public class TeacherService {
         einAbRepository.delete(einAb);
     }
 
-    public Page<EinAb> findAllEinAbs(int page, int size) {
-        return einAbRepository.findAllByOrderByStartDateTimeAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
+    public Page<EinAb> findAllEinAbs(String bezirkSlug, int page, int size) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        return einAbRepository.findAllByBezirkOrderByStartDateTimeAsc(
+                bezirk,
+                PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
-    public Page<User> findAllTeachers(int page, int size) {
-        return userRepository.findAllByCanGiveEinAbsTrueOrWantsToBeTeacherTrueOrderByNameAsc(PageRequest.of(Math.max(page, 0), normalizeSize(size)));
+    public Page<User> findAllTeachers(String bezirkSlug, int page, int size) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        return userRepository.findAllTeachersByBezirk(
+                bezirk,
+                PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
     @Transactional
     public User setTeacherActive(UUID teacherId, boolean active) {
-        User teacher = userRepository.findById(teacherId)
+        User teacher = userRepository.findWithBezirkById(teacherId)
                 .filter(user -> user.isCanGiveEinAbs() || user.isWantsToBeTeacher())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
         teacher.setCanGiveEinAbs(active);
@@ -219,7 +274,7 @@ public class TeacherService {
 
     @Transactional
     public User setTeacherAdmin(UUID teacherId, boolean admin) {
-        User teacher = userRepository.findById(teacherId)
+        User teacher = userRepository.findWithBezirkById(teacherId)
                 .filter(user -> user.isCanGiveEinAbs() || user.isWantsToBeTeacher())
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.TEACHER_NOT_FOUND));
         teacher.setCanManageUsers(admin);
@@ -232,8 +287,12 @@ public class TeacherService {
     }
 
     @Transactional
-    public Slot cancelBookedSlot(User teacher, UUID slotId, boolean admin) {
-        Slot slot = slotRepository.findForUpdateById(slotId)
+    public Slot cancelBookedSlot(String bezirkSlug, User teacher, UUID slotId, boolean admin) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        if (!admin) {
+            ensureTeacherBezirk(teacher, bezirk);
+        }
+        Slot slot = slotRepository.findForUpdateByIdAndBezirk(slotId, bezirk)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.SLOT_NOT_FOUND));
         if (!admin && !slot.getEinAb().getTeacher().getId().equals(teacher.getId())) {
             throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ONLY_OWN_EINABS_MANAGEABLE);
@@ -303,8 +362,8 @@ public class TeacherService {
         return minimumPickupCount;
     }
 
-    private EinAb requireTeacherEinAb(User teacher, UUID einAbId, boolean admin) {
-        EinAb einAb = einAbRepository.findById(einAbId)
+    private EinAb requireTeacherEinAb(User teacher, UUID einAbId, boolean admin, Bezirk bezirk) {
+        EinAb einAb = einAbRepository.findWithTeacherByIdAndBezirk(einAbId, bezirk)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.EINAB_NOT_FOUND));
         if (!admin && !einAb.getTeacher().getId().equals(teacher.getId())) {
             throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ONLY_OWN_EINABS_MANAGEABLE);
@@ -312,14 +371,21 @@ public class TeacherService {
         return einAb;
     }
 
-    private EinAb reloadEinAbWithTeacher(UUID einAbId) {
-        return einAbRepository.findWithTeacherById(einAbId)
+    private EinAb reloadEinAbWithTeacher(UUID einAbId, Bezirk bezirk) {
+        return einAbRepository.findWithTeacherByIdAndBezirk(einAbId, bezirk)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.EINAB_NOT_FOUND));
     }
 
-    private User requireBookingUser(UUID bookingUserId) {
-        return userRepository.findById(bookingUserId)
+    private User requireBookingUser(UUID bookingUserId, Bezirk bezirk) {
+        return userRepository.findWithBezirkById(bookingUserId)
+                .filter(user -> user.getBezirk() != null && user.getBezirk().getId().equals(bezirk.getId()))
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_USER_NOT_FOUND));
+    }
+
+    private void ensureTeacherBezirk(User teacher, Bezirk bezirk) {
+        if (teacher.getBezirk() == null || !teacher.getBezirk().getId().equals(bezirk.getId())) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_BEZIRK_MISMATCH);
+        }
     }
 
     private int normalizeSize(int size) {

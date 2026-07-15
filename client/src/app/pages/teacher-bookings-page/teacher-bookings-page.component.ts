@@ -12,6 +12,7 @@ import {
   TeacherService
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
+import { BezirkContextService } from '../../core/bezirk-context.service';
 import { I18nService } from '../../core/i18n.service';
 import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 import { AccordionModule } from 'primeng/accordion';
@@ -76,6 +77,7 @@ export class TeacherBookingsPageComponent implements OnInit {
   });
 
   private readonly teacherApi = inject(TeacherService);
+  private readonly bezirkContext = inject(BezirkContextService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
 
@@ -85,7 +87,7 @@ export class TeacherBookingsPageComponent implements OnInit {
 
   reload(): void {
     this.loading.set(true);
-    this.teacherApi.getTeacherBookings({ page: 0, size: 100 }).subscribe({
+    this.teacherApi.getTeacherBookings({ bezirkSlug: this.bezirkContext.currentSlug(), page: 0, size: 100 }).subscribe({
       next: (response) => {
         this.bookings.set(response.bookings);
         this.loadComments(response.bookings);
@@ -121,6 +123,7 @@ export class TeacherBookingsPageComponent implements OnInit {
     this.commentLoading.set(true);
     const request: CreateBookingCommentRequest = { comment };
     this.teacherApi.addTeacherBookingComment({
+      bezirkSlug: this.bezirkContext.currentSlug(),
       bookingUserId: group.bookingUserId,
       createBookingCommentRequest: request
     }).subscribe({
@@ -140,7 +143,7 @@ export class TeacherBookingsPageComponent implements OnInit {
     this.confirmationService.confirm({
       message: this.i18n.t('confirm.cancelTeacherBooking'),
       accept: () => {
-        this.teacherApi.cancelTeacherSlotBooking({ slotId }).subscribe({
+        this.teacherApi.cancelTeacherSlotBooking({ bezirkSlug: this.bezirkContext.currentSlug(), slotId }).subscribe({
           next: () => this.reload(),
           error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });
@@ -163,7 +166,7 @@ export class TeacherBookingsPageComponent implements OnInit {
 
     forkJoin(
       userIds.map((userId) =>
-        this.teacherApi.getTeacherBookingComments({ bookingUserId: userId }).pipe(
+        this.teacherApi.getTeacherBookingComments({ bezirkSlug: this.bezirkContext.currentSlug(), bookingUserId: userId }).pipe(
           map((response) => [userId, response.comments] as const),
           catchError(() => of([userId, []] as const))
         )
@@ -181,7 +184,7 @@ export class TeacherBookingsPageComponent implements OnInit {
   }
 
   private refreshComments(userId: string): void {
-    this.teacherApi.getTeacherBookingComments({ bookingUserId: userId }).subscribe({
+    this.teacherApi.getTeacherBookingComments({ bezirkSlug: this.bezirkContext.currentSlug(), bookingUserId: userId }).subscribe({
       next: (response) => {
         this.commentsByUserId.update((current) => ({ ...current, [userId]: response.comments }));
         this.commentLoading.set(false);

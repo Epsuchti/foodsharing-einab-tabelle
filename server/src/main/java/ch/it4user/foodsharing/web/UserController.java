@@ -24,9 +24,10 @@ public class UserController implements UserApi {
     }
 
     @Override
-    public ResponseEntity<BookingListResponse> getMyBookings(Integer page, Integer size) {
+    public ResponseEntity<BookingListResponse> getMyBookings(String bezirkSlug, Integer page, Integer size) {
         return ResponseEntity.ok(mapper.toBookingListResponse(
-                userService.getBookingsByFoodsharingId(currentActorService.requireFoodsharingId(), page == null ? 0 : page, size == null ? 20 : size)));
+                userService.getBookingsByFoodsharingId(bezirkSlug, currentActorService.requireFoodsharingId(),
+                        page == null ? 0 : page, size == null ? 20 : size)));
     }
 
     @Override
@@ -36,8 +37,8 @@ public class UserController implements UserApi {
     }
 
     @Override
-    public ResponseEntity<Void> cancelMyBooking(UUID slotId) {
-        userService.cancelBooking(currentActorService.requireFoodsharingId(), slotId);
+    public ResponseEntity<Void> cancelMyBooking(String bezirkSlug, UUID slotId) {
+        userService.cancelBooking(bezirkSlug, currentActorService.requireFoodsharingId(), slotId);
         return ResponseEntity.noContent().build();
     }
 }

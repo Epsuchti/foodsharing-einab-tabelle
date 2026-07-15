@@ -1,15 +1,19 @@
 package ch.it4user.foodsharing.web;
 
 import ch.it4user.foodsharing.domain.entity.BookingComment;
+import ch.it4user.foodsharing.domain.entity.Bezirk;
 import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.Slot;
 import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.entity.NotificationSubscription;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserResponse;
+import ch.it4user.foodsharing.openapi.model.AdminBezirkResponse;
 import ch.it4user.foodsharing.openapi.model.AdminEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.AvailableSlotListResponse;
 import ch.it4user.foodsharing.openapi.model.AvailableSlotResponse;
+import ch.it4user.foodsharing.openapi.model.BezirkListResponse;
+import ch.it4user.foodsharing.openapi.model.BezirkResponse;
 import ch.it4user.foodsharing.openapi.model.BookingCommentListResponse;
 import ch.it4user.foodsharing.openapi.model.BookingCommentResponse;
 import ch.it4user.foodsharing.openapi.model.BookingDetailResponse;
@@ -37,6 +41,32 @@ import org.springframework.stereotype.Component;
 @Component
 public class ApiModelMapper {
 
+    public BezirkResponse toBezirkResponse(Bezirk bezirk) {
+        if (bezirk == null) {
+            return null;
+        }
+        BezirkResponse response = new BezirkResponse();
+        response.setId(bezirk.getId());
+        response.setName(bezirk.getName());
+        response.setSlug(bezirk.getSlug());
+        return response;
+    }
+
+    public BezirkListResponse toBezirkListResponse(List<Bezirk> bezirke) {
+        BezirkListResponse response = new BezirkListResponse();
+        response.setBezirke(bezirke.stream().map(this::toBezirkResponse).toList());
+        return response;
+    }
+
+    public AdminBezirkResponse toAdminBezirkResponse(Bezirk bezirk) {
+        AdminBezirkResponse response = new AdminBezirkResponse();
+        response.setId(bezirk.getId());
+        response.setName(bezirk.getName());
+        response.setSlug(bezirk.getSlug());
+        response.setCleaningStoreId(bezirk.getCleaningStoreId());
+        return response;
+    }
+
     public TeacherResponse toTeacherResponse(User teacher) {
         TeacherResponse response = new TeacherResponse();
         response.setId(teacher.getId());
@@ -52,7 +82,10 @@ public class ApiModelMapper {
         response.setCanUseAutomations(teacher.isCanUseAutomations());
         response.setCanSeeUserPickupCountGrouping(teacher.isCanSeeUserPickupCountGrouping());
         response.setCanUseAutomationSlotApproval(teacher.isCanUseAutomationSlotApproval());
+        response.setCanUseAutomationRequestApproval(teacher.isCanUseAutomationRequestApproval());
+        response.setCanUseAutomationOpenSlotAdvertising(teacher.isCanUseAutomationOpenSlotAdvertising());
         response.setCanSeeAllAutomationDecisions(teacher.isCanSeeAllAutomationDecisions());
+        response.setBezirk(toBezirkResponse(teacher.getBezirk()));
         response.setLanguage(ch.it4user.foodsharing.openapi.model.Language.fromValue(teacher.getPreferredLanguage().getCode()));
         response.setCreatedAt(toOffsetDateTime(teacher.getCreatedAt()));
         response.setUpdatedAt(toOffsetDateTime(teacher.getUpdatedAt()));
@@ -63,6 +96,7 @@ public class ApiModelMapper {
         NotificationSubscriptionResponse response = new NotificationSubscriptionResponse();
         response.setEmail(subscription.getEmail());
         response.setActive(subscription.isActive());
+        response.setBezirk(toBezirkResponse(subscription.getBezirk()));
         return response;
     }
 
@@ -94,8 +128,11 @@ public class ApiModelMapper {
         response.setCanUseAutomations(bookingUser.isCanUseAutomations());
         response.setCanSeeUserPickupCountGrouping(bookingUser.isCanSeeUserPickupCountGrouping());
         response.setCanUseAutomationSlotApproval(bookingUser.isCanUseAutomationSlotApproval());
+        response.setCanUseAutomationRequestApproval(bookingUser.isCanUseAutomationRequestApproval());
+        response.setCanUseAutomationOpenSlotAdvertising(bookingUser.isCanUseAutomationOpenSlotAdvertising());
         response.setCanSeeAllAutomationDecisions(bookingUser.isCanSeeAllAutomationDecisions());
         response.setWantsToBeTeacher(bookingUser.isWantsToBeTeacher());
+        response.setBezirk(toBezirkResponse(bookingUser.getBezirk()));
         response.setCreatedAt(toOffsetDateTime(bookingUser.getCreatedAt()));
         response.setUpdatedAt(toOffsetDateTime(bookingUser.getUpdatedAt()));
         return response;
@@ -132,6 +169,7 @@ public class ApiModelMapper {
     public AvailableSlotResponse toAvailableSlotResponse(Slot slot) {
         AvailableSlotResponse response = new AvailableSlotResponse();
         response.setSlotId(slot.getId());
+        response.setBezirk(toBezirkResponse(slot.getEinAb().getBezirk()));
         response.setCategory(ch.it4user.foodsharing.openapi.model.EinAbCategory.fromValue(slot.getEinAb().getCategory().name()));
         response.setStartDateTime(toOffsetDateTime(slot.getEinAb().getStartDateTime()));
         response.setLocation(slot.getEinAb().getPublicLocation());
@@ -148,6 +186,7 @@ public class ApiModelMapper {
         BookingDetailResponse response = new BookingDetailResponse();
         response.setSlotId(slot.getId());
         response.setEinAbId(slot.getEinAb().getId());
+        response.setBezirk(toBezirkResponse(slot.getEinAb().getBezirk()));
         response.setCategory(ch.it4user.foodsharing.openapi.model.EinAbCategory.fromValue(slot.getEinAb().getCategory().name()));
         response.setStartDateTime(toOffsetDateTime(slot.getEinAb().getStartDateTime()));
         response.setLocation(slot.getEinAb().getLocation());
@@ -189,6 +228,7 @@ public class ApiModelMapper {
     public EinAbResponse toEinAbResponse(EinAb einAb) {
         EinAbResponse response = new EinAbResponse();
         response.setId(einAb.getId());
+        response.setBezirk(toBezirkResponse(einAb.getBezirk()));
         response.setCategory(ch.it4user.foodsharing.openapi.model.EinAbCategory.fromValue(einAb.getCategory().name()));
         response.setStartDateTime(toOffsetDateTime(einAb.getStartDateTime()));
         response.setLocation(einAb.getLocation());
@@ -330,7 +370,10 @@ public class ApiModelMapper {
         target.setCanUseAutomations(source.getCanUseAutomations());
         target.setCanSeeUserPickupCountGrouping(source.getCanSeeUserPickupCountGrouping());
         target.setCanUseAutomationSlotApproval(source.getCanUseAutomationSlotApproval());
+        target.setCanUseAutomationRequestApproval(source.getCanUseAutomationRequestApproval());
+        target.setCanUseAutomationOpenSlotAdvertising(source.getCanUseAutomationOpenSlotAdvertising());
         target.setCanSeeAllAutomationDecisions(source.getCanSeeAllAutomationDecisions());
+        target.setBezirk(source.getBezirk());
         target.setLanguage(source.getLanguage());
         target.setCreatedAt(source.getCreatedAt());
         target.setUpdatedAt(source.getUpdatedAt());
@@ -338,6 +381,7 @@ public class ApiModelMapper {
 
     private void copyEinAb(EinAbResponse source, TeacherEinAbResponse target) {
         target.setId(source.getId());
+        target.setBezirk(source.getBezirk());
         target.setCategory(source.getCategory());
         target.setStartDateTime(source.getStartDateTime());
         target.setLocation(source.getLocation());

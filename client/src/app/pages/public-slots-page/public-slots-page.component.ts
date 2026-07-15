@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { catchError, of } from 'rxjs';
 
@@ -18,6 +18,7 @@ import {
   UserService
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
+import { BezirkContextService } from '../../core/bezirk-context.service';
 import { I18nService } from '../../core/i18n.service';
 import { SessionService } from '../../core/session.service';
 import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
@@ -64,6 +65,7 @@ const FOODSHARING_BASE_URL = 'https://foodsharing.network';
 })
 export class PublicSlotsPageComponent implements OnInit {
   readonly i18n = inject(I18nService);
+  protected readonly bezirkContext = inject(BezirkContextService);
 
   protected readonly categoryOptions = computed(() => Object.values(EinAbCategory).map((value) => ({
     value,
@@ -94,18 +96,27 @@ export class PublicSlotsPageComponent implements OnInit {
 
   private readonly publicApi = inject(PublicService);
   private readonly userApi = inject(UserService);
+  private readonly route = inject(ActivatedRoute);
   private readonly sessionService = inject(SessionService);
   private readonly confirmationService = inject(ConfirmationService);
   private readonly messageService = inject(MessageService);
 
   ngOnInit(): void {
-    this.loadSlots();
-    this.loadBookingProfile();
+    const bezirkRoute = this.route.parent;
+    if (!bezirkRoute) {
+      return;
+    }
+    bezirkRoute.paramMap.subscribe(() => {
+      this.slotsPage.set(null);
+      this.loadSlots();
+      this.loadBookingProfile();
+    });
   }
 
   loadSlots(): void {
     this.loading.set(true);
     this.publicApi.getAvailableSlots({
+      bezirkSlug: this.bezirkContext.currentSlug(),
       search: this.search || undefined,
       category: this.selectedCategory,
       visitFairteiler: this.fairteilerOnly ? true : undefined,
@@ -166,6 +177,7 @@ export class PublicSlotsPageComponent implements OnInit {
       language: this.i18n.apiLanguage()
     };
     this.publicApi.bookSlot({
+      bezirkSlug: this.bezirkContext.currentSlug(),
       slotId: this.selectedSlot.slotId,
       bookSlotRequest
     }).pipe(finalize(() => this.bookingLoading.set(false)))
@@ -189,7 +201,10 @@ export class PublicSlotsPageComponent implements OnInit {
       email: this.subscriptionForm.getRawValue().email,
       language: this.i18n.apiLanguage()
     };
-    this.publicApi.subscribeNotifications({ notificationSubscriptionRequest })
+    this.publicApi.subscribeNotifications({
+      bezirkSlug: this.bezirkContext.currentSlug(),
+      notificationSubscriptionRequest
+    })
       .pipe(finalize(() => this.subscribeLoading.set(false)))
       .subscribe({
         next: () => {

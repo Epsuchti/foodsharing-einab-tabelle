@@ -1,332 +1,262 @@
-<section class="page-stack">
+<section class="page-stack automation-page">
   <p-card>
     <ng-template pTemplate="title">{{ i18n.t('adminAutomation.title') }}</ng-template>
-
-    @if (canManageAutomation()) {
-      @if (!foodsharingStatus()?.connected) {
-        <div class="form-grid">
-          <label>
-            {{ i18n.t('common.email') }}
-            <input pInputText type="email" [ngModel]="foodsharingEmail()" (ngModelChange)="foodsharingEmail.set($event)">
-          </label>
-          <label>
-            {{ i18n.t('common.password') }}
-            <input pInputText type="password" [(ngModel)]="foodsharingPassword">
-          </label>
-          <button pButton type="button" [label]="i18n.t('adminAutomation.connect')" (click)="connectFoodsharing()"></button>
-        </div>
-      } @else {
-        <p>{{ i18n.t('adminAutomation.connectedAs') }} {{ foodsharingStatus()?.email }}.</p>
-        <p class="automation-mode-banner" [ngClass]="statusBannerClass()">
-          {{ statusBannerText() }}
-        </p>
-        <div class="actions-cell">
-          <button pButton type="button" severity="secondary" [label]="i18n.t('adminAutomation.disconnect')" (click)="disconnectFoodsharing()"></button>
-          <button pButton type="button" [label]="i18n.t('adminAutomation.runDryRun')" (click)="runFoodsharingDryRun()"></button>
-        </div>
-
-        @if (foodsharingRunResult()) {
-          <p class="empty-state">
-            {{ i18n.t('adminAutomation.dryRunSummary') }}
-            {{ foodsharingRunResult()?.evaluated }},
-            {{ i18n.t('adminAutomation.dryRunWouldConfirm') }}
-            {{ foodsharingRunResult()?.confirmed }},
-            {{ i18n.t('adminAutomation.dryRunWouldDecline') }}
-            {{ foodsharingRunResult()?.declined }},
-            {{ i18n.t('adminAutomation.dryRunFailed') }}
-            {{ foodsharingRunResult()?.failed }}.
-          </p>
-        }
-
-        <p-tabs value="stores" class="automation-tabs">
-          <p-tablist>
-            <p-tab value="stores">{{ i18n.t('adminAutomation.tabStores') }}</p-tab>
-            @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)) {
-              <p-tab value="cleaning">{{ i18n.t('adminAutomation.tabCleaningRuleExemptions') }}</p-tab>
-            }
-            @if (sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
-              <p-tab value="users">{{ i18n.t('adminAutomation.tabUserStatistics') }}</p-tab>
-            }
-          </p-tablist>
-          <p-tabpanels>
-            <p-tabpanel value="stores">
-              <div class="automation-tabpanel">
-                <div class="automation-help">
-                  <h3 class="automation-help__title">{{ i18n.t('adminAutomation.rulesTitle') }}</h3>
-                  <p class="automation-help__intro">{{ i18n.t('adminAutomation.rulesIntro') }}</p>
-
-                  <h4 class="automation-help__section">{{ i18n.t('adminAutomation.rulesRunTitle') }}</h4>
-                  <ul class="automation-help__list">
-                    <li>{{ i18n.t('adminAutomation.rulesRunEnabledStores') }}</li>
-                    <li>{{ i18n.t('adminAutomation.rulesRunPendingOnly') }}</li>
-                    <li>{{ i18n.t('adminAutomation.rulesRunOrder') }}</li>
-                    <li>{{ i18n.t('adminAutomation.rulesRunDryRunOverride') }}</li>
-                    <li>{{ i18n.t('adminAutomation.rulesRunDryRun') }}</li>
-                  </ul>
-
-                  <h4 class="automation-help__section">{{ i18n.t('adminAutomation.rulesGracePeriodTitle') }}</h4>
-                  <p>{{ i18n.t('adminAutomation.rulesGracePeriodBody') }}</p>
-
-                  <h4 class="automation-help__section">{{ i18n.t('adminAutomation.rulesGapTitle') }}</h4>
-                  <ul class="automation-help__list">
-                    <li>{{ i18n.t('adminAutomation.rulesGapSameStore') }}</li>
-                    <li>{{ i18n.t('adminAutomation.rulesGapCalendarDays') }}</li>
-                    <li>{{ i18n.t('adminAutomation.rulesGapExample') }}</li>
-                  </ul>
-
-                  <h4 class="automation-help__section">{{ i18n.t('adminAutomation.rulesExperienceTitle') }}</h4>
-                  <ul class="automation-help__list">
-                    <li>{{ i18n.t('adminAutomation.rulesExperienceOwnHistory') }}</li>
-                    <li>{{ i18n.t('adminAutomation.rulesExperienceCoPickup') }}</li>
-                  </ul>
-
-                  <h4 class="automation-help__section">{{ i18n.t('adminAutomation.rulesCleaningTitle') }}</h4>
-                  <ul class="automation-help__list">
-                    <li>{{ i18n.t('adminAutomation.rulesCleaningExemption') }}</li>
-                    <li>{{ i18n.t('adminAutomation.rulesCleaningHistory') }}</li>
-                    <li>{{ i18n.t('adminAutomation.rulesCleaningFuture') }}</li>
-                    <li>{{ i18n.t('adminAutomation.rulesCleaningOverride') }}</li>
-                  </ul>
-                </div>
-
-                <div class="automation-toolbar">
-                  <label class="automation-toolbar__toggle">
-                    <p-checkbox [binary]="true" [ngModel]="onlyMyAutomations()" (ngModelChange)="onlyMyAutomations.set(!!$event)"></p-checkbox>
-                    <span>{{ i18n.t('adminAutomation.onlyMyAutomations') }}</span>
-                  </label>
-
-                  @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)) {
-                    <div class="automation-toolbar__add">
-                      <p-select
-                        [options]="availableStoreOptions()"
-                        [ngModel]="selectedStoreId()"
-                        (ngModelChange)="selectedStoreId.set($event)"
-                        [placeholder]="i18n.t('adminAutomation.addStorePlaceholder')"
-                        appendTo="body"></p-select>
-                      <button
-                        pButton
-                        type="button"
-                        icon="pi pi-plus"
-                        [label]="i18n.t('adminAutomation.addStore')"
-                        [disabled]="selectedStoreId() == null"
-                        (click)="addFoodsharingStore()"></button>
-                    </div>
-                  }
-                </div>
-
-                <p-table class="automation-table" [value]="visibleFoodsharingStores()">
-                  <ng-template pTemplate="header">
-                    <tr>
-                      <th>{{ i18n.t('common.id') }}</th>
-                      <th>{{ i18n.t('common.name') }}</th>
-                      <th>{{ i18n.t('adminAutomation.owner') }}</th>
-                      <th>{{ i18n.t('adminAutomation.enabled') }}</th>
-                      <th>{{ i18n.t('adminAutomation.storeDryRun') }}</th>
-                      <th>{{ i18n.t('adminAutomation.gapRule') }}</th>
-                      <th>{{ i18n.t('adminAutomation.minimumGapDays') }}</th>
-                      <th>{{ i18n.t('adminAutomation.cleaningRule') }}</th>
-                      <th>{{ i18n.t('adminAutomation.experienceRule') }}</th>
-                      <th>{{ i18n.t('common.actions') }}</th>
-                    </tr>
-                  </ng-template>
-                  <ng-template pTemplate="body" let-store>
-                    <tr>
-                      <td>{{ store.storeId }}</td>
-                      <td>{{ store.storeName }}</td>
-                      <td>
-                        <span [class.automation-owner--available]="store.editable">{{ storeOwnerLabel(store) }}</span>
-                      </td>
-                      <td><p-checkbox [binary]="true" [(ngModel)]="store.enabled" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)"></p-checkbox></td>
-                      <td><p-checkbox [binary]="true" [(ngModel)]="store.dryRunEnabled" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)"></p-checkbox></td>
-                      <td><p-checkbox [binary]="true" [(ngModel)]="store.gapRuleEnabled" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)"></p-checkbox></td>
-                      <td><p-inputNumber [(ngModel)]="store.minimumGapDays" [min]="0" [showButtons]="true" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)"></p-inputNumber></td>
-                      <td><p-checkbox [binary]="true" [(ngModel)]="store.cleaningRuleEnabled" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)"></p-checkbox></td>
-                      <td><p-checkbox [binary]="true" [(ngModel)]="store.experienceRuleEnabled" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)"></p-checkbox></td>
-                      <td><button pButton type="button" size="small" [label]="i18n.t('common.save')" [disabled]="!store.editable || !sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)" (click)="saveFoodsharingStore(store)"></button></td>
-                    </tr>
-                  </ng-template>
-                </p-table>
-
-                @if (visibleFoodsharingStores().length === 0) {
-                  <p class="empty-state automation-empty">{{ i18n.t('adminAutomation.noAutomations') }}</p>
-                }
-
-                @if (sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) {
-                  <h3 class="automation-section-title">{{ i18n.t('adminAutomation.audit') }}</h3>
-                  <p-table class="automation-table" [value]="foodsharingAudit()" [paginator]="true" [rows]="10">
-                    <ng-template pTemplate="header">
-                      <tr>
-                        <th>{{ i18n.t('adminAutomation.decision') }}</th>
-                        <th>{{ i18n.t('adminAutomation.store') }}</th>
-                        <th>{{ i18n.t('adminAutomation.user') }}</th>
-                        <th>{{ i18n.t('adminAutomation.pickup') }}</th>
-                        <th>{{ i18n.t('adminAutomation.dryRun') }}</th>
-                        <th>{{ i18n.t('adminAutomation.reasons') }}</th>
-                        <th>{{ i18n.t('adminAutomation.message') }}</th>
-                        <th>{{ i18n.t('common.error') }}</th>
-                        <th>{{ i18n.t('common.createdAt') }}</th>
-                      </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-entry>
-                      <tr>
-                        <td><p-tag [value]="entry.decision"></p-tag></td>
-                        <td>{{ entry.storeName }}</td>
-                        <td>{{ entry.foodsharingUserName || entry.foodsharingUserId }}</td>
-                        <td>{{ entry.pickupDate | date:'dd.MM.yyyy HH:mm':'Europe/Zurich' }}</td>
-                        <td>{{ entry.dryRun ? i18n.t('common.yes') : i18n.t('common.no') }}</td>
-                        <td>{{ entry.reasons }}</td>
-                        <td>{{ entry.userMessage || '-' }}</td>
-                        <td>{{ entry.error || '-' }}</td>
-                        <td>{{ entry.createdAt | zurichDateTime: 'short' }}</td>
-                      </tr>
-                    </ng-template>
-                  </p-table>
-                }
-              </div>
-            </p-tabpanel>
-
-            @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)) {
-              <p-tabpanel value="cleaning">
-                <div class="automation-tabpanel">
-                  <div class="form-grid automation-form-grid">
-                    <label>
-                      {{ i18n.t('common.foodsharingId') }}
-                      <input pInputText type="text" [ngModel]="cleaningExemptionFoodsharingId()" (ngModelChange)="cleaningExemptionFoodsharingId.set($event)">
-                    </label>
-                    <label>
-                      {{ i18n.t('adminAutomation.exemptionReason') }}
-                      <input pInputText type="text" [ngModel]="cleaningExemptionReason()" (ngModelChange)="cleaningExemptionReason.set($event)">
-                    </label>
-                    <button pButton type="button" [label]="i18n.t('common.save')" (click)="saveCleaningRuleExemption()"></button>
-                  </div>
-                  <p-table class="automation-table" [value]="cleaningRuleExemptions()">
-                    <ng-template pTemplate="header">
-                      <tr>
-                        <th>{{ i18n.t('common.foodsharingId') }}</th>
-                        <th>{{ i18n.t('adminAutomation.exemptionReason') }}</th>
-                        <th>{{ i18n.t('common.actions') }}</th>
-                      </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-exemption>
-                      <tr>
-                        <td>{{ exemption.foodsharingId }}</td>
-                        <td>{{ exemption.reason }}</td>
-                        <td><button pButton type="button" size="small" severity="danger" [label]="i18n.t('common.delete')" (click)="deleteCleaningRuleExemption(exemption)"></button></td>
-                      </tr>
-                    </ng-template>
-                  </p-table>
-                </div>
-              </p-tabpanel>
-            }
-
-            @if (sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
-              <p-tabpanel value="users">
-                <div class="automation-tabpanel">
-                  <p-table class="automation-table" [value]="foodsharingFuturePickupUsers()" [paginator]="true" [rows]="10" sortField="futurePickupCount" [sortOrder]="-1">
-                    <ng-template pTemplate="header">
-                      <tr>
-                        <th>{{ i18n.t('common.name') }}</th>
-                        <th>{{ i18n.t('common.foodsharingId') }}</th>
-                        <th pSortableColumn="futurePickupCount">{{ i18n.t('adminAutomation.futurePickupCount') }} <p-sortIcon field="futurePickupCount"></p-sortIcon></th>
-                        <th>{{ i18n.t('adminAutomation.pickupDates') }}</th>
-                      </tr>
-                    </ng-template>
-                    <ng-template pTemplate="body" let-user>
-                      <tr>
-                        <td>{{ user.name || '-' }}</td>
-                        <td>{{ user.foodsharingUserId }}</td>
-                        <td>{{ user.futurePickupCount }}</td>
-                        <td>
-                          @for (pickup of user.futurePickups; track pickup.storeId + '-' + pickup.pickupDate) {
-                            <div>
-                              {{ pickup.pickupDate | date:'dd.MM.yyyy HH:mm':'Europe/Zurich' }} - {{ pickup.storeName }} ({{ pickup.storeId }})
-                              <p-tag [severity]="pickup.confirmed ? 'success' : 'warn'" [value]="pickup.confirmed ? i18n.t('adminAutomation.confirmed') : i18n.t('adminAutomation.pending')"></p-tag>
-                            </div>
-                          }
-                        </td>
-                      </tr>
-                    </ng-template>
-                  </p-table>
-                </div>
-              </p-tabpanel>
-            }
-          </p-tabpanels>
-        </p-tabs>
-      }
+    @if (!foodsharingStatus()?.connected) {
+      <div class="form-grid automation-form-grid">
+        <label>{{ i18n.t('common.email') }}<input pInputText type="email" [ngModel]="foodsharingEmail()" (ngModelChange)="foodsharingEmail.set($event)"></label>
+        <label>{{ i18n.t('common.password') }}<input pInputText type="password" [(ngModel)]="foodsharingPassword"></label>
+        <button pButton type="button" [label]="i18n.t('adminAutomation.connect')" (click)="connectFoodsharing()"></button>
+      </div>
     } @else {
-      <p-tabs [value]="sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions) ? 'audit' : 'users'" class="automation-tabs">
+      <div class="automation-toolbar">
+        <span>{{ i18n.t('adminAutomation.connectedAs') }} {{ foodsharingStatus()?.email }}</span>
+        <button pButton type="button" severity="secondary" [label]="i18n.t('adminAutomation.disconnect')" (click)="disconnectFoodsharing()"></button>
+      </div>
+      <div class="automation-mode-banner" [ngClass]="statusBannerClass()">{{ statusBannerText() }}</div>
+
+      <p-tabs [value]="activeAutomationTab()" (valueChange)="onAutomationTabChange($event)" class="automation-tabs">
         <p-tablist>
-          @if (sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) {
-            <p-tab value="audit">{{ i18n.t('adminAutomation.audit') }}</p-tab>
-          }
-          @if (sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
-            <p-tab value="users">{{ i18n.t('adminAutomation.tabUserStatistics') }}</p-tab>
-          }
+          @if (sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval)) { <p-tab value="applications">{{ i18n.t('automation.storeApplications') }}</p-tab> }
+          @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)) { <p-tab value="slots">{{ i18n.t('automation.slotApproval') }}</p-tab> }
+          @if (sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)) { <p-tab value="advertisements">{{ i18n.t('automation.slotAdvertisement') }}</p-tab> }
+          @if (sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) { <p-tab value="statistics">{{ i18n.t('adminAutomation.tabUserStatistics') }}</p-tab> }
         </p-tablist>
         <p-tabpanels>
-          @if (sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) {
-            <p-tabpanel value="audit">
+          @if (sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval)) {
+            <p-tabpanel value="applications">
+              @if (activeAutomationTab() === 'applications') {
               <div class="automation-tabpanel">
-                <p-table class="automation-table" [value]="foodsharingAudit()" [paginator]="true" [rows]="10">
-                  <ng-template pTemplate="header">
+              <div class="automation-help">
+                <h3 class="automation-help__title">{{ i18n.t('automation.applicationsInstructionsTitle') }}</h3>
+                <ol class="automation-help__list">
+                  <li>{{ i18n.t('automation.applicationsInstruction1') }}</li>
+                  <li>{{ i18n.t('automation.applicationsInstruction2') }}</li>
+                  <li>{{ i18n.t('automation.applicationsInstruction3') }}</li>
+                  <li>{{ i18n.t('automation.applicationsInstruction4') }}</li>
+                </ol>
+                <h4 class="automation-help__section">{{ i18n.t('automation.requestDecisionTableTitle') }}</h4>
+                <table class="automation-help__decision-table">
+                  <thead>
                     <tr>
-                      <th>{{ i18n.t('adminAutomation.decision') }}</th>
-                      <th>{{ i18n.t('adminAutomation.store') }}</th>
-                      <th>{{ i18n.t('adminAutomation.user') }}</th>
-                      <th>{{ i18n.t('adminAutomation.pickup') }}</th>
-                      <th>{{ i18n.t('adminAutomation.dryRun') }}</th>
-                      <th>{{ i18n.t('adminAutomation.reasons') }}</th>
-                      <th>{{ i18n.t('adminAutomation.message') }}</th>
-                      <th>{{ i18n.t('common.error') }}</th>
-                      <th>{{ i18n.t('common.createdAt') }}</th>
+                      <th>{{ i18n.t('automation.requestDecisionCondition') }}</th>
+                      <th>{{ i18n.t('automation.requestDecisionAction') }}</th>
+                      <th>{{ i18n.t('automation.requestDecisionAudit') }}</th>
+                      <th>{{ i18n.t('automation.requestDecisionCustomerMessage') }}</th>
                     </tr>
-                  </ng-template>
-                  <ng-template pTemplate="body" let-entry>
+                  </thead>
+                  <tbody>
                     <tr>
-                      <td><p-tag [value]="entry.decision"></p-tag></td>
-                      <td>{{ entry.storeName }}</td>
-                      <td>{{ entry.foodsharingUserName || entry.foodsharingUserId }}</td>
-                      <td>{{ entry.pickupDate | date:'dd.MM.yyyy HH:mm':'Europe/Zurich' }}</td>
-                      <td>{{ entry.dryRun ? i18n.t('common.yes') : i18n.t('common.no') }}</td>
-                      <td>{{ entry.reasons }}</td>
-                      <td>{{ entry.userMessage || '-' }}</td>
-                      <td>{{ entry.error || '-' }}</td>
-                      <td>{{ entry.createdAt | zurichDateTime: 'short' }}</td>
+                      <td>{{ i18n.t('automation.requestDecisionMissingData') }}</td>
+                      <td>{{ i18n.t('automation.requestDecisionSkip') }}</td>
+                      <td>SKIPPED</td>
+                      <td>{{ i18n.t('automation.requestDecisionNoMessage') }}</td>
                     </tr>
-                  </ng-template>
-                </p-table>
+                    <tr>
+                      <td>{{ i18n.t('automation.requestDecisionTooFar') }}</td>
+                      <td>{{ i18n.t('automation.requestDecisionDecline') }}</td>
+                      <td>WOULD_DECLINE / DECLINED</td>
+                      <td>{{ i18n.t('automation.requestDecisionTooFarMessage') }}</td>
+                    </tr>
+                    <tr>
+                      <td>{{ i18n.t('automation.requestDecisionOtherwise') }}</td>
+                      <td>{{ i18n.t('automation.requestDecisionApprove') }}</td>
+                      <td>WOULD_APPROVE / APPROVED</td>
+                      <td>{{ i18n.t('automation.requestDecisionNoMessage') }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="automation-help__note">{{ i18n.t('automation.requestDecisionDryRunNote') }}</p>
               </div>
+              <div class="automation-toolbar"><button pButton type="button" [label]="i18n.t('adminAutomation.runDryRun')" (click)="runRequestAutomationDryRun()"></button><div class="automation-toolbar__add"><p-select [options]="availableRequestStoreOptions()" optionLabel="label" optionValue="value" [ngModel]="selectedRequestStoreId()" (ngModelChange)="selectedRequestStoreId.set(normalizeStoreId($event))" [placeholder]="i18n.t('adminAutomation.addStorePlaceholder')" appendTo="body"></p-select><button pButton type="button" icon="pi pi-plus" [label]="i18n.t('adminAutomation.addStore')" [disabled]="selectedRequestStoreId() == null" (click)="addRequestAutomation()"></button></div></div>
+              @if (requestRunResult(); as result) { <div class="automation-run-result"><strong>{{ i18n.t('adminAutomation.dryRunSummary') }}</strong>: {{ result.evaluated }} {{ i18n.t('automation.evaluated') }}, {{ result.confirmed }} {{ i18n.t('automation.wouldAct') }}, {{ result.declined }} {{ i18n.t('automation.skipped') }}.</div> }
+              <p-table [value]="requestAutomationStores()"><ng-template pTemplate="header"><tr><th>{{ i18n.t('common.name') }}</th><th>{{ i18n.t('adminAutomation.enabled') }}</th><th>{{ i18n.t('adminAutomation.storeDryRun') }}</th><th>{{ i18n.t('adminAutomation.distanceRule') }}</th><th>{{ i18n.t('adminAutomation.maximumDistanceKm') }}</th><th>{{ i18n.t('common.actions') }}</th></tr></ng-template><ng-template pTemplate="body" let-store><tr><td>{{ store.storeName }}</td><td><p-checkbox [binary]="true" [(ngModel)]="store.requestEnabled" [disabled]="!store.editable"></p-checkbox></td><td><p-checkbox [binary]="true" [(ngModel)]="store.requestDryRunEnabled" [disabled]="!store.editable"></p-checkbox></td><td><p-checkbox [binary]="true" [(ngModel)]="store.requestDistanceRuleEnabled" [disabled]="!store.editable"></p-checkbox></td><td><p-inputNumber [(ngModel)]="store.requestMaximumDistanceKm" [min]="0" [minFractionDigits]="0" [maxFractionDigits]="2" [disabled]="!store.editable || !store.requestDistanceRuleEnabled"></p-inputNumber></td><td><button pButton type="button" size="small" [label]="i18n.t('common.save')" [disabled]="!store.editable" (click)="saveRequestAutomation(store)"></button><button pButton type="button" size="small" severity="danger" [label]="i18n.t('common.delete')" [disabled]="!store.editable" (click)="deleteRequestAutomation(store)"></button></td></tr></ng-template></p-table>
+              @if (sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) { <ng-container *ngTemplateOutlet="requestAudit; context: { entries: requestAutomationAudit() }"></ng-container> }
+              </div>
+              }
+            </p-tabpanel>
+          }
+          @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)) {
+            <p-tabpanel value="slots">
+              @if (activeAutomationTab() === 'slots') {
+              <div class="automation-tabpanel">
+              <div class="automation-help">
+                <h3 class="automation-help__title">{{ i18n.t('automation.slotsInstructionsTitle') }}</h3>
+                <ol class="automation-help__list">
+                  <li>{{ i18n.t('automation.slotsInstruction1') }}</li>
+                  <li>{{ i18n.t('automation.slotsInstruction2') }}</li>
+                  <li>{{ i18n.t('automation.slotsInstruction3') }}</li>
+                  <li>{{ i18n.t('automation.slotsInstruction4') }}</li>
+                </ol>
+                <h4 class="automation-help__section">{{ i18n.t('automation.slotsDecisionTableTitle') }}</h4>
+                <table class="automation-help__decision-table">
+                  <thead>
+                    <tr>
+                      <th>{{ i18n.t('automation.requestDecisionCondition') }}</th>
+                      <th>{{ i18n.t('automation.requestDecisionAction') }}</th>
+                      <th>{{ i18n.t('automation.requestDecisionAudit') }}</th>
+                      <th>{{ i18n.t('automation.requestDecisionCustomerMessage') }}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>{{ i18n.t('automation.slotsDecisionRecentPickup') }}</td>
+                      <td>{{ i18n.t('automation.slotsDecisionAllow') }}</td>
+                      <td>WOULD_CONFIRM / CONFIRMED</td>
+                      <td>{{ i18n.t('automation.slotsDecisionRecentPickupMessage') }}</td>
+                    </tr>
+                    <tr>
+                      <td>{{ i18n.t('automation.slotsDecisionGapRule') }}</td>
+                      <td>{{ i18n.t('automation.slotsDecisionDecline') }}</td>
+                      <td>WOULD_DECLINE / DECLINED</td>
+                      <td>{{ i18n.t('automation.slotsDecisionGapRuleMessage') }}</td>
+                    </tr>
+                    <tr>
+                      <td>{{ i18n.t('automation.slotsDecisionExperienceRule') }}</td>
+                      <td>{{ i18n.t('automation.slotsDecisionDecline') }}</td>
+                      <td>WOULD_DECLINE / DECLINED</td>
+                      <td>{{ i18n.t('automation.slotsDecisionExperienceRuleMessage') }}</td>
+                    </tr>
+                    <tr>
+                      <td>{{ i18n.t('automation.slotsDecisionCleaningRuleOverride') }}</td>
+                      <td>{{ i18n.t('automation.slotsDecisionAllow') }}</td>
+                      <td>WOULD_CONFIRM / CONFIRMED</td>
+                      <td>{{ i18n.t('automation.slotsDecisionCleaningRuleOverrideMessage') }}</td>
+                    </tr>
+                    <tr>
+                      <td>{{ i18n.t('automation.slotsDecisionCleaningRuleDecline') }}</td>
+                      <td>{{ i18n.t('automation.slotsDecisionDecline') }}</td>
+                      <td>WOULD_DECLINE / DECLINED</td>
+                      <td>{{ i18n.t('automation.slotsDecisionCleaningRuleDeclineMessage') }}</td>
+                    </tr>
+                    <tr>
+                      <td>{{ i18n.t('automation.slotsDecisionOtherwise') }}</td>
+                      <td>{{ i18n.t('automation.slotsDecisionAllow') }}</td>
+                      <td>WOULD_CONFIRM / CONFIRMED</td>
+                      <td>{{ i18n.t('automation.slotsDecisionOtherwiseMessage') }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p class="automation-help__note">{{ i18n.t('automation.slotsDecisionDryRunNote') }}</p>
+              </div>
+              @if (cleaningStoreConfigured() === false) { <p class="empty-state">{{ i18n.t('adminAutomation.cleaningStoreMissing') }}</p> }
+              <div class="automation-toolbar"><button pButton type="button" [label]="i18n.t('adminAutomation.runDryRun')" (click)="runFoodsharingDryRun()"></button><div class="automation-toolbar__add"><p-select [options]="availableStoreOptions()" optionLabel="label" optionValue="value" [ngModel]="selectedStoreId()" (ngModelChange)="selectedStoreId.set(normalizeStoreId($event))" [placeholder]="i18n.t('adminAutomation.addStorePlaceholder')" appendTo="body"></p-select><button pButton type="button" icon="pi pi-plus" [label]="i18n.t('adminAutomation.addStore')" [disabled]="selectedStoreId() == null" (click)="addFoodsharingStore()"></button></div></div>
+              @if (slotRunResult(); as result) { <div class="automation-run-result"><strong>{{ i18n.t('adminAutomation.dryRunSummary') }}</strong>: {{ result.evaluated }} {{ i18n.t('automation.evaluated') }}, {{ result.confirmed }} {{ i18n.t('adminAutomation.dryRunWouldConfirm') }}, {{ result.declined }} {{ i18n.t('adminAutomation.dryRunWouldDecline') }}, {{ result.failed }} {{ i18n.t('adminAutomation.dryRunFailed') }}.</div> }
+              <p-table [value]="slotApprovalStores()"><ng-template pTemplate="header"><tr><th>{{ i18n.t('common.name') }}</th><th>{{ i18n.t('adminAutomation.enabled') }}</th><th>{{ i18n.t('adminAutomation.storeDryRun') }}</th><th>{{ i18n.t('adminAutomation.gapRule') }}</th><th>{{ i18n.t('adminAutomation.minimumGapDays') }}</th><th>{{ i18n.t('adminAutomation.cleaningRule') }}</th><th>{{ i18n.t('adminAutomation.experienceRule') }}</th><th>{{ i18n.t('common.actions') }}</th></tr></ng-template><ng-template pTemplate="body" let-store><tr><td>{{ store.storeName }}</td><td><p-checkbox [binary]="true" [(ngModel)]="store.enabled" [disabled]="!store.editable"></p-checkbox></td><td><p-checkbox [binary]="true" [(ngModel)]="store.dryRunEnabled" [disabled]="!store.editable"></p-checkbox></td><td><p-checkbox [binary]="true" [(ngModel)]="store.gapRuleEnabled" [disabled]="!store.editable"></p-checkbox></td><td><p-inputNumber [(ngModel)]="store.minimumGapDays" [min]="0" [disabled]="!store.editable"></p-inputNumber></td><td><p-checkbox [binary]="true" [(ngModel)]="store.cleaningRuleEnabled" [disabled]="!store.editable || cleaningStoreConfigured() === false"></p-checkbox></td><td><p-checkbox [binary]="true" [(ngModel)]="store.experienceRuleEnabled" [disabled]="!store.editable"></p-checkbox></td><td><button pButton type="button" size="small" [label]="i18n.t('common.save')" [disabled]="!store.editable" (click)="saveFoodsharingStore(store)"></button><button pButton type="button" size="small" severity="danger" [label]="i18n.t('common.delete')" [disabled]="!store.editable" (click)="deleteFoodsharingStore(store)"></button></td></tr></ng-template></p-table>
+              <h3>{{ i18n.t('adminAutomation.tabCleaningRuleExemptions') }}</h3><div class="form-grid automation-form-grid"><label>{{ i18n.t('common.foodsharingId') }}<input pInputText [ngModel]="cleaningExemptionFoodsharingId()" (ngModelChange)="cleaningExemptionFoodsharingId.set($event)"></label><label>{{ i18n.t('adminAutomation.exemptionReason') }}<input pInputText [ngModel]="cleaningExemptionReason()" (ngModelChange)="cleaningExemptionReason.set($event)"></label><button pButton type="button" [label]="i18n.t('common.save')" (click)="saveCleaningRuleExemption()"></button></div>
+              <p-table [value]="cleaningRuleExemptions()"><ng-template pTemplate="header"><tr><th>{{ i18n.t('common.foodsharingId') }}</th><th>{{ i18n.t('adminAutomation.exemptionReason') }}</th><th>{{ i18n.t('common.actions') }}</th></tr></ng-template><ng-template pTemplate="body" let-exemption><tr><td>{{ exemption.foodsharingId }}</td><td>{{ exemption.reason }}</td><td><button pButton type="button" size="small" severity="danger" [label]="i18n.t('common.delete')" (click)="deleteCleaningRuleExemption(exemption)"></button></td></tr></ng-template></p-table>
+              @if (sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) { <ng-container *ngTemplateOutlet="slotAudit"></ng-container> }
+              </div>
+              }
+            </p-tabpanel>
+          }
+          @if (sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)) {
+            <p-tabpanel value="advertisements">
+              @if (activeAutomationTab() === 'advertisements') {
+              <div class="automation-tabpanel">
+              <div class="automation-help"><h3>{{ i18n.t('automation.advertisementsInstructionsTitle') }}</h3><ol><li>{{ i18n.t('automation.advertisementsInstruction1') }}</li><li>{{ i18n.t('automation.advertisementsInstruction2') }}</li><li>{{ i18n.t('automation.advertisementsInstruction3') }}</li><li>{{ i18n.t('automation.advertisementsInstruction4') }}</li><li>{{ i18n.t('automation.advertisementsInstruction5') }}</li></ol><p>{{ i18n.t('automation.advertisementVariables') }}</p></div>
+              @if (foodsharingStatus()?.telegramBotTokenConfigured) {
+                <div class="automation-form-grid automation-form-grid--telegram">
+                  <div class="automation-form-grid__status">
+                    <strong>{{ i18n.t('automation.telegramBotTokenConfigured') }}</strong>
+                  </div>
+                  <div class="automation-form-grid__actions">
+                    <button pButton type="button" severity="secondary" [label]="i18n.t('automation.removeTelegramBotToken')" (click)="removeTelegramBotToken()"></button>
+                  </div>
+                </div>
+              } @else {
+                <div class="automation-form-grid automation-form-grid--telegram">
+                  <label>{{ i18n.t('automation.telegramBotToken') }}<input pInputText type="password" [ngModel]="telegramBotToken" (ngModelChange)="telegramBotToken = $event"></label>
+                  <div class="automation-form-grid__actions">
+                    <button pButton type="button" [label]="i18n.t('common.save')" (click)="saveTelegramBotToken()"></button>
+                  </div>
+                </div>
+              }
+              <div class="automation-toolbar"><button pButton type="button" [label]="i18n.t('adminAutomation.runDryRun')" (click)="runAdvertisementAutomationDryRun()"></button><button pButton type="button" severity="secondary" [label]="i18n.t('automation.refreshTelegramChats')" (click)="refreshTelegramChats()"></button><div class="automation-toolbar__add"><p-select [options]="availableAdvertisementStoreOptions()" optionLabel="label" optionValue="value" [ngModel]="selectedAdvertisementStoreId()" (ngModelChange)="selectedAdvertisementStoreId.set(normalizeStoreId($event))" [placeholder]="i18n.t('adminAutomation.addStorePlaceholder')" appendTo="body"></p-select><button pButton type="button" icon="pi pi-plus" [label]="i18n.t('adminAutomation.addStore')" [disabled]="selectedAdvertisementStoreId() == null" (click)="addAdvertisementAutomation()"></button></div></div>
+              <div class="automation-help automation-help--telegram">
+                <h3 class="automation-help__title">{{ i18n.t('automation.telegramSetupTitle') }}</h3>
+                <ol class="automation-help__list">
+                  <li>{{ i18n.t('automation.telegramSetupInstruction1') }}</li>
+                  <li>{{ i18n.t('automation.telegramSetupInstruction2') }}</li>
+                  <li>{{ i18n.t('automation.telegramSetupInstruction3') }}</li>
+                  <li>{{ i18n.t('automation.telegramSetupInstruction4') }}</li>
+                </ol>
+              </div>
+              @if (advertisementRunResult(); as result) { <div class="automation-run-result"><strong>{{ i18n.t('adminAutomation.dryRunSummary') }}</strong>: {{ result.evaluated }} {{ i18n.t('automation.evaluated') }}, {{ result.confirmed }} {{ i18n.t('automation.wouldAct') }}, {{ result.declined }} {{ i18n.t('automation.skipped') }}.</div> }
+              @for (store of advertisementAutomationStores(); track store.storeId) { <p-card><ng-template pTemplate="title">{{ store.storeName }}</ng-template>
+                @if (advertisementNumbers(store).length === 0) { <p class="empty-state">{{ i18n.t('automation.noAdvertisements') }}</p> }
+                @for (advertNumber of advertisementNumbers(store); track advertNumber) {
+                  <div class="advert-config">
+                    <h4>{{ i18n.t('automation.alert') }} {{ advertNumber }}</h4>
+                    <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertEnabled' + advertNumber]"></p-checkbox> {{ i18n.t('adminAutomation.enabled') }}</label>
+                    <p-inputNumber [(ngModel)]="$any(store)['advertHoursBefore' + advertNumber]" [min]="1" [max]="168" [suffix]="' ' + i18n.t('automation.hoursBefore')"></p-inputNumber>
+                    <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendToStoreChat' + advertNumber]"></p-checkbox> {{ i18n.t('automation.storeChat') }}</label>
+                    <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendToTelegram' + advertNumber]"></p-checkbox> {{ i18n.t('automation.telegram') }}</label>
+                    <p-select [options]="telegramChatOptions()" [(ngModel)]="$any(store)['advertTelegramChatId' + advertNumber]" [editable]="true" [placeholder]="i18n.t('automation.telegramChat')" appendTo="body"></p-select>
+
+                    <div class="advert-messages">
+                      <div class="advert-messages__header">
+                        <strong>{{ i18n.t('automation.storeChatMessages') }}</strong>
+                        <button pButton type="button" size="small" icon="pi pi-plus" [label]="i18n.t('automation.addStoreChatMessage')" (click)="addAdvertisementMessage(store, advertNumber, 'store')"></button>
+                      </div>
+                      <div class="advert-messages__note">{{ i18n.t('automation.messagesRandomizedNote') }}</div>
+                      <div class="advert-message-list">
+                        @for (message of advertisementMessages(store, advertNumber, 'store'); track $index) {
+                          <div class="advert-message-row">
+                            <textarea pInputText rows="4" [ngModel]="message" (ngModelChange)="updateAdvertisementMessage(store, advertNumber, 'store', $index, $event)" [placeholder]="i18n.t('automation.messageTemplatePlaceholder')"></textarea>
+                            <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('common.delete')" (click)="removeAdvertisementMessage(store, advertNumber, 'store', $index)" [disabled]="advertisementMessages(store, advertNumber, 'store').length === 1"></button>
+                          </div>
+                        }
+                      </div>
+                    </div>
+
+                    <div class="advert-messages">
+                      <div class="advert-messages__header">
+                        <strong>{{ i18n.t('automation.telegramMessages') }}</strong>
+                        <button pButton type="button" size="small" icon="pi pi-plus" [label]="i18n.t('automation.addTelegramMessage')" (click)="addAdvertisementMessage(store, advertNumber, 'telegram')"></button>
+                      </div>
+                      <div class="advert-messages__note">{{ i18n.t('automation.messagesRandomizedNote') }}</div>
+                      <div class="advert-message-list">
+                        @for (message of advertisementMessages(store, advertNumber, 'telegram'); track $index) {
+                          <div class="advert-message-row">
+                            <textarea pInputText rows="4" [ngModel]="message" (ngModelChange)="updateAdvertisementMessage(store, advertNumber, 'telegram', $index, $event)" [placeholder]="i18n.t('automation.messageTemplatePlaceholder')"></textarea>
+                            <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('common.delete')" (click)="removeAdvertisementMessage(store, advertNumber, 'telegram', $index)" [disabled]="advertisementMessages(store, advertNumber, 'telegram').length === 1"></button>
+                          </div>
+                        }
+                      </div>
+                    </div>
+
+                    <div class="advert-preview">
+                      <strong>{{ i18n.t('automation.preview') }} {{ i18n.t('automation.storeChat') }}:</strong>
+                      {{ previewOpenSlotAdvertisement(store, advertNumber, 'store') }}
+                    </div>
+                    <div class="advert-preview">
+                      <strong>{{ i18n.t('automation.preview') }} {{ i18n.t('automation.telegram') }}:</strong>
+                      {{ previewOpenSlotAdvertisement(store, advertNumber, 'telegram') }}
+                    </div>
+                    <div class="actions-cell">
+                      <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('automation.sendTelegramTest')" (click)="sendTelegramTestMessage(store, advertNumber)"></button>
+                      <button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveOpenSlotAdvertisement(store, advertNumber)"></button>
+                      <button pButton type="button" size="small" severity="danger" [label]="i18n.t('common.delete')" (click)="deleteAdvertisementAutomation(store, advertNumber)"></button>
+                    </div>
+                  </div>
+                }
+                <button pButton type="button" icon="pi pi-plus" [label]="i18n.t('automation.createAlert')" [disabled]="advertisementNumbers(store).length >= 3" (click)="addAdvertisement(store)"></button>
+              </p-card> }
+              @if (sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) { <ng-container *ngTemplateOutlet="advertisementAudit; context: { entries: advertisementAutomationAudit() }"></ng-container> }
+              </div>
+              }
             </p-tabpanel>
           }
           @if (sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
-            <p-tabpanel value="users">
+            <p-tabpanel value="statistics">
+              @if (activeAutomationTab() === 'statistics') {
               <div class="automation-tabpanel">
-                <p-table class="automation-table" [value]="foodsharingFuturePickupUsers()" [paginator]="true" [rows]="10" sortField="futurePickupCount" [sortOrder]="-1">
-                  <ng-template pTemplate="header">
-                    <tr>
-                      <th>{{ i18n.t('common.name') }}</th>
-                      <th>{{ i18n.t('common.foodsharingId') }}</th>
-                      <th pSortableColumn="futurePickupCount">{{ i18n.t('adminAutomation.futurePickupCount') }} <p-sortIcon field="futurePickupCount"></p-sortIcon></th>
-                      <th>{{ i18n.t('adminAutomation.pickupDates') }}</th>
-                    </tr>
-                  </ng-template>
-                  <ng-template pTemplate="body" let-user>
-                    <tr>
-                      <td>{{ user.name || '-' }}</td>
-                      <td>{{ user.foodsharingUserId }}</td>
-                      <td>{{ user.futurePickupCount }}</td>
-                      <td>
-                        @for (pickup of user.futurePickups; track pickup.storeId + '-' + pickup.pickupDate) {
-                          <div>
-                            {{ pickup.pickupDate | date:'dd.MM.yyyy HH:mm':'Europe/Zurich' }} - {{ pickup.storeName }} ({{ pickup.storeId }})
-                            <p-tag [severity]="pickup.confirmed ? 'success' : 'warn'" [value]="pickup.confirmed ? i18n.t('adminAutomation.confirmed') : i18n.t('adminAutomation.pending')"></p-tag>
-                          </div>
-                        }
-                      </td>
-                    </tr>
-                  </ng-template>
-                </p-table>
+              <p-table [value]="foodsharingFuturePickupUsers()" [paginator]="true" [rows]="10" sortField="futurePickupCount" [sortOrder]="-1">
+                <ng-template pTemplate="header"><tr><th>{{ i18n.t('common.name') }}</th><th>{{ i18n.t('common.foodsharingId') }}</th><th pSortableColumn="futurePickupCount">{{ i18n.t('adminAutomation.futurePickupCount') }} <p-sortIcon field="futurePickupCount"></p-sortIcon></th><th>{{ i18n.t('adminAutomation.pickupDates') }}</th></tr></ng-template>
+                <ng-template pTemplate="body" let-user><tr><td>{{ user.name || '-' }}</td><td>{{ user.foodsharingUserId }}</td><td>{{ user.futurePickupCount }}</td><td>@for (pickup of user.futurePickups; track pickup.storeId + '-' + pickup.pickupDate) { <div>{{ pickup.pickupDate | date:'dd.MM.yyyy HH:mm':'Europe/Zurich' }} - {{ pickup.storeName }} ({{ pickup.storeId }}) <p-tag [severity]="pickup.confirmed ? 'success' : 'warn'" [value]="pickup.confirmed ? i18n.t('adminAutomation.confirmed') : i18n.t('adminAutomation.pending')"></p-tag></div> }</td></tr></ng-template>
+              </p-table>
               </div>
+              }
             </p-tabpanel>
           }
         </p-tabpanels>
@@ -334,3 +264,7 @@
     }
   </p-card>
 </section>
+
+<ng-template #requestAudit let-entries="entries"><h3>{{ i18n.t('adminAutomation.audit') }}</h3><p-table [value]="entries" [paginator]="true" [rows]="10"><ng-template pTemplate="header"><tr><th>{{ i18n.t('adminAutomation.store') }}</th><th>{{ i18n.t('common.status') }}</th><th>{{ i18n.t('adminAutomation.dryRun') }}</th><th>{{ i18n.t('adminAutomation.reasons') }}</th><th>{{ i18n.t('adminAutomation.message') }}</th><th>{{ i18n.t('adminAutomation.user') }}</th><th>{{ i18n.t('common.error') }}</th><th>{{ i18n.t('common.createdAt') }}</th></tr></ng-template><ng-template pTemplate="body" let-entry><tr><td>{{ entry.storeName || entry.storeId }}</td><td><p-tag [value]="entry.status"></p-tag></td><td>{{ entry.dryRun ? i18n.t('common.yes') : i18n.t('common.no') }}</td><td>{{ entry.reason || '-' }}</td><td>{{ entry.message || '-' }}</td><td>{{ entry.foodsharingUserName || entry.foodsharingUserId || '-' }}</td><td>{{ entry.error || '-' }}</td><td>{{ entry.createdAt | zurichDateTime: 'short' }}</td></tr></ng-template></p-table></ng-template>
+<ng-template #advertisementAudit let-entries="entries"><h3>{{ i18n.t('adminAutomation.audit') }}</h3><p-table [value]="entries" [paginator]="true" [rows]="10"><ng-template pTemplate="header"><tr><th>{{ i18n.t('adminAutomation.store') }}</th><th>{{ i18n.t('common.status') }}</th><th>{{ i18n.t('adminAutomation.dryRun') }}</th><th>{{ i18n.t('adminAutomation.reasons') }}</th><th>{{ i18n.t('adminAutomation.message') }}</th><th>{{ i18n.t('common.error') }}</th><th>{{ i18n.t('common.createdAt') }}</th></tr></ng-template><ng-template pTemplate="body" let-entry><tr><td>{{ entry.storeName || entry.storeId }}</td><td><p-tag [value]="entry.status"></p-tag></td><td>{{ entry.dryRun ? i18n.t('common.yes') : i18n.t('common.no') }}</td><td>{{ entry.reason || '-' }}</td><td>{{ entry.message || '-' }}</td><td>{{ entry.error || '-' }}</td><td>{{ entry.createdAt | zurichDateTime: 'short' }}</td></tr></ng-template></p-table></ng-template>
+<ng-template #slotAudit><h3>{{ i18n.t('adminAutomation.audit') }}</h3><p-table [value]="foodsharingAudit()" [paginator]="true" [rows]="10"><ng-template pTemplate="header"><tr><th>{{ i18n.t('adminAutomation.decision') }}</th><th>{{ i18n.t('adminAutomation.store') }}</th><th>{{ i18n.t('adminAutomation.user') }}</th><th>{{ i18n.t('adminAutomation.pickup') }}</th><th>{{ i18n.t('adminAutomation.dryRun') }}</th><th>{{ i18n.t('adminAutomation.reasons') }}</th><th>{{ i18n.t('common.createdAt') }}</th></tr></ng-template><ng-template pTemplate="body" let-entry><tr><td><p-tag [value]="entry.decision"></p-tag></td><td>{{ entry.storeName }}</td><td>{{ entry.foodsharingUserName || entry.foodsharingUserId }}</td><td>{{ entry.pickupDate | date:'dd.MM.yyyy HH:mm':'Europe/Zurich' }}</td><td>{{ entry.dryRun ? i18n.t('common.yes') : i18n.t('common.no') }}</td><td>{{ entry.reasons }}</td><td>{{ entry.createdAt | zurichDateTime: 'short' }}</td></tr></ng-template></p-table></ng-template>

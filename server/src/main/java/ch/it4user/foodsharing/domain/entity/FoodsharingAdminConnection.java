@@ -39,6 +39,9 @@ public class FoodsharingAdminConnection extends BaseEntity {
     @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     private String csrfTokenCiphertext;
 
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
+    private String telegramBotTokenCiphertext;
+
     @Column
     private Instant authenticatedAt;
 }

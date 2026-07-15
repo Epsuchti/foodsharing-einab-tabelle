@@ -130,6 +130,31 @@
   margin-top: 0.75rem;
 }
 
+.automation-help__decision-table {
+  width: 100%;
+  margin-top: 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.automation-help__decision-table th,
+.automation-help__decision-table td {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #d9e0ea;
+  vertical-align: top;
+  text-align: left;
+}
+
+.automation-help__decision-table th {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.automation-help__note {
+  margin-top: 0.75rem;
+  color: #475569;
+}
+
 .automation-help__list {
   margin-bottom: 0;
   padding-left: 1.25rem;
@@ -142,4 +167,75 @@
 
 .automation-empty {
   margin-top: 0.75rem;
+}
+
+.advert-preview {
+  margin-top: 0.5rem;
+  max-width: 28rem;
+  padding: 0.5rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #334155;
+  white-space: pre-wrap;
+}
+
+.advert-config {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 24rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.advert-config textarea {
+  width: 100%;
+  min-height: 5rem;
+}
+
+.automation-form-grid--telegram {
+  margin-top: 1rem;
+  gap: 0.75rem;
+}
+
+.automation-form-grid__actions {
+  display: flex;
+  align-items: end;
+}
+
+.automation-help--telegram {
+  margin-top: 1rem;
+}
+
+.advert-messages {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.advert-messages__header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.advert-messages__note {
+  color: #475569;
+}
+
+.advert-message-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.advert-message-row {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.advert-message-row textarea {
+  width: 100%;
+  min-height: 6rem;
 }

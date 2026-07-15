@@ -11,11 +11,23 @@ tags:
   - name: teacher
   - name: admin
 paths:
-  /api/public/slots/available:
+  /api/public/bezirke:
+    get:
+      tags: [public]
+      operationId: getBezirke
+      responses:
+        '200':
+          description: Active Bezirke
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BezirkListResponse'
+  /api/public/bezirke/{bezirkSlug}/slots/available:
     get:
       tags: [public]
       operationId: getAvailableSlots
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: search
           in: query
           schema:
@@ -45,11 +57,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AvailableSlotListResponse'
-  /api/public/slots/{slotId}/book:
+  /api/public/bezirke/{bezirkSlug}/slots/{slotId}/book:
     post:
       tags: [public]
       operationId: bookSlot
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - $ref: '#/components/parameters/SlotId'
       requestBody:
         required: true
@@ -92,10 +105,12 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /api/public/teachers/signup:
+  /api/public/bezirke/{bezirkSlug}/teachers/signup:
     post:
       tags: [public]
       operationId: signupTeacher
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
       requestBody:
         required: true
         content:
@@ -113,10 +128,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/public/notifications/subscribe:
+  /api/public/bezirke/{bezirkSlug}/notifications/subscribe:
     post:
       tags: [public]
       operationId: subscribeNotifications
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
       requestBody:
         required: true
         content:
@@ -151,10 +168,12 @@ paths:
                 $ref: '#/components/schemas/NotificationSubscriptionResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
-  /api/auth/request-login:
+  /api/auth/bezirke/{bezirkSlug}/request-login:
     post:
       tags: [auth]
       operationId: requestLogin
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
       requestBody:
         required: true
         content:
@@ -191,11 +210,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/user/bookings:
+  /api/user/bezirke/{bezirkSlug}/bookings:
     get:
       tags: [user]
       operationId: getMyBookings
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: page
           in: query
           schema:
@@ -230,11 +250,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
-  /api/user/bookings/{slotId}:
+  /api/user/bezirke/{bezirkSlug}/bookings/{slotId}:
     delete:
       tags: [user]
       operationId: cancelMyBooking
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - $ref: '#/components/parameters/SlotId'
       responses:
         '204':
@@ -280,11 +301,33 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/teacher/einabs:
+  /api/teacher/bezirke:
+    put:
+      tags: [teacher]
+      operationId: assignTeacherBezirk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignTeacherBezirkRequest'
+      responses:
+        '200':
+          description: Updated teacher profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/teacher/bezirke/{bezirkSlug}/einabs:
     get:
       tags: [teacher]
       operationId: getTeacherEinAbs
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: page
           in: query
           schema:
@@ -305,6 +348,8 @@ paths:
     post:
       tags: [teacher]
       operationId: createTeacherEinAb
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
       requestBody:
         required: true
         content:
@@ -322,11 +367,12 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/teacher/einabs/{einAbId}:
+  /api/teacher/bezirke/{bezirkSlug}/einabs/{einAbId}:
     put:
       tags: [teacher]
       operationId: updateTeacherEinAb
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - $ref: '#/components/parameters/EinAbId'
       requestBody:
         required: true
@@ -353,6 +399,7 @@ paths:
       tags: [teacher]
       operationId: deleteTeacherEinAb
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - $ref: '#/components/parameters/EinAbId'
       responses:
         '204':
@@ -363,11 +410,12 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
-  /api/teacher/bookings:
+  /api/teacher/bezirke/{bezirkSlug}/bookings:
     get:
       tags: [teacher]
       operationId: getTeacherBookings
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: page
           in: query
           schema:
@@ -385,11 +433,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BookingListResponse'
-  /api/teacher/bookings/{bookingUserId}/comments:
+  /api/teacher/bezirke/{bezirkSlug}/bookings/{bookingUserId}/comments:
     get:
       tags: [teacher]
       operationId: getTeacherBookingComments
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: bookingUserId
           in: path
           required: true
@@ -411,6 +460,7 @@ paths:
       tags: [teacher]
       operationId: addTeacherBookingComment
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: bookingUserId
           in: path
           required: true
@@ -458,11 +508,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IcalCandidateListResponse'
-  /api/teacher/slots/{slotId}/booking:
+  /api/teacher/bezirke/{bezirkSlug}/slots/{slotId}/booking:
     delete:
       tags: [teacher]
       operationId: cancelTeacherSlotBooking
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - $ref: '#/components/parameters/SlotId'
       responses:
         '200':
@@ -471,7 +522,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SlotResponse'
-  /api/admin/teachers:
+  /api/admin/bezirke/{bezirkSlug}/teachers:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     get:
       tags: [admin]
       operationId: getAdminTeachers
@@ -571,55 +624,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TeacherListResponse'
-  /api/admin/einabs:
+  /api/admin/bezirke/{bezirkSlug}:
     get:
       tags: [admin]
-      operationId: getAdminEinAbs
+      operationId: getAdminBezirk
       parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 0
-        - name: size
-          in: query
-          schema:
-            type: integer
-            default: 20
+        - $ref: '#/components/parameters/BezirkSlug'
       responses:
         '200':
-          description: All EinAbs
+          description: Bezirk settings
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AdminEinAbListResponse'
-  /api/admin/bookings:
-    get:
+                $ref: '#/components/schemas/AdminBezirkResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
       tags: [admin]
-      operationId: getAdminBookings
+      operationId: updateAdminBezirk
       parameters:
-        - name: page
-          in: query
-          schema:
-            type: integer
-            default: 0
-        - name: size
-          in: query
-          schema:
-            type: integer
-            default: 20
+        - $ref: '#/components/parameters/BezirkSlug'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBezirkRequest'
       responses:
         '200':
-          description: All bookings
+          description: Updated Bezirk settings
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BookingListResponse'
-  /api/admin/users:
+                $ref: '#/components/schemas/AdminBezirkResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/bezirke/{bezirkSlug}/users:
     get:
       tags: [admin]
       operationId: getAdminUsers
       parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
         - name: page
           in: query
           required: false
@@ -646,6 +695,18 @@ paths:
           schema:
             type: boolean
             default: true
+        - name: unassigned
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - name: allBezirke
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: All booking users
@@ -692,6 +753,32 @@ paths:
       responses:
         '200':
           description: Granted admin to user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingUserResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/users/{userId}/bezirk:
+    put:
+      tags: [admin]
+      operationId: updateAdminUserBezirk
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserBezirkRequest'
+      responses:
+        '200':
+          description: Updated user bezirk
           content:
             application/json:
               schema:
@@ -829,7 +916,271 @@ paths:
                 $ref: '#/components/schemas/FoodsharingConnectionStatus'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/admin/foodsharing/stores:
+
+
+  /api/admin/foodsharing/request-automation-overview:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingRequestAutomationOverview
+      responses:
+        '200':
+          description: Request automation settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingRequestAutomationOverview'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/open-slot-advertisements-overview:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingOpenSlotAdvertisementOverview
+      responses:
+        '200':
+          description: Open-slot advertisement automation settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingOpenSlotAdvertisementOverview'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/extra-automation-overview:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingExtraAutomationOverview
+      deprecated: true
+      responses:
+        '200':
+          description: Request and advertisement automation settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingExtraAutomationOverview'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/request-automation/run:
+    post:
+      tags: [admin]
+      operationId: runFoodsharingRequestAutomationDryRun
+      responses:
+        '200':
+          description: Request automation dry-run result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRunSummary'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/open-slot-advertisements/run:
+    post:
+      tags: [admin]
+      operationId: runFoodsharingOpenSlotAdvertisementDryRun
+      responses:
+        '200':
+          description: Open-slot advertisement dry-run result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AutomationRunSummary'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/telegram/test-message:
+    post:
+      tags: [admin]
+      operationId: sendFoodsharingTelegramTestMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramTestMessageRequest'
+      responses:
+        '204':
+          description: Telegram test message sent
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/admin/foodsharing/request-automation-audit:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingRequestAutomationAudit
+      responses:
+        '200':
+          description: Request automation audit entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodsharingExtraAutomationAudit'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/open-slot-advertisements-audit:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingOpenSlotAdvertisementAudit
+      responses:
+        '200':
+          description: Open-slot advertisement audit entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodsharingExtraAutomationAudit'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/extra-automation-audit:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingExtraAutomationAudit
+      deprecated: true
+      responses:
+        '200':
+          description: Request and advertisement automation audit entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodsharingExtraAutomationAudit'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/telegram/chats:
+    get:
+      tags: [admin]
+      operationId: getFoodsharingTelegramChats
+      responses:
+        '200':
+          description: Telegram chats visible to the connected admin bot
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TelegramChat'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/telegram/bot-token:
+    put:
+      tags: [admin]
+      operationId: saveFoodsharingTelegramBotToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsharingTelegramBotTokenRequest'
+      responses:
+        '204':
+          description: Telegram bot token saved
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/admin/foodsharing/stores/{storeId}/request-automation:
+    put:
+      tags: [admin]
+      operationId: saveFoodsharingRequestAutomation
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsharingRequestAutomationRequest'
+      responses:
+        '200':
+          description: Foodsharing request automation settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingRequestAutomation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [admin]
+      operationId: deleteFoodsharingRequestAutomation
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Request automation deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/foodsharing/stores/{storeId}/open-slot-advertisements/{advertNumber}:
+    put:
+      tags: [admin]
+      operationId: saveFoodsharingOpenSlotAdvertisementAutomation
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: advertNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsharingOpenSlotAdvertisementAutomationRequest'
+      responses:
+        '200':
+          description: Foodsharing open-slot advertisement automation settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingOpenSlotAdvertisementAutomation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    delete:
+      tags: [admin]
+      operationId: deleteFoodsharingOpenSlotAdvertisementAutomation
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: advertNumber
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int32
+      responses:
+        '204':
+          description: Open-slot advertisement deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/stores:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     get:
       tags: [admin]
       operationId: getFoodsharingStores
@@ -844,7 +1195,9 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/admin/foodsharing/stores/{storeId}/automation:
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/stores/{storeId}/automation:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     put:
       tags: [admin]
       operationId: saveFoodsharingStoreAutomation
@@ -872,7 +1225,26 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/admin/foodsharing/automation/run:
+    delete:
+      tags: [admin]
+      operationId: deleteFoodsharingStoreAutomation
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Foodsharing store automation deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/automation/run:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     post:
       tags: [admin]
       operationId: runFoodsharingAutomation
@@ -894,7 +1266,9 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /api/admin/foodsharing/cleaning-rule-exemptions:
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/cleaning-rule-exemptions:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     get:
       tags: [admin]
       operationId: getFoodsharingCleaningRuleExemptions
@@ -930,7 +1304,9 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /api/admin/foodsharing/cleaning-rule-exemptions/{exemptionId}:
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/cleaning-rule-exemptions/{exemptionId}:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     delete:
       tags: [admin]
       operationId: deleteFoodsharingCleaningRuleExemption
@@ -949,7 +1325,9 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/admin/foodsharing/automation/audit:
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/automation/audit:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     get:
       tags: [admin]
       operationId: getFoodsharingAutomationAudit
@@ -966,7 +1344,9 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /api/admin/foodsharing/future-pickup-users:
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/future-pickup-users:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
     get:
       tags: [admin]
       operationId: getFoodsharingFuturePickupUsers
@@ -985,6 +1365,13 @@ paths:
           $ref: '#/components/responses/Forbidden'
 components:
   parameters:
+    BezirkSlug:
+      name: bezirkSlug
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '^[a-z0-9-]+$'
     SlotId:
       name: slotId
       in: path
@@ -1069,7 +1456,49 @@ components:
             type: string
     ErrorCode:
       type: string
-      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, INVALID_UNSUBSCRIBE_TOKEN, TEACHER_ACCOUNT_REQUIRED, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, EINAB_NOT_FOUND, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED, INVALID_BOOKING_CONFIRMATION_TOKEN, BOOKING_CONFIRMATION_EXPIRED]
+      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, BEZIRK_NOT_FOUND, USER_BEZIRK_MISMATCH, NOTIFICATION_SUBSCRIPTION_BEZIRK_MISMATCH, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, INVALID_UNSUBSCRIBE_TOKEN, TEACHER_ACCOUNT_REQUIRED, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, EINAB_NOT_FOUND, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED, INVALID_BOOKING_CONFIRMATION_TOKEN, BOOKING_CONFIRMATION_EXPIRED]
+    BezirkResponse:
+      type: object
+      required: [id, name, slug]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+    BezirkListResponse:
+      type: object
+      required: [bezirke]
+      properties:
+        bezirke:
+          type: array
+          items:
+            $ref: '#/components/schemas/BezirkResponse'
+    AdminBezirkResponse:
+      allOf:
+        - $ref: '#/components/schemas/BezirkResponse'
+        - type: object
+          properties:
+            cleaningStoreId:
+              type: integer
+              format: int64
+              nullable: true
+    UpdateBezirkRequest:
+      type: object
+      properties:
+        cleaningStoreId:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
+    UpdateUserBezirkRequest:
+      type: object
+      properties:
+        bezirkSlug:
+          type: string
+          nullable: true
     Language:
       type: string
       enum: [de, en, gws]
@@ -1081,7 +1510,7 @@ components:
       enum: [AVAILABLE, PENDING_CONFIRMATION, BOOKED, DONE, CANCELLED]
     UserPermission:
       type: string
-      enum: [CAN_GIVE_EIN_ABS, CAN_MANAGE_USERS, CAN_USE_AUTOMATIONS, CAN_SEE_USER_PICKUP_COUNT_GROUPING, CAN_USE_AUTOMATION_SLOT_APPROVAL, CAN_SEE_ALL_AUTOMATION_DECISIONS]
+      enum: [CAN_GIVE_EIN_ABS, CAN_MANAGE_USERS, CAN_USE_AUTOMATIONS, CAN_SEE_USER_PICKUP_COUNT_GROUPING, CAN_USE_AUTOMATION_SLOT_APPROVAL, CAN_USE_AUTOMATION_REQUEST_APPROVAL, CAN_USE_AUTOMATION_OPEN_SLOT_ADVERTISING, CAN_SEE_ALL_AUTOMATION_DECISIONS]
     BookSlotRequest:
       type: object
       required: [foodsharingId, language]
@@ -1118,13 +1547,15 @@ components:
           minLength: 1
     NotificationSubscriptionResponse:
       type: object
-      required: [email, active]
+      required: [email, active, bezirk]
       properties:
         email:
           type: string
           format: email
         active:
           type: boolean
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
     LoginRequest:
       type: object
       required: [foodsharingId]
@@ -1155,13 +1586,15 @@ components:
           type: string
         displayName:
           type: string
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
         permissions:
           type: array
           items:
             $ref: '#/components/schemas/UserPermission'
     UserPermissionsRequest:
       type: object
-      required: [canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canSeeAllAutomationDecisions]
+      required: [canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canUseAutomationRequestApproval, canUseAutomationOpenSlotAdvertising, canSeeAllAutomationDecisions]
       properties:
         canGiveEinAbs:
           type: boolean
@@ -1173,8 +1606,204 @@ components:
           type: boolean
         canUseAutomationSlotApproval:
           type: boolean
+        canUseAutomationRequestApproval:
+          type: boolean
+        canUseAutomationOpenSlotAdvertising:
+          type: boolean
         canSeeAllAutomationDecisions:
           type: boolean
+
+
+    AutomationRunSummary:
+      type: object
+      required: [evaluated, acted, skipped, dryRun, messages]
+      properties:
+        evaluated:
+          type: integer
+          format: int32
+        acted:
+          type: integer
+          format: int32
+        skipped:
+          type: integer
+          format: int32
+        dryRun:
+          type: boolean
+        messages:
+          type: array
+          items:
+            type: string
+    TelegramTestMessageRequest:
+      type: object
+      required: [chatId]
+      properties:
+        chatId:
+          type: string
+        message:
+          type: string
+    FoodsharingRequestAutomationRequest:
+      type: object
+      required: [storeName, enabled, dryRunEnabled, distanceRuleEnabled, maximumDistanceKm]
+      properties:
+        storeName:
+          type: string
+        enabled:
+          type: boolean
+        dryRunEnabled:
+          type: boolean
+        distanceRuleEnabled:
+          type: boolean
+        maximumDistanceKm:
+          type: number
+          format: double
+    FoodsharingOpenSlotAdvertisementAutomationRequest:
+      type: object
+      required: [storeName, enabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages]
+      properties:
+        storeName:
+          type: string
+        enabled:
+          type: boolean
+        triggerHoursBefore:
+          type: integer
+          format: int32
+        sendToStoreChat:
+          type: boolean
+        sendToTelegram:
+          type: boolean
+        telegramChatId:
+          type: string
+        storeMessages:
+          type: array
+          items:
+            type: string
+        telegramMessages:
+          type: array
+          items:
+            type: string
+    FoodsharingRequestAutomation:
+      type: object
+      required: [storeId, storeName, enabled, dryRunEnabled, distanceRuleEnabled, maximumDistanceKm, editable]
+      properties:
+        storeId:
+          type: integer
+          format: int64
+        storeName:
+          type: string
+        enabled:
+          type: boolean
+        dryRunEnabled:
+          type: boolean
+        distanceRuleEnabled:
+          type: boolean
+        maximumDistanceKm:
+          type: number
+          format: double
+        editable:
+          type: boolean
+    FoodsharingOpenSlotAdvertisementAutomation:
+      type: object
+      required: [storeId, storeName, advertNumber, enabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages, editable]
+      properties:
+        storeId:
+          type: integer
+          format: int64
+        storeName:
+          type: string
+        advertNumber:
+          type: integer
+          format: int32
+        enabled:
+          type: boolean
+        triggerHoursBefore:
+          type: integer
+          format: int32
+        sendToStoreChat:
+          type: boolean
+        sendToTelegram:
+          type: boolean
+        telegramChatId:
+          type: string
+        storeMessages:
+          type: array
+          items:
+            type: string
+        telegramMessages:
+          type: array
+          items:
+            type: string
+        editable:
+          type: boolean
+    FoodsharingExtraAutomationOverview:
+      type: object
+      required: [requestAutomations, advertisementAutomations]
+      properties:
+        requestAutomations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodsharingRequestAutomation'
+        advertisementAutomations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodsharingOpenSlotAdvertisementAutomation'
+    FoodsharingRequestAutomationOverview:
+      type: object
+      required: [requestAutomations]
+      properties:
+        requestAutomations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodsharingRequestAutomation'
+    FoodsharingOpenSlotAdvertisementOverview:
+      type: object
+      required: [advertisementAutomations]
+      properties:
+        advertisementAutomations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FoodsharingOpenSlotAdvertisementAutomation'
+
+    FoodsharingExtraAutomationAudit:
+      type: object
+      required: [automationType, storeId, dryRun, status, createdAt]
+      properties:
+        automationType:
+          type: string
+        storeId:
+          type: integer
+          format: int64
+        storeName:
+          type: string
+        pickupDate:
+          type: string
+          format: date-time
+        foodsharingUserId:
+          type: string
+        foodsharingUserName:
+          type: string
+        dryRun:
+          type: boolean
+        status:
+          type: string
+        reason:
+          type: string
+        message:
+          type: string
+        error:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    TelegramChat:
+      type: object
+      required: [id, title, type]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        type:
+          type: string
     FoodsharingConnectRequest:
       type: object
       required: [email, password]
@@ -1185,6 +1814,14 @@ components:
         password:
           type: string
           minLength: 1
+        telegramBotToken:
+          type: string
+    FoodsharingTelegramBotTokenRequest:
+      type: object
+      required: [telegramBotToken]
+      properties:
+        telegramBotToken:
+          type: string
     FoodsharingConnectionStatus:
       type: object
       required: [connected]
@@ -1199,6 +1836,8 @@ components:
         authenticatedAt:
           type: string
           format: date-time
+        telegramBotTokenConfigured:
+          type: boolean
         automationEnabled:
           type: boolean
         automationDryRun:
@@ -1374,7 +2013,7 @@ components:
             $ref: '#/components/schemas/FoodsharingFuturePickup'
     TeacherResponse:
       type: object
-      required: [id, foodsharingId, name, active, language, createdAt, updatedAt, canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canSeeAllAutomationDecisions]
+      required: [id, foodsharingId, name, active, language, createdAt, updatedAt, canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canUseAutomationRequestApproval, canUseAutomationOpenSlotAdvertising, canSeeAllAutomationDecisions]
       properties:
         id:
           type: string
@@ -1402,6 +2041,10 @@ components:
           type: boolean
         canUseAutomationSlotApproval:
           type: boolean
+        canUseAutomationRequestApproval:
+          type: boolean
+        canUseAutomationOpenSlotAdvertising:
+          type: boolean
         canSeeAllAutomationDecisions:
           type: boolean
         wantsToBeTeacher:
@@ -1414,6 +2057,8 @@ components:
         updatedAt:
           type: string
           format: date-time
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
     TeacherListResponse:
       type: object
       required: [teachers, page, size, totalElements, totalPages]
@@ -1454,9 +2099,15 @@ components:
           maxLength: 2000
         language:
           $ref: '#/components/schemas/Language'
+    AssignTeacherBezirkRequest:
+      type: object
+      required: [bezirkSlug]
+      properties:
+        bezirkSlug:
+          type: string
     BookingUserResponse:
       type: object
-      required: [id, name, foodsharingId, language, active, createdAt, updatedAt, canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canSeeAllAutomationDecisions]
+      required: [id, name, foodsharingId, language, active, createdAt, updatedAt, canGiveEinAbs, canManageUsers, canUseAutomations, canSeeUserPickupCountGrouping, canUseAutomationSlotApproval, canUseAutomationRequestApproval, canUseAutomationOpenSlotAdvertising, canSeeAllAutomationDecisions]
       properties:
         id:
           type: string
@@ -1484,6 +2135,10 @@ components:
           type: boolean
         canUseAutomationSlotApproval:
           type: boolean
+        canUseAutomationRequestApproval:
+          type: boolean
+        canUseAutomationOpenSlotAdvertising:
+          type: boolean
         canSeeAllAutomationDecisions:
           type: boolean
         wantsToBeTeacher:
@@ -1494,6 +2149,8 @@ components:
         updatedAt:
           type: string
           format: date-time
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
     BookingUserListResponse:
       type: object
       required: [users]
@@ -1541,11 +2198,13 @@ components:
           type: boolean
     EinAbResponse:
       type: object
-      required: [id, category, startDateTime, publicLocation, teacher, visitFairteiler, slotCount, createdAt, updatedAt]
+      required: [id, bezirk, category, startDateTime, publicLocation, teacher, visitFairteiler, slotCount, createdAt, updatedAt]
       properties:
         id:
           type: string
           format: uuid
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
         category:
           $ref: '#/components/schemas/EinAbCategory'
         startDateTime:
@@ -1601,11 +2260,13 @@ components:
           format: date-time
     AvailableSlotResponse:
       type: object
-      required: [slotId, category, startDateTime, teacherName, visitFairteiler, status]
+      required: [slotId, bezirk, category, startDateTime, teacherName, visitFairteiler, status]
       properties:
         slotId:
           type: string
           format: uuid
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
         category:
           $ref: '#/components/schemas/EinAbCategory'
         startDateTime:
@@ -1649,7 +2310,7 @@ components:
           type: boolean
     BookingDetailResponse:
       type: object
-      required: [slotId, einAbId, category, startDateTime, teacherName, teacherPhoneNumber, status, bookingUser]
+      required: [slotId, einAbId, bezirk, category, startDateTime, teacherName, teacherPhoneNumber, status, bookingUser]
       properties:
         slotId:
           type: string
@@ -1657,6 +2318,8 @@ components:
         einAbId:
           type: string
           format: uuid
+        bezirk:
+          $ref: '#/components/schemas/BezirkResponse'
         category:
           $ref: '#/components/schemas/EinAbCategory'
         startDateTime:

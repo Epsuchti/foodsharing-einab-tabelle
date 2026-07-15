@@ -4,17 +4,22 @@ import { FormsModule } from '@angular/forms';
 
 import {
   AdminService,
+  AutomationRunSummary,
   FoodsharingAutomationAudit,
+  FoodsharingExtraAutomationAudit,
   FoodsharingCleaningRuleExemption,
   FoodsharingConnectionStatus,
   FoodsharingFuturePickupUser,
   FoodsharingManagedStore,
+  FoodsharingOpenSlotAdvertisementOverview,
   FoodsharingRunResult,
+  FoodsharingRequestAutomationOverview,
   FoodsharingStoreAutomation,
   FoodsharingStoreAutomationOverview,
   UserPermission
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
+import { BezirkContextService } from '../../core/bezirk-context.service';
 import { I18nService } from '../../core/i18n.service';
 import { SessionService } from '../../core/session.service';
 import { ButtonModule } from 'primeng/button';
@@ -57,42 +62,67 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly foodsharingStores = signal<FoodsharingStoreAutomation[]>([]);
   protected readonly availableStores = signal<FoodsharingManagedStore[]>([]);
   protected readonly foodsharingAudit = signal<FoodsharingAutomationAudit[]>([]);
+  protected readonly requestAutomationAudit = signal<FoodsharingExtraAutomationAudit[]>([]);
+  protected readonly advertisementAutomationAudit = signal<FoodsharingExtraAutomationAudit[]>([]);
   protected readonly foodsharingFuturePickupUsers = signal<FoodsharingFuturePickupUser[]>([]);
   protected readonly cleaningRuleExemptions = signal<FoodsharingCleaningRuleExemption[]>([]);
+  protected readonly cleaningStoreConfigured = signal<boolean | null>(null);
   protected readonly foodsharingEmail = signal('');
   protected readonly cleaningExemptionFoodsharingId = signal('');
   protected readonly cleaningExemptionReason = signal('');
-  protected readonly foodsharingRunResult = signal<FoodsharingRunResult | null>(null);
+  protected readonly slotRunResult = signal<FoodsharingRunResult | null>(null);
+  protected readonly requestRunResult = signal<FoodsharingRunResult | null>(null);
+  protected readonly advertisementRunResult = signal<FoodsharingRunResult | null>(null);
   protected readonly onlyMyAutomations = signal(true);
+  protected readonly activeAutomationTab = signal('applications');
   protected readonly selectedStoreId = signal<number | null>(null);
+  protected readonly selectedRequestStoreId = signal<number | null>(null);
+  protected readonly selectedAdvertisementStoreId = signal<number | null>(null);
+  protected readonly telegramChatOptions = signal<{ label: string; value: string }[]>([]);
+  protected telegramBotToken = "";
   protected readonly visibleFoodsharingStores = computed(() => this.onlyMyAutomations()
     ? this.foodsharingStores().filter((store) => store.editable)
     : this.foodsharingStores());
-  protected readonly canManageAutomation = computed(() =>
-    this.sessionService.hasPermission(UserPermission.CanUseAutomations)
-    || this.sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval));
+  protected readonly slotApprovalStores = computed(() => this.visibleFoodsharingStores()
+    .filter((store) => Boolean((store as FoodsharingStoreAutomation & Record<string, unknown>)['slotApprovalConfigured'])));
+  protected readonly requestAutomationStores = computed(() => this.visibleFoodsharingStores()
+    .filter((store) => Boolean((store as FoodsharingStoreAutomation & Record<string, unknown>)['requestConfigured'])));
+  protected readonly advertisementAutomationStores = computed(() => this.visibleFoodsharingStores()
+    .filter((store) => this.advertisementNumbers(store).length > 0));
   protected readonly availableStoreOptions = computed(() => this.availableStores().map((store) => ({
     label: `${store.storeName} (${store.storeId})`,
     value: store.storeId
   })));
+  protected readonly availableRequestStoreOptions = computed(() => this.foodsharingStores()
+    .filter((store) => !(store as FoodsharingStoreAutomation & Record<string, unknown>)['requestConfigured'])
+    .map((store) => ({ label: `${store.storeName} (${store.storeId})`, value: store.storeId })));
+  protected readonly availableAdvertisementStoreOptions = computed(() => this.foodsharingStores()
+    .filter((store) => this.advertisementNumbers(store).length === 0)
+    .map((store) => ({ label: `${store.storeName} (${store.storeId})`, value: store.storeId })));
   protected foodsharingPassword = '';
 
   private readonly adminApi = inject(AdminService);
+  private readonly bezirkContext = inject(BezirkContextService);
   protected readonly sessionService = inject(SessionService);
   private readonly messageService = inject(MessageService);
 
   ngOnInit(): void {
-    if (this.canManageAutomation()) {
-      this.loadFoodsharingAutomation();
-    } else {
-      if (this.sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
-        this.loadFoodsharingFuturePickupUsers();
-      }
-      if (this.sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) {
-        this.loadFoodsharingAudit();
-      }
+    this.activeAutomationTab.set(this.sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval)
+      ? 'applications'
+      : this.sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)
+        ? 'slots'
+        : this.sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising) ? 'advertisements' : 'statistics');
+    this.loadBezirkSettings();
+    this.loadFoodsharingStatus();
+  }
+
+  onAutomationTabChange(tab: string | number | undefined): void {
+    if (tab == null) {
+      return;
     }
-    this.loadCleaningRuleExemptions();
+    const nextTab = String(tab);
+    this.activeAutomationTab.set(nextTab);
+    this.loadActiveAutomationTab();
   }
 
   connectFoodsharing(): void {
@@ -105,7 +135,37 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       next: (status) => {
         this.foodsharingStatus.set(status);
         this.foodsharingPassword = '';
-        this.loadFoodsharingAutomation();
+        this.loadActiveAutomationTab();
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  saveTelegramBotToken(): void {
+    this.adminApi.saveFoodsharingTelegramBotToken({
+      foodsharingTelegramBotTokenRequest: {
+        telegramBotToken: this.telegramBotToken
+      }
+    }).subscribe({
+      next: () => {
+        this.telegramBotToken = '';
+        this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') });
+        this.loadFoodsharingStatus();
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  removeTelegramBotToken(): void {
+    this.adminApi.saveFoodsharingTelegramBotToken({
+      foodsharingTelegramBotTokenRequest: {
+        telegramBotToken: ''
+      }
+    }).subscribe({
+      next: () => {
+        this.telegramBotToken = '';
+        this.messageService.add({ severity: 'success', summary: this.i18n.t('common.deleted') });
+        this.loadFoodsharingStatus();
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
@@ -119,20 +179,273 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
         this.availableStores.set([]);
         this.foodsharingFuturePickupUsers.set([]);
         this.foodsharingAudit.set([]);
-        this.foodsharingRunResult.set(null);
+        this.requestAutomationAudit.set([]);
+        this.advertisementAutomationAudit.set([]);
+        this.slotRunResult.set(null);
+        this.requestRunResult.set(null);
+        this.advertisementRunResult.set(null);
+        this.telegramBotToken = '';
       },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  saveRequestAutomation(store: FoodsharingStoreAutomation & { requestEnabled?: boolean; requestDryRunEnabled?: boolean; requestDistanceRuleEnabled?: boolean; requestMaximumDistanceKm?: number }): void {
+    this.adminApi.saveFoodsharingRequestAutomation({
+      storeId: store.storeId,
+      foodsharingRequestAutomationRequest: {
+        storeName: store.storeName,
+        enabled: !!store.requestEnabled,
+        dryRunEnabled: store.requestDryRunEnabled !== false,
+        distanceRuleEnabled: store.requestDistanceRuleEnabled === true,
+        maximumDistanceKm: Number(store.requestMaximumDistanceKm ?? 0)
+      }
+    }).subscribe({ next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') }), error: (error) => this.toastError(resolveApiError(error, this.i18n)) });
+  }
+
+  deleteRequestAutomation(store: FoodsharingStoreAutomation): void {
+    if (!window.confirm(this.i18n.t('common.deleteConfirm'))) {
+      return;
+    }
+    this.adminApi.deleteFoodsharingRequestAutomation({ storeId: store.storeId }).subscribe({
+      next: () => this.reloadActiveAutomationTab(),
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  addRequestAutomation(): void {
+    const storeId = this.selectedRequestStoreId();
+    const store = this.foodsharingStores().find((entry) => entry.storeId === storeId);
+    if (!store) {
+      return;
+    }
+    this.adminApi.saveFoodsharingRequestAutomation({
+      storeId: store.storeId,
+      foodsharingRequestAutomationRequest: {
+        storeName: store.storeName,
+        enabled: false,
+        dryRunEnabled: true,
+        distanceRuleEnabled: false,
+        maximumDistanceKm: 0
+      }
+    }).subscribe({
+      next: () => {
+        this.selectedRequestStoreId.set(null);
+        this.reloadActiveAutomationTab();
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  previewOpenSlotAdvertisement(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram'): string {
+    const templates = this.advertisementMessages(store, advertNumber, channel).map((message) => message.trim()).filter(Boolean);
+    if (templates.length === 0) {
+      return this.i18n.t('automation.addAdvertMessagePreview');
+    }
+    const sampleDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const date = sampleDate.toISOString().slice(0, 10);
+    const time = sampleDate.toTimeString().slice(0, 5);
+    const adminFoodsharingId = this.sessionService.foodsharingId() || '';
+    const dateDe = sampleDate.toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const weekday = sampleDate.toLocaleDateString('de-CH', { weekday: 'long' });
+    return templates.map((template) => template
+      .replaceAll('{{date}}', date)
+      .replaceAll('{{dateDe}}', dateDe)
+      .replaceAll('{{weekday}}', weekday)
+      .replaceAll('{{time}}', time)
+      .replaceAll('{{datetime}}', `${date} ${time}`)
+      .replaceAll('{{datetimeDe}}', `${weekday}, ${dateDe} um ${time}`)
+      .replaceAll('{{adminFoodsharingId}}', adminFoodsharingId)
+      .replaceAll('{{adminProfileUrl}}', adminFoodsharingId ? `https://foodsharing.de/user/${adminFoodsharingId}/profile` : '')
+    ).join('\n\n---\n\n');
+  }
+
+  advertisementMessages(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram'): string[] {
+    const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
+    const propertyName = channel === 'store' ? `advertStoreMessages${advertNumber}` : `advertTelegramMessages${advertNumber}`;
+    const messages = String(data[propertyName] || '').split('\n---\n').map((message) => message.trim());
+    return messages.length > 0 ? messages : [''];
+  }
+
+  updateAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram', index: number, value: string): void {
+    const messages = this.advertisementMessages(store, advertNumber, channel);
+    messages[index] = value;
+    this.setAdvertisementMessages(store, advertNumber, channel, messages);
+  }
+
+  addAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram'): void {
+    const messages = this.advertisementMessages(store, advertNumber, channel);
+    messages.push('');
+    this.setAdvertisementMessages(store, advertNumber, channel, messages);
+  }
+
+  removeAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram', index: number): void {
+    const messages = this.advertisementMessages(store, advertNumber, channel);
+    if (messages.length === 1) {
+      return;
+    }
+    messages.splice(index, 1);
+    this.setAdvertisementMessages(store, advertNumber, channel, messages);
+  }
+
+  saveOpenSlotAdvertisement(store: FoodsharingStoreAutomation, advertNumber: number): void {
+    const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
+    const storeMessages = this.advertisementMessages(store, advertNumber, 'store').map((message) => message.trim()).filter(Boolean);
+    const telegramMessages = this.advertisementMessages(store, advertNumber, 'telegram').map((message) => message.trim()).filter(Boolean);
+    const sendToStoreChat = Boolean(data[`advertSendToStoreChat${advertNumber}`]);
+    const sendToTelegram = Boolean(data[`advertSendToTelegram${advertNumber}`]);
+    const telegramChatId = String(data[`advertTelegramChatId${advertNumber}`] || '').trim();
+    if (!sendToStoreChat && !sendToTelegram) {
+      this.toastError(this.i18n.t('automation.selectDestination'));
+      return;
+    }
+    if (sendToStoreChat && storeMessages.length === 0) {
+      this.toastError(this.i18n.t('automation.addStoreChatMessage'));
+      return;
+    }
+    if (sendToTelegram && !telegramChatId) {
+      this.toastError(this.i18n.t('automation.selectTelegramChat'));
+      return;
+    }
+    if (sendToTelegram && telegramMessages.length === 0) {
+      this.toastError(this.i18n.t('automation.addTelegramMessage'));
+      return;
+    }
+    this.adminApi.saveFoodsharingOpenSlotAdvertisementAutomation({
+      storeId: store.storeId,
+      advertNumber,
+      foodsharingOpenSlotAdvertisementAutomationRequest: {
+        storeName: store.storeName,
+        enabled: Boolean(data[`advertEnabled${advertNumber}`]),
+        triggerHoursBefore: Number(data[`advertHoursBefore${advertNumber}`] || (advertNumber === 1 ? 24 : advertNumber === 2 ? 12 : 3)),
+        sendToStoreChat,
+        sendToTelegram,
+        telegramChatId: telegramChatId || undefined,
+        storeMessages,
+        telegramMessages
+      }
+    }).subscribe({ next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') }), error: (error) => this.toastError(resolveApiError(error, this.i18n)) });
+  }
+
+  deleteAdvertisementAutomation(store: FoodsharingStoreAutomation, advertNumber: number): void {
+    if (!window.confirm(this.i18n.t('common.deleteConfirm'))) {
+      return;
+    }
+    this.adminApi.deleteFoodsharingOpenSlotAdvertisementAutomation({ storeId: store.storeId, advertNumber }).subscribe({
+      next: () => this.reloadActiveAutomationTab(),
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  private setAdvertisementMessages(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram', messages: string[]): void {
+    const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
+    const propertyName = channel === 'store' ? `advertStoreMessages${advertNumber}` : `advertTelegramMessages${advertNumber}`;
+    data[propertyName] = messages.join('\n---\n');
+    this.foodsharingStores.update((stores) => [...stores]);
+  }
+
+  runRequestAutomationDryRun(): void {
+    this.adminApi.runFoodsharingRequestAutomationDryRun().subscribe({
+      next: (result) => {
+        this.requestRunResult.set(this.toRunResult(result));
+        this.loadRequestAutomationAuditIfActive();
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  runAdvertisementAutomationDryRun(): void {
+    this.adminApi.runFoodsharingOpenSlotAdvertisementDryRun().subscribe({
+      next: (result) => {
+        this.advertisementRunResult.set(this.toRunResult(result));
+        this.loadAdvertisementAutomationAuditIfActive();
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+
+  sendTelegramTestMessage(store: FoodsharingStoreAutomation, advertNumber: number): void {
+    const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
+    const chatId = String(data[`advertTelegramChatId${advertNumber}`] || '').trim();
+    if (!chatId) {
+      this.toastError(this.i18n.t('automation.selectTelegramChat'));
+      return;
+    }
+    this.adminApi.sendFoodsharingTelegramTestMessage({
+      telegramTestMessageRequest: {
+        chatId,
+        message: this.previewOpenSlotAdvertisement(store, advertNumber, 'telegram')
+      }
+    }).subscribe({
+      next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('automation.telegramTestSent') }),
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
   }
 
   saveFoodsharingStore(store: FoodsharingStoreAutomation): void {
     this.adminApi.saveFoodsharingStoreAutomation({
+      bezirkSlug: this.bezirkContext.currentSlug(),
       storeId: store.storeId,
       foodsharingStoreAutomationRequest: store
     }).subscribe({
-      next: () => this.loadFoodsharingAutomation(),
+      next: (savedStore) => {
+        this.foodsharingStores.update((stores) => stores.map((entry) => entry.storeId === savedStore.storeId
+          ? { ...entry, ...savedStore, slotApprovalConfigured: true }
+          : entry));
+        this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') });
+      },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
+  }
+
+  deleteFoodsharingStore(store: FoodsharingStoreAutomation): void {
+    if (!window.confirm(this.i18n.t('common.deleteConfirm'))) {
+      return;
+    }
+    this.adminApi.deleteFoodsharingStoreAutomation({ bezirkSlug: this.bezirkContext.currentSlug(), storeId: store.storeId }).subscribe({
+      next: () => this.reloadActiveAutomationTab(),
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  advertisementNumbers(store: FoodsharingStoreAutomation): number[] {
+    const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
+    return [1, 2, 3].filter((number) => data[`advertConfigured${number}`] || data[`advertStoreMessages${number}`] !== undefined || data[`advertTelegramMessages${number}`] !== undefined);
+  }
+
+  addAdvertisement(store: FoodsharingStoreAutomation): void {
+    const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
+    const advertNumber = [1, 2, 3].find((number) => !data[`advertConfigured${number}`] && data[`advertStoreMessages${number}`] === undefined && data[`advertTelegramMessages${number}`] === undefined);
+    if (!advertNumber) {
+      return;
+    }
+    data[`advertConfigured${advertNumber}`] = true;
+    data[`advertEnabled${advertNumber}`] = false;
+    data[`advertHoursBefore${advertNumber}`] = advertNumber === 1 ? 24 : advertNumber === 2 ? 12 : 3;
+    data[`advertSendToStoreChat${advertNumber}`] = false;
+    data[`advertSendToTelegram${advertNumber}`] = false;
+    data[`advertStoreMessages${advertNumber}`] = '';
+    data[`advertTelegramMessages${advertNumber}`] = '';
+    this.foodsharingStores.update((stores) => [...stores]);
+  }
+
+  addAdvertisementAutomation(): void {
+    const storeId = this.selectedAdvertisementStoreId();
+    const store = this.foodsharingStores().find((entry) => entry.storeId === storeId);
+    if (!store) {
+      return;
+    }
+    this.selectedAdvertisementStoreId.set(null);
+    this.addAdvertisement(store);
+  }
+
+  requestAudit(): FoodsharingExtraAutomationAudit[] {
+    return this.requestAutomationAudit();
+  }
+
+  advertisementAudit(): FoodsharingExtraAutomationAudit[] {
+    return this.advertisementAutomationAudit();
   }
 
   addFoodsharingStore(): void {
@@ -142,6 +455,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       return;
     }
     this.adminApi.saveFoodsharingStoreAutomation({
+      bezirkSlug: this.bezirkContext.currentSlug(),
       storeId: store.storeId,
       foodsharingStoreAutomationRequest: {
         storeName: store.storeName,
@@ -155,7 +469,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     }).subscribe({
       next: () => {
         this.selectedStoreId.set(null);
-        this.loadFoodsharingAutomation();
+        this.reloadActiveAutomationTab();
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
@@ -196,10 +510,10 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   runFoodsharingDryRun(): void {
-    this.adminApi.runFoodsharingAutomation({ foodsharingRunRequest: { dryRun: true } }).subscribe({
+    this.adminApi.runFoodsharingAutomation({ bezirkSlug: this.bezirkContext.currentSlug(), foodsharingRunRequest: { dryRun: true } }).subscribe({
       next: (result) => {
-        this.foodsharingRunResult.set(result);
-        this.loadFoodsharingAudit();
+        this.slotRunResult.set(result);
+        this.loadFoodsharingAuditIfActive();
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
@@ -208,6 +522,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
 
   saveCleaningRuleExemption(): void {
     this.adminApi.saveFoodsharingCleaningRuleExemption({
+      bezirkSlug: this.bezirkContext.currentSlug(),
       foodsharingCleaningRuleExemptionRequest: {
         foodsharingId: this.cleaningExemptionFoodsharingId(),
         reason: this.cleaningExemptionReason()
@@ -223,31 +538,99 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   deleteCleaningRuleExemption(exemption: FoodsharingCleaningRuleExemption): void {
-    this.adminApi.deleteFoodsharingCleaningRuleExemption({ exemptionId: exemption.id }).subscribe({
+    this.adminApi.deleteFoodsharingCleaningRuleExemption({ bezirkSlug: this.bezirkContext.currentSlug(), exemptionId: exemption.id }).subscribe({
       next: () => this.loadCleaningRuleExemptions(),
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
   }
 
-  private loadFoodsharingAutomation(): void {
+  private loadFoodsharingStatus(): void {
     this.adminApi.getFoodsharingStatus().subscribe({
       next: (status) => {
         this.foodsharingStatus.set(status);
         if (status.connected) {
-          this.adminApi.getFoodsharingStores().subscribe({
-            next: (overview: FoodsharingStoreAutomationOverview) => {
-              this.foodsharingStores.set(overview.automations);
-              this.availableStores.set(overview.availableStores);
-            },
-            error: () => undefined
-          });
-          this.loadFoodsharingFuturePickupUsers();
-          this.loadFoodsharingAudit();
+          this.loadActiveAutomationTab();
         } else {
           this.foodsharingStores.set([]);
           this.availableStores.set([]);
           this.foodsharingFuturePickupUsers.set([]);
           this.foodsharingAudit.set([]);
+          this.requestAutomationAudit.set([]);
+          this.advertisementAutomationAudit.set([]);
+          this.telegramChatOptions.set([]);
+        }
+      },
+      error: () => undefined
+    });
+  }
+
+  private loadBezirkSettings(): void {
+    this.adminApi.getAdminBezirk({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
+      next: (bezirk) => this.cleaningStoreConfigured.set(bezirk.cleaningStoreId != null),
+      error: () => this.cleaningStoreConfigured.set(null)
+    });
+  }
+
+  private loadActiveAutomationTab(): void {
+    if (!this.foodsharingStatus()?.connected) {
+      return;
+    }
+    const tab = this.activeAutomationTab();
+    switch (tab) {
+      case 'applications':
+        this.loadStoreAutomation({ loadRequestOverview: true, loadAdvertisementOverview: false });
+        this.loadRequestAutomationAuditIfActive();
+        break;
+      case 'slots':
+        this.loadStoreAutomation({ loadRequestOverview: false, loadAdvertisementOverview: false });
+        this.loadCleaningRuleExemptions();
+        this.loadFoodsharingAuditIfActive();
+        break;
+      case 'advertisements':
+        this.loadStoreAutomation({ loadRequestOverview: false, loadAdvertisementOverview: true });
+        this.loadAdvertisementAutomationAuditIfActive();
+        this.loadTelegramChats();
+        break;
+      case 'statistics':
+        this.loadFoodsharingFuturePickupUsers();
+        break;
+    }
+  }
+
+  private reloadActiveAutomationTab(): void {
+    this.loadActiveAutomationTab();
+  }
+
+  private loadStoreAutomation(options: { loadRequestOverview: boolean; loadAdvertisementOverview: boolean }): void {
+    this.adminApi.getFoodsharingStores({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
+      next: (overview: FoodsharingStoreAutomationOverview) => {
+        const stores: FoodsharingStoreAutomation[] = overview.automations
+          .map((store) => ({ ...store, slotApprovalConfigured: true } as FoodsharingStoreAutomation & Record<string, unknown>));
+        if (this.sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval)
+            || this.sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)) {
+          for (const availableStore of overview.availableStores) {
+            if (!stores.some((store) => store.storeId === availableStore.storeId)) {
+              stores.push({
+                storeId: availableStore.storeId,
+                storeName: availableStore.storeName,
+                enabled: false,
+                dryRunEnabled: true,
+                gapRuleEnabled: false,
+                minimumGapDays: 0,
+                cleaningRuleEnabled: false,
+                experienceRuleEnabled: false,
+                editable: true
+              });
+            }
+          }
+        }
+        this.foodsharingStores.set(stores);
+        this.availableStores.set(overview.availableStores);
+        if (options.loadRequestOverview) {
+          this.loadRequestAutomationOverview();
+        }
+        if (options.loadAdvertisementOverview) {
+          this.loadAdvertisementAutomationOverview();
         }
       },
       error: () => undefined
@@ -255,9 +638,104 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   private loadFoodsharingFuturePickupUsers(): void {
-    this.adminApi.getFoodsharingFuturePickupUsers().subscribe({
+    this.adminApi.getFoodsharingFuturePickupUsers({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
       next: (users) => this.foodsharingFuturePickupUsers.set(users),
       error: () => undefined
+    });
+  }
+
+
+  private loadRequestAutomationOverview(): void {
+    this.adminApi.getFoodsharingRequestAutomationOverview().subscribe({
+      next: (overview: FoodsharingRequestAutomationOverview) => {
+        const stores = this.foodsharingStores().map((store) => ({ ...store }) as FoodsharingStoreAutomation & Record<string, unknown>);
+        for (const requestAutomation of overview.requestAutomations || []) {
+          const store = stores.find((entry) => entry.storeId === requestAutomation.storeId);
+          if (store) {
+            store['requestConfigured'] = true;
+            store['requestEnabled'] = requestAutomation.enabled;
+            store['requestDryRunEnabled'] = requestAutomation.dryRunEnabled;
+            store['requestDistanceRuleEnabled'] = requestAutomation.distanceRuleEnabled;
+            store['requestMaximumDistanceKm'] = requestAutomation.maximumDistanceKm;
+          }
+        }
+        this.foodsharingStores.set(stores as FoodsharingStoreAutomation[]);
+      },
+      error: () => undefined
+    });
+  }
+
+  private loadAdvertisementAutomationOverview(): void {
+    this.adminApi.getFoodsharingOpenSlotAdvertisementOverview().subscribe({
+      next: (overview: FoodsharingOpenSlotAdvertisementOverview) => {
+        const stores = this.foodsharingStores().map((store) => ({ ...store }) as FoodsharingStoreAutomation & Record<string, unknown>);
+        for (const advert of overview.advertisementAutomations || []) {
+          const store = stores.find((entry) => entry.storeId === advert.storeId);
+          if (store) {
+            const number = advert.advertNumber;
+            store[`advertConfigured${number}`] = true;
+            store[`advertEnabled${number}`] = advert.enabled;
+            store[`advertHoursBefore${number}`] = advert.triggerHoursBefore;
+            store[`advertSendToStoreChat${number}`] = advert.sendToStoreChat;
+            store[`advertSendToTelegram${number}`] = advert.sendToTelegram;
+            store[`advertTelegramChatId${number}`] = advert.telegramChatId;
+            store[`advertStoreMessages${number}`] = (advert.storeMessages || []).join('\n---\n');
+            store[`advertTelegramMessages${number}`] = (advert.telegramMessages || []).join('\n---\n');
+          }
+        }
+        this.foodsharingStores.set(stores as FoodsharingStoreAutomation[]);
+      },
+      error: () => undefined
+    });
+  }
+
+
+  refreshTelegramChats(): void {
+    this.loadTelegramChats();
+  }
+
+  private loadRequestAutomationAudit(): void {
+    if (!this.sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) {
+      this.requestAutomationAudit.set([]);
+      return;
+    }
+    this.adminApi.getFoodsharingRequestAutomationAudit().subscribe({
+      next: (audit) => this.requestAutomationAudit.set(audit),
+      error: () => undefined
+    });
+  }
+
+  private loadAdvertisementAutomationAudit(): void {
+    if (!this.sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) {
+      this.advertisementAutomationAudit.set([]);
+      return;
+    }
+    this.adminApi.getFoodsharingOpenSlotAdvertisementAudit().subscribe({
+      next: (audit) => this.advertisementAutomationAudit.set(audit),
+      error: () => undefined
+    });
+  }
+
+  private loadRequestAutomationAuditIfActive(): void {
+    if (this.activeAutomationTab() === 'applications') {
+      this.loadRequestAutomationAudit();
+    }
+  }
+
+  private loadAdvertisementAutomationAuditIfActive(): void {
+    if (this.activeAutomationTab() === 'advertisements') {
+      this.loadAdvertisementAutomationAudit();
+    }
+  }
+
+  private loadTelegramChats(): void {
+    if (!this.sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)) {
+      this.telegramChatOptions.set([]);
+      return;
+    }
+    this.adminApi.getFoodsharingTelegramChats().subscribe({
+      next: (chats) => this.telegramChatOptions.set(chats.map((chat) => ({ label: `${chat.title} (${chat.type || chat.id})`, value: chat.id }))),
+      error: () => this.telegramChatOptions.set([])
     });
   }
 
@@ -266,17 +744,41 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       this.cleaningRuleExemptions.set([]);
       return;
     }
-    this.adminApi.getFoodsharingCleaningRuleExemptions().subscribe({
+    this.adminApi.getFoodsharingCleaningRuleExemptions({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
       next: (exemptions) => this.cleaningRuleExemptions.set(exemptions),
       error: () => undefined
     });
   }
 
   private loadFoodsharingAudit(): void {
-    this.adminApi.getFoodsharingAutomationAudit().subscribe({
+    this.adminApi.getFoodsharingAutomationAudit({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
       next: (audit) => this.foodsharingAudit.set(audit),
       error: () => undefined
     });
+  }
+
+  private loadFoodsharingAuditIfActive(): void {
+    if (this.activeAutomationTab() === 'slots') {
+      this.loadFoodsharingAudit();
+    }
+  }
+
+  private toRunResult(result: AutomationRunSummary): FoodsharingRunResult {
+    return {
+      evaluated: result.evaluated,
+      confirmed: result.acted,
+      declined: result.skipped,
+      failed: 0,
+      dryRun: result.dryRun,
+      messages: result.messages || []
+    };
+  }
+
+  protected normalizeStoreId(value: number | { value?: number } | null): number | null {
+    if (typeof value === 'number') {
+      return value;
+    }
+    return value?.value ?? null;
   }
 
   private toastError(detail: string): void {

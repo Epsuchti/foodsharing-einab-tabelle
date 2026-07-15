@@ -14,10 +14,12 @@ import {
   TeacherResponse,
   TeacherService,
   TeacherSelfResponse,
+  BezirkResponse,
   UpdateTeacherMeRequest,
   UpsertEinAbRequest
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
+import { BezirkContextService } from '../../core/bezirk-context.service';
 import { I18nService } from '../../core/i18n.service';
 import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 import { ButtonModule } from 'primeng/button';
@@ -67,6 +69,9 @@ export class TeacherDashboardPageComponent implements OnInit {
   protected readonly selectedEinAb = signal<TeacherEinAbResponse | null>(null);
   protected readonly icalCandidates = signal<IcalCandidate[]>([]);
   protected readonly icalCandidatesPage = signal<IcalCandidateListResponse | null>(null);
+  protected readonly bezirke = signal<BezirkResponse[]>([]);
+  protected readonly selectedBezirkSlug = signal<string | null>(null);
+  protected readonly bezirkSaveLoading = signal(false);
   protected readonly profileSaveLoading = signal(false);
   protected readonly saveLoading = signal(false);
   protected readonly categoryOptions = computed(() => Object.values(EinAbCategory).map((value) => ({ value, label: this.i18n.categoryLabel(value) })));
@@ -93,6 +98,7 @@ export class TeacherDashboardPageComponent implements OnInit {
   });
 
   private readonly teacherApi = inject(TeacherService);
+  private readonly bezirkContext = inject(BezirkContextService);
   private readonly messageService = inject(MessageService);
   private readonly confirmationService = inject(ConfirmationService);
 
@@ -107,10 +113,30 @@ export class TeacherDashboardPageComponent implements OnInit {
         this.teacherProfileForm.reset({
           icalLink: response.icalLink ?? ''
         });
+        if (!response.bezirk) {
+          this.bezirkContext.loadBezirke().subscribe((bezirke) => this.bezirke.set(bezirke));
+        }
+        this.loadTeacherEinAbs(response.bezirk?.slug);
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
-    this.teacherApi.getTeacherEinAbs({ page: this.einAbsPage()?.page ?? 0, size: this.pageSize }).subscribe({
+    this.teacherApi.getTeacherIcalCandidates({ page: this.icalCandidatesPage()?.page ?? 0, size: this.pageSize }).subscribe({
+      next: (response) => {
+        this.icalCandidates.set(response.candidates);
+        this.icalCandidatesPage.set(response);
+      },
+      error: () => this.icalCandidates.set([])
+    });
+  }
+
+  private loadTeacherEinAbs(teacherBezirkSlug?: string): void {
+    if (!teacherBezirkSlug) {
+      this.einAbs.set([]);
+      this.einAbsPage.set(null);
+      this.selectedEinAb.set(null);
+      return;
+    }
+    this.teacherApi.getTeacherEinAbs({ bezirkSlug: teacherBezirkSlug, page: this.einAbsPage()?.page ?? 0, size: this.pageSize }).subscribe({
       next: (response) => {
         this.einAbs.set(response.einAbs);
         this.einAbsPage.set(response);
@@ -121,12 +147,23 @@ export class TeacherDashboardPageComponent implements OnInit {
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
-    this.teacherApi.getTeacherIcalCandidates({ page: this.icalCandidatesPage()?.page ?? 0, size: this.pageSize }).subscribe({
-      next: (response) => {
-        this.icalCandidates.set(response.candidates);
-        this.icalCandidatesPage.set(response);
+  }
+
+  assignBezirk(bezirkSlug: string): void {
+    if (!bezirkSlug || this.teacher()?.bezirk || this.bezirkSaveLoading()) {
+      return;
+    }
+    this.bezirkSaveLoading.set(true);
+    this.teacherApi.assignTeacherBezirk({ assignTeacherBezirkRequest: { bezirkSlug } }).subscribe({
+      next: (teacher) => {
+        this.teacher.update((current) => current ? { ...current, bezirk: teacher.bezirk } : current);
+        this.bezirkSaveLoading.set(false);
+        this.loadTeacherEinAbs(teacher.bezirk?.slug);
       },
-      error: () => this.icalCandidates.set([])
+      error: (error) => {
+        this.bezirkSaveLoading.set(false);
+        this.toastError(resolveApiError(error, this.i18n));
+      }
     });
   }
 
@@ -247,9 +284,15 @@ export class TeacherDashboardPageComponent implements OnInit {
       minimumPickupCount: formValue.minimumPickupCount ?? undefined
     };
 
+    const bezirkSlug = this.teacher()?.bezirk?.slug;
+    if (!bezirkSlug) {
+      this.toastError(this.i18n.t('teacher.unassignedHint'));
+      this.saveLoading.set(false);
+      return;
+    }
     const request$ = this.editingEinAb()
-      ? this.teacherApi.updateTeacherEinAb({ einAbId: this.editingEinAb()!.id, upsertEinAbRequest })
-      : this.teacherApi.createTeacherEinAb({ upsertEinAbRequest });
+      ? this.teacherApi.updateTeacherEinAb({ bezirkSlug, einAbId: this.editingEinAb()!.id, upsertEinAbRequest })
+      : this.teacherApi.createTeacherEinAb({ bezirkSlug, upsertEinAbRequest });
 
     request$.pipe(finalize(() => this.saveLoading.set(false))).subscribe({
       next: () => {
@@ -264,7 +307,7 @@ export class TeacherDashboardPageComponent implements OnInit {
     this.confirmationService.confirm({
       message: this.i18n.t('confirm.deleteEinab'),
       accept: () => {
-        this.teacherApi.deleteTeacherEinAb({ einAbId: einab.id }).subscribe({
+        this.teacherApi.deleteTeacherEinAb({ bezirkSlug: this.teacher()!.bezirk!.slug, einAbId: einab.id }).subscribe({
           next: () => this.reload(),
           error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });
@@ -276,7 +319,7 @@ export class TeacherDashboardPageComponent implements OnInit {
     this.confirmationService.confirm({
       message: this.i18n.t('confirm.cancelTeacherBooking'),
       accept: () => {
-        this.teacherApi.cancelTeacherSlotBooking({ slotId: slot.id }).subscribe({
+        this.teacherApi.cancelTeacherSlotBooking({ bezirkSlug: this.teacher()!.bezirk!.slug, slotId: slot.id }).subscribe({
           next: () => this.reload(),
           error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });
@@ -289,6 +332,10 @@ export class TeacherDashboardPageComponent implements OnInit {
   }
 
   private requireActiveTeacher(): boolean {
+    if (!this.teacher()?.bezirk) {
+      this.toastError(this.i18n.t('teacher.unassignedHint'));
+      return false;
+    }
     if (this.teacher()?.active) {
       return true;
     }

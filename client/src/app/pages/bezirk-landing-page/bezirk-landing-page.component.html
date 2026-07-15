@@ -1,0 +1,23 @@
+<section class="page-stack">
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('bezirk.chooseTitle') }}</ng-template>
+    <p>{{ i18n.t('bezirk.chooseHint') }}</p>
+
+    @if (loading()) {
+      <div class="loading-box"><p-progressSpinner strokeWidth="4"></p-progressSpinner></div>
+    } @else if (error()) {
+      <p class="empty-state">{{ error() }}</p>
+    } @else {
+      <div class="toolbar-row">
+        @for (bezirk of bezirke(); track bezirk.id) {
+          <a
+            pButton
+            [routerLink]="['/bezirke', bezirk.slug]"
+            [label]="bezirk.name"
+            icon="pi pi-map-marker">
+          </a>
+        }
+      </div>
+    }
+  </p-card>
+</section>

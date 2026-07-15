@@ -10,6 +10,7 @@ import ch.it4user.foodsharing.openapi.model.CreateBookingCommentRequest;
 import ch.it4user.foodsharing.openapi.model.IcalCandidateListResponse;
 import ch.it4user.foodsharing.openapi.model.SlotResponse;
 import ch.it4user.foodsharing.openapi.model.UpdateTeacherMeRequest;
+import ch.it4user.foodsharing.openapi.model.AssignTeacherBezirkRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSelfResponse;
@@ -47,7 +48,9 @@ public class TeacherController implements TeacherApi {
     @Override
     public ResponseEntity<TeacherSelfResponse> getTeacherMe() {
         User teacher = currentActorService.requireTeacher();
-        return ResponseEntity.ok(mapper.toTeacherSelfResponse(teacher, teacherService.getIcalCandidates(teacher)));
+        return ResponseEntity.ok(mapper.toTeacherSelfResponse(
+                teacher,
+                teacherService.getIcalCandidates(teacher)));
     }
 
     @Override
@@ -57,20 +60,31 @@ public class TeacherController implements TeacherApi {
                 teacher,
                 updateTeacherMeRequest.getIcalLink(),
                 mapLanguage(updateTeacherMeRequest.getLanguage()));
-        return ResponseEntity.ok(mapper.toTeacherSelfResponse(updated, teacherService.getIcalCandidates(updated)));
+        return ResponseEntity.ok(mapper.toTeacherSelfResponse(
+                updated,
+                teacherService.getIcalCandidates(updated)));
     }
 
     @Override
-    public ResponseEntity<TeacherEinAbListResponse> getTeacherEinAbs(Integer page, Integer size) {
+    public ResponseEntity<ch.it4user.foodsharing.openapi.model.TeacherResponse> assignTeacherBezirk(
+            AssignTeacherBezirkRequest request) {
+        return ResponseEntity.ok(mapper.toTeacherResponse(
+                teacherService.assignBezirk(currentActorService.requireTeacher(), request.getBezirkSlug())));
+    }
+
+    @Override
+    public ResponseEntity<TeacherEinAbListResponse> getTeacherEinAbs(String bezirkSlug, Integer page, Integer size) {
         User teacher = currentActorService.requireTeacher();
-        org.springframework.data.domain.Page<EinAb> einAbs = teacherService.findTeacherEinAbs(teacher, page == null ? 0 : page, size == null ? 20 : size);
+        org.springframework.data.domain.Page<EinAb> einAbs = teacherService.findTeacherEinAbs(
+                bezirkSlug, teacher, page == null ? 0 : page, size == null ? 20 : size);
         return ResponseEntity.ok(mapTeacherEinAbs(einAbs));
     }
 
     @Override
-    public ResponseEntity<TeacherEinAbResponse> createTeacherEinAb(UpsertEinAbRequest upsertEinAbRequest) {
+    public ResponseEntity<TeacherEinAbResponse> createTeacherEinAb(String bezirkSlug, UpsertEinAbRequest upsertEinAbRequest) {
         User teacher = currentActorService.requireTeacher();
         EinAb einAb = teacherService.createEinAb(
+                bezirkSlug,
                 teacher,
                 ch.it4user.foodsharing.domain.enumtype.EinAbCategory.valueOf(upsertEinAbRequest.getCategory().getValue()),
                 toInstant(upsertEinAbRequest.getStartDateTime()),
@@ -86,9 +100,13 @@ public class TeacherController implements TeacherApi {
     }
 
     @Override
-    public ResponseEntity<TeacherEinAbResponse> updateTeacherEinAb(UUID einAbId, UpsertEinAbRequest upsertEinAbRequest) {
+    public ResponseEntity<TeacherEinAbResponse> updateTeacherEinAb(
+            String bezirkSlug,
+            UUID einAbId,
+            UpsertEinAbRequest upsertEinAbRequest) {
         User teacher = currentActorService.requireTeacher();
         EinAb einAb = teacherService.updateEinAb(
+                bezirkSlug,
                 teacher,
                 einAbId,
                 ch.it4user.foodsharing.domain.enumtype.EinAbCategory.valueOf(upsertEinAbRequest.getCategory().getValue()),
@@ -106,39 +124,53 @@ public class TeacherController implements TeacherApi {
     }
 
     @Override
-    public ResponseEntity<Void> deleteTeacherEinAb(UUID einAbId) {
-        teacherService.deleteEinAb(currentActorService.requireTeacher(), einAbId, currentActorService.canManageUsers());
+    public ResponseEntity<Void> deleteTeacherEinAb(String bezirkSlug, UUID einAbId) {
+        teacherService.deleteEinAb(
+                bezirkSlug,
+                currentActorService.requireTeacher(),
+                einAbId,
+                currentActorService.canManageUsers());
         return ResponseEntity.noContent().build();
     }
 
     @Override
-    public ResponseEntity<BookingListResponse> getTeacherBookings(Integer page, Integer size) {
+    public ResponseEntity<BookingListResponse> getTeacherBookings(String bezirkSlug, Integer page, Integer size) {
         return ResponseEntity.ok(mapper.toBookingListResponse(
-                teacherService.findTeacherBookings(currentActorService.requireTeacher(), page == null ? 0 : page, size == null ? 20 : size)));
+                teacherService.findTeacherBookings(
+                        bezirkSlug,
+                        currentActorService.requireTeacher(),
+                        page == null ? 0 : page,
+                        size == null ? 20 : size)));
     }
 
     @Override
     public ResponseEntity<BookingCommentResponse> addTeacherBookingComment(
+            String bezirkSlug,
             UUID bookingUserId,
             CreateBookingCommentRequest createBookingCommentRequest) {
         return ResponseEntity.status(201).body(mapper.toBookingCommentResponse(
                 teacherService.addBookingComment(
+                        bezirkSlug,
                         currentActorService.requireTeacher(),
                         bookingUserId,
                         createBookingCommentRequest.getComment())));
     }
 
     @Override
-    public ResponseEntity<BookingCommentListResponse> getTeacherBookingComments(UUID bookingUserId) {
+    public ResponseEntity<BookingCommentListResponse> getTeacherBookingComments(String bezirkSlug, UUID bookingUserId) {
         return ResponseEntity.ok(mapper.toBookingCommentListResponse(
-                teacherService.findBookingComments(bookingUserId)));
+                teacherService.findBookingComments(
+                        bezirkSlug,
+                        currentActorService.requireTeacher(),
+                        bookingUserId)));
     }
 
     @Override
     public ResponseEntity<IcalCandidateListResponse> getTeacherIcalCandidates(
             Integer page,
             Integer size) {
-        List<ch.it4user.foodsharing.openapi.model.IcalCandidate> candidates = teacherService.getIcalCandidates(currentActorService.requireTeacher());
+        User teacher = currentActorService.requireTeacher();
+        List<ch.it4user.foodsharing.openapi.model.IcalCandidate> candidates = teacherService.getIcalCandidates(teacher);
         int safePage = page == null ? 0 : Math.max(page, 0);
         int safeSize = size == null ? 20 : Math.min(Math.max(size, 1), 100);
         int fromIndex = Math.min(safePage * safeSize, candidates.size());
@@ -152,9 +184,13 @@ public class TeacherController implements TeacherApi {
     }
 
     @Override
-    public ResponseEntity<SlotResponse> cancelTeacherSlotBooking(UUID slotId) {
+    public ResponseEntity<SlotResponse> cancelTeacherSlotBooking(String bezirkSlug, UUID slotId) {
         return ResponseEntity.ok(mapper.toSlotResponse(
-                teacherService.cancelBookedSlot(currentActorService.requireTeacher(), slotId, currentActorService.canManageUsers())));
+                teacherService.cancelBookedSlot(
+                        bezirkSlug,
+                        currentActorService.requireTeacher(),
+                        slotId,
+                        currentActorService.canManageUsers())));
     }
 
     private TeacherEinAbListResponse mapTeacherEinAbs(org.springframework.data.domain.Page<EinAb> einAbs) {
@@ -185,4 +221,5 @@ public class TeacherController implements TeacherApi {
     private java.time.Instant toInstant(OffsetDateTime value) {
         return value == null ? null : value.toInstant();
     }
+
 }

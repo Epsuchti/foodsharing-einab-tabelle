@@ -2,6 +2,7 @@ import { Injectable, computed, signal } from '@angular/core';
 import { Router } from '@angular/router';
 
 import { AuthResponse, UserPermission } from '../api';
+import { BezirkContextService } from './bezirk-context.service';
 
 type SessionState = AuthResponse | null;
 
@@ -14,7 +15,10 @@ export class SessionService {
     return Boolean(session && new Date(session.expiresAt).getTime() > Date.now());
   });
 
-  constructor(private readonly router: Router) {}
+  constructor(
+    private readonly router: Router,
+    private readonly bezirkContext: BezirkContextService
+  ) {}
 
   setSession(session: AuthResponse): void {
     this.session.set(session);
@@ -24,7 +28,7 @@ export class SessionService {
   clearSession(): void {
     this.session.set(null);
     localStorage.removeItem(this.storageKey);
-    this.router.navigateByUrl('/');
+    void this.router.navigate(this.bezirkContext.route());
   }
 
   token(): string | null {
@@ -41,23 +45,21 @@ export class SessionService {
   }
 
   primaryRoute(): string {
+    const bezirkSlug = this.bezirkContext.selectedBezirk()?.slug ?? this.session()?.bezirk?.slug;
+    const prefix = bezirkSlug ? `/bezirke/${bezirkSlug}` : '';
     if (this.hasPermission(UserPermission.CanManageUsers)) {
-      return '/admin';
+      return `${prefix}/admin`;
     }
-    if (
-      this.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)
-      || this.hasPermission(UserPermission.CanUseAutomationSlotApproval)
-      || this.hasPermission(UserPermission.CanSeeAllAutomationDecisions)
-    ) {
-      return '/admin/foodsharing-automation';
+    if (this.hasPermission(UserPermission.CanUseAutomations) || this.hasPermission(UserPermission.CanUseAutomationSlotApproval) || this.hasPermission(UserPermission.CanSeeAllAutomationDecisions) || this.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) {
+      return `${prefix}/admin/foodsharing-automation`;
     }
     if (this.hasPermission(UserPermission.CanGiveEinAbs)) {
-      return '/teacher';
+      return `${prefix}/teacher`;
     }
     if (this.isAuthenticated()) {
-      return '/my-bookings';
+      return `${prefix}/my-bookings`;
     }
-    return '/';
+    return prefix || '/';
   }
 
   foodsharingId(): string | null {

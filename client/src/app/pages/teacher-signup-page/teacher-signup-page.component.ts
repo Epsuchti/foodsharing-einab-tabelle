@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 
 import { PublicService, TeacherSignupRequest } from '../../api';
 import { resolveApiError } from '../../core/api-error';
+import { BezirkContextService } from '../../core/bezirk-context.service';
 import { I18nService } from '../../core/i18n.service';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -19,6 +20,7 @@ import { MessageService } from 'primeng/api';
 })
 export class TeacherSignupPageComponent {
   readonly i18n = inject(I18nService);
+  protected readonly bezirkContext = inject(BezirkContextService);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
     foodsharingId: ['', [Validators.required, Validators.pattern('^\\d+$')]]
@@ -35,7 +37,10 @@ export class TeacherSignupPageComponent {
       foodsharingId: this.form.getRawValue().foodsharingId,
       language: this.i18n.apiLanguage()
     };
-    this.publicApi.signupTeacher({ teacherSignupRequest }).subscribe({
+    this.publicApi.signupTeacher({
+      bezirkSlug: this.bezirkContext.currentSlug(),
+      teacherSignupRequest
+    }).subscribe({
       next: () => {
         this.messageService.add({ severity: 'success', summary: this.i18n.t('teacherSignup.success') });
         this.form.reset();

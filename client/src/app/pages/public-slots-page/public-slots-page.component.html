@@ -60,7 +60,7 @@
               <div class="slot-card__title">{{ i18n.categoryLabel(slot.category) }}</div>
               <p-tag
                 [severity]="slot.visitFairteiler ? 'success' : 'secondary'"
-                [value]="slot.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag>
+                [value]="i18n.t('common.visitFairteiler') + ': ' + (slot.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no'))"></p-tag>
             </div>
 
             <div class="slot-card__meta">
@@ -132,7 +132,7 @@
           [text]="true"
           icon="pi pi-question-circle"
           [label]="i18n.t('common.foodsharingIdHelpLink')"
-          routerLink="/foodsharing-id"
+          [routerLink]="bezirkContext.route('foodsharing-id')"
           class="foodsharing-id-help-link"></a>
       </div>
     }

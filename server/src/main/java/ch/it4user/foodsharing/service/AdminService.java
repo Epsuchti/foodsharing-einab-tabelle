@@ -1,5 +1,6 @@
 package ch.it4user.foodsharing.service;
 
+import ch.it4user.foodsharing.domain.entity.Bezirk;
 import ch.it4user.foodsharing.domain.entity.BookingComment;
 import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.entity.EinAb;
@@ -24,25 +25,28 @@ public class AdminService {
     private static final List<SlotStatus> ACTIVE_BOOKING_STATUSES = List.of(SlotStatus.BOOKED, SlotStatus.DONE);
 
     private final TeacherService teacherService;
+    private final BezirkService bezirkService;
     private final BookingUserService bookingUserService;
     private final SlotRepository slotRepository;
     private final UserRepository userRepository;
     private final BookingCommentRepository bookingCommentRepository;
 
     public AdminService(TeacherService teacherService,
+                        BezirkService bezirkService,
                         BookingUserService bookingUserService,
                         SlotRepository slotRepository,
                         UserRepository userRepository,
                         BookingCommentRepository bookingCommentRepository) {
         this.teacherService = teacherService;
+        this.bezirkService = bezirkService;
         this.bookingUserService = bookingUserService;
         this.slotRepository = slotRepository;
         this.userRepository = userRepository;
         this.bookingCommentRepository = bookingCommentRepository;
     }
 
-    public Page<User> getTeachers(int page, int size) {
-        return teacherService.findAllTeachers(page, size);
+    public Page<User> getTeachers(String bezirkSlug, int page, int size) {
+        return teacherService.findAllTeachers(bezirkSlug, page, size);
     }
 
     public Page<User> getAdmins(int page, int size) {
@@ -58,21 +62,34 @@ public class AdminService {
         return teacherService.setTeacherAdmin(teacherId, admin);
     }
 
-    public Page<EinAb> getEinAbs(int page, int size) {
-        return teacherService.findAllEinAbs(page, size);
+    public Page<EinAb> getEinAbs(String bezirkSlug, int page, int size) {
+        return teacherService.findAllEinAbs(bezirkSlug, page, size);
     }
 
-    public Page<Slot> getBookings(int page, int size) {
-        return slotRepository.findAllByStatusInOrderByEinAbStartDateTimeAsc(
+    public Page<Slot> getBookings(String bezirkSlug, int page, int size) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        return slotRepository.findAllByStatusInAndBezirkOrderByEinAbStartDateTimeAsc(
                 ACTIVE_BOOKING_STATUSES,
+                bezirk,
                 org.springframework.data.domain.PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
     }
 
-    public AdminUsersView getUsers(int page, int size, boolean threePickupsOnly, boolean activeOnly) {
+    public AdminUsersView getUsers(String bezirkSlug,
+                                   boolean unassigned,
+                                   boolean allBezirke,
+                                   int page,
+                                   int size,
+                                   boolean threePickupsOnly,
+                                   boolean activeOnly) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 100);
-        List<User> users = userRepository.findAll();
-        Map<UUID, List<Slot>> bookingsByUser = groupBookings(users);
+        Bezirk bezirk = unassigned || allBezirke ? null : bezirkService.requireActive(bezirkSlug);
+        List<User> users = allBezirke
+                ? userRepository.findAllWithBezirk()
+                : unassigned
+                ? userRepository.findAllByBezirkIsNull()
+                : userRepository.findAllByBezirk(bezirk);
+        Map<UUID, List<Slot>> bookingsByUser = groupBookings(users, bezirk, allBezirke);
         Map<UUID, List<BookingComment>> commentsByUser = groupComments(users);
         List<User> sortedUsers = users.stream()
                 .filter(user -> !activeOnly || user.isActive())
@@ -103,7 +120,7 @@ public class AdminService {
 
     @Transactional
     public User grantBookingUserAdmin(UUID bookingUserId) {
-        User bookingUser = userRepository.findById(bookingUserId)
+        User bookingUser = userRepository.findWithBezirkById(bookingUserId)
                 .filter(User::isActive)
                 .filter(user -> !user.isCanGiveEinAbs())
                 .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_USER_NOT_FOUND));
@@ -114,7 +131,7 @@ public class AdminService {
 
     @Transactional
     public User setAdminActive(UUID adminUserId, boolean active) {
-        User adminUser = userRepository.findById(adminUserId)
+        User adminUser = userRepository.findWithBezirkById(adminUserId)
                 .filter(User::isCanManageUsers)
                 .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND));
         if (adminUser.isCanGiveEinAbs() || adminUser.isWantsToBeTeacher()) {
@@ -126,13 +143,15 @@ public class AdminService {
 
     @Transactional
     public User setUserPermissions(UUID userId, UserPermissions permissions) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findWithBezirkById(userId)
                 .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND));
         user.setCanGiveEinAbs(permissions.canGiveEinAbs());
         user.setCanManageUsers(permissions.canManageUsers());
         user.setCanUseAutomations(permissions.canUseAutomations());
         user.setCanSeeUserPickupCountGrouping(permissions.canSeeUserPickupCountGrouping());
         user.setCanUseAutomationSlotApproval(permissions.canUseAutomationSlotApproval());
+        user.setCanUseAutomationRequestApproval(permissions.canUseAutomationRequestApproval());
+        user.setCanUseAutomationOpenSlotAdvertising(permissions.canUseAutomationOpenSlotAdvertising());
         user.setCanSeeAllAutomationDecisions(permissions.canSeeAllAutomationDecisions());
         if (permissions.canManageUsers()) {
             user.setActive(true);
@@ -141,8 +160,16 @@ public class AdminService {
     }
 
     @Transactional
+    public User setUserBezirk(UUID userId, String bezirkSlug) {
+        User user = userRepository.findWithBezirkById(userId)
+                .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND));
+        user.setBezirk(bezirkSlug == null || bezirkSlug.isBlank() ? null : bezirkService.requireActive(bezirkSlug));
+        return user;
+    }
+
+    @Transactional
     public User setAdminAdmin(UUID adminUserId, boolean admin) {
-        User adminUser = userRepository.findById(adminUserId)
+        User adminUser = userRepository.findWithBezirkById(adminUserId)
                 .filter(User::isCanManageUsers)
                 .orElseThrow(() -> new ApiException(org.springframework.http.HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND));
         adminUser.setCanManageUsers(admin);
@@ -152,11 +179,13 @@ public class AdminService {
         return adminUser;
     }
 
-    private Map<UUID, List<Slot>> groupBookings(Collection<User> users) {
-        if (users.isEmpty()) {
+    private Map<UUID, List<Slot>> groupBookings(Collection<User> users, Bezirk bezirk, boolean allBezirke) {
+        if (users.isEmpty() || (!allBezirke && bezirk == null)) {
             return Map.of();
         }
-        List<Slot> bookings = slotRepository.findAllByActiveBookingUsersAndStatuses(users, ACTIVE_BOOKING_STATUSES);
+        List<Slot> bookings = allBezirke
+                ? slotRepository.findAllByActiveBookingUsersAndStatuses(users, ACTIVE_BOOKING_STATUSES)
+                : slotRepository.findAllByActiveBookingUsersAndStatusesAndBezirk(users, ACTIVE_BOOKING_STATUSES, bezirk);
         return bookings.stream().collect(Collectors.groupingBy(slot -> slot.getBookingUser().getId()));
     }
 
@@ -177,6 +206,7 @@ public class AdminService {
 
     public record UserPermissions(boolean canGiveEinAbs, boolean canManageUsers, boolean canUseAutomations,
                                   boolean canSeeUserPickupCountGrouping, boolean canUseAutomationSlotApproval,
+                                  boolean canUseAutomationRequestApproval, boolean canUseAutomationOpenSlotAdvertising,
                                   boolean canSeeAllAutomationDecisions) {
     }
 

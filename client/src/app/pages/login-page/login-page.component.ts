@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 
 import { resolveApiError } from '../../core/api-error';
 import { AuthFacadeService } from '../../core/auth-facade.service';
+import { BezirkContextService } from '../../core/bezirk-context.service';
 import { I18nService } from '../../core/i18n.service';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
@@ -21,6 +22,7 @@ import { MessageService } from 'primeng/api';
 })
 export class LoginPageComponent {
   readonly i18n = inject(I18nService);
+  protected readonly bezirkContext = inject(BezirkContextService);
   protected readonly loading = signal(false);
 
   protected readonly form = inject(FormBuilder).nonNullable.group({
@@ -35,7 +37,7 @@ export class LoginPageComponent {
       return;
     }
     this.loading.set(true);
-    this.authFacade.requestLogin(this.form.getRawValue().foodsharingId).pipe(
+    this.authFacade.requestLogin(this.bezirkContext.currentSlug(), this.form.getRawValue().foodsharingId).pipe(
       finalize(() => this.loading.set(false))
     ).subscribe({
       next: () => this.messageService.add({

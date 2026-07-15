@@ -21,6 +21,10 @@ import java.time.Instant;
 @NoArgsConstructor
 public class EinAb extends BaseEntity {
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "bezirk_id", nullable = false)
+    private Bezirk bezirk;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 64)
     private EinAbCategory category;

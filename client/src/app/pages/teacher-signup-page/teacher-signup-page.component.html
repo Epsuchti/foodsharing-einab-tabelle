@@ -10,7 +10,7 @@
         [text]="true"
         icon="pi pi-question-circle"
         [label]="i18n.t('common.foodsharingIdHelpLink')"
-        routerLink="/foodsharing-id"
+        [routerLink]="bezirkContext.route('foodsharing-id')"
         class="foodsharing-id-help-link"></a>
     </div>
     <button pButton type="submit" [label]="i18n.t('common.save')" [disabled]="form.invalid"></button>

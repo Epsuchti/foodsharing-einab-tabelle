@@ -1,7 +1,37 @@
 <section class="page-stack">
   <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('admin.bezirkSettings') }}: {{ bezirkSettings()?.name }}</ng-template>
+    <div class="stack-form">
+      <label>
+        {{ i18n.t('admin.cleaningStoreId') }}
+        <p-inputNumber
+          [ngModel]="cleaningStoreId()"
+          (ngModelChange)="cleaningStoreId.set($event)"
+          [useGrouping]="false"
+          [min]="1"
+          [placeholder]="i18n.t('admin.cleaningStoreIdPlaceholder')">
+        </p-inputNumber>
+      </label>
+      <div class="dialog-actions">
+        <button pButton type="button" icon="pi pi-save" [label]="i18n.t('common.save')" [loading]="settingsSaving()" (click)="saveBezirkSettings()"></button>
+      </div>
+    </div>
+  </p-card>
+
+  <p-card>
     <ng-template pTemplate="title">{{ i18n.t('admin.users') }}</ng-template>
     <div class="admin-users-toolbar">
+      <label>
+        {{ i18n.t('bezirk.label') }}
+        <p-select
+          [options]="userFilterOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="selectedBezirkFilter()"
+          (ngModelChange)="setBezirkFilter($event)"
+          appendTo="body">
+        </p-select>
+      </label>
       <label class="filter-toggle">
         <p-checkbox [binary]="true" [ngModel]="activeOnly()" (onChange)="setActiveOnly($event.checked)"></p-checkbox>
         <span>{{ i18n.t('admin.onlyActiveUsers') }}</span>
@@ -21,6 +51,8 @@
           <tr>
             <th></th>
             <th>{{ i18n.t('common.name') }}</th>
+            <th>{{ i18n.t('bezirk.label') }}</th>
+            <th>{{ i18n.t('admin.changeBezirk') }}</th>
             <th>{{ i18n.t('common.foodsharingId') }}</th>
             <th>{{ i18n.t('common.phoneNumber') }}</th>
             <th>{{ i18n.t('common.status') }}</th>
@@ -47,6 +79,17 @@
               </button>
             </td>
             <td>{{ user.user.name }}</td>
+            <td>{{ user.user.bezirk?.name ?? i18n.t('bezirk.unassigned') }}</td>
+            <td>
+              <p-select
+                [options]="bezirkOptions()"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="selectedBezirkSlug(user)"
+                (ngModelChange)="setSelectedBezirkSlug(user, $event)"
+                appendTo="body">
+              </p-select>
+            </td>
             <td>{{ user.user.foodsharingId }}</td>
             <td>{{ user.user.phoneNumber ?? '-' }}</td>
             <td>
@@ -68,18 +111,34 @@
             <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationSlotApproval"></p-checkbox></td>
             <td><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeAllAutomationDecisions"></p-checkbox></td>
             <td class="actions-cell">
-              <button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveUserPermissions(user)"></button>
               @if (user.user.active) {
                 <button pButton type="button" size="small" severity="danger" [label]="i18n.t('admin.disableBookingUser')" (click)="disableBookingUser(user)"></button>
               } @else {
                 <button pButton type="button" size="small" severity="contrast" [label]="i18n.t('admin.enableBookingUser')" (click)="enableBookingUser(user)"></button>
               }
+              <button pButton type="button" size="small" [label]="i18n.t('admin.saveBezirk')" (click)="saveUserBezirk(user)"></button>
             </td>
           </tr>
           @if (isUserExpanded(user)) {
             <tr>
-              <td [attr.colspan]="13">
+              <td [attr.colspan]="15">
                 <div class="page-stack">
+                  <div>
+                    <h4>{{ i18n.t('admin.userPermissions') }}</h4>
+                    <p>{{ i18n.t('admin.userPermissionsHelp') }}</p>
+                    <div class="user-permissions-form">
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canGiveEinAbs"></p-checkbox><span>{{ i18n.t('permission.canGiveEinAbs') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canManageUsers"></p-checkbox><span>{{ i18n.t('permission.canManageUsers') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomations"></p-checkbox><span>{{ i18n.t('permission.canUseAutomations') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeUserPickupCountGrouping"></p-checkbox><span>{{ i18n.t('permission.canSeeUserPickupCountGrouping') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationSlotApproval"></p-checkbox><span>{{ i18n.t('permission.canUseAutomationSlotApproval') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationRequestApproval"></p-checkbox><span>{{ i18n.t('permission.canUseAutomationRequestApproval') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationOpenSlotAdvertising"></p-checkbox><span>{{ i18n.t('permission.canUseAutomationOpenSlotAdvertising') }}</span></label>
+                      <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeAllAutomationDecisions"></p-checkbox><span>{{ i18n.t('permission.canSeeAllAutomationDecisions') }}</span></label>
+                      <div class="dialog-actions"><button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveUserPermissions(user)"></button></div>
+                    </div>
+                  </div>
+
                   <div>
                     <h4>{{ i18n.t('admin.userPickups') }}</h4>
                     @if (user.bookings.length) {
@@ -151,73 +210,4 @@
     }
   </p-card>
 
-  <p-card>
-    <ng-template pTemplate="title">{{ i18n.t('admin.einabs') }}</ng-template>
-    <p-table [value]="einAbs()">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>{{ i18n.t('slots.category') }}</th>
-          <th>{{ i18n.t('slots.date') }}</th>
-          <th>{{ i18n.t('common.location') }}</th>
-          <th>{{ i18n.t('common.publicLocation') }}</th>
-          <th>{{ i18n.t('slots.teacher') }}</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-einab>
-        <tr>
-          <td>{{ i18n.categoryLabel(einab.category) }}</td>
-          <td>{{ einab.startDateTime | zurichDateTime }}</td>
-          <td>{{ einab.location ?? '-' }}</td>
-          <td>{{ einab.publicLocation ?? '-' }}</td>
-          <td>{{ einab.teacher.name }}</td>
-        </tr>
-      </ng-template>
-    </p-table>
-    <p-paginator
-      [rows]="pageSize"
-      [totalRecords]="einAbsPage()?.totalElements ?? 0"
-      [first]="(einAbsPage()?.page ?? 0) * pageSize"
-      [showCurrentPageReport]="true"
-      currentPageReportTemplate="{first} - {last} / {totalRecords}"
-      (onPageChange)="onEinAbsPageChange($event)">
-    </p-paginator>
-  </p-card>
-
-  <p-card>
-    <ng-template pTemplate="title">{{ i18n.t('admin.bookings') }}</ng-template>
-    <p-table [value]="bookings()">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>{{ i18n.t('common.name') }}</th>
-          <th>{{ i18n.t('slots.category') }}</th>
-          <th>{{ i18n.t('slots.teacher') }}</th>
-          <th>{{ i18n.t('slots.date') }}</th>
-          <th>{{ i18n.t('common.location') }}</th>
-          <th>{{ i18n.t('common.foodsharingId') }}</th>
-          <th>{{ i18n.t('common.phoneNumber') }}</th>
-          <th>{{ i18n.t('common.status') }}</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-booking>
-        <tr>
-          <td>{{ booking.bookingUser?.name ?? '-' }}</td>
-          <td>{{ i18n.categoryLabel(booking.category) }}</td>
-          <td>{{ booking.teacherName }}</td>
-          <td>{{ booking.startDateTime | zurichDateTime }}</td>
-          <td>{{ booking.location ?? '-' }}</td>
-          <td>{{ booking.bookingUser?.foodsharingId }}</td>
-          <td>{{ booking.bookingUser?.phoneNumber ?? '-' }}</td>
-          <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
-        </tr>
-      </ng-template>
-    </p-table>
-    <p-paginator
-      [rows]="pageSize"
-      [totalRecords]="bookingsPage()?.totalElements ?? 0"
-      [first]="(bookingsPage()?.page ?? 0) * pageSize"
-      [showCurrentPageReport]="true"
-      currentPageReportTemplate="{first} - {last} / {totalRecords}"
-      (onPageChange)="onBookingsPageChange($event)">
-    </p-paginator>
-  </p-card>
 </section>
