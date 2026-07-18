@@ -310,25 +310,25 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<List<FoodsharingExtraAutomationAudit>> getFoodsharingRequestAutomationAudit() {
-        currentActorService.requirePermission(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS);
-        return ResponseEntity.ok(foodsharingPickupAutomationService.requestAutomationAudit().stream()
+    public ResponseEntity<List<FoodsharingExtraAutomationAudit>> getFoodsharingRequestAutomationAudit(Boolean onlyMine) {
+        requireAuditAccess(UserPermission.CAN_USE_AUTOMATION_REQUEST_APPROVAL);
+        return ResponseEntity.ok(foodsharingPickupAutomationService.requestAutomationAudit(Boolean.TRUE.equals(onlyMine)).stream()
                 .map(this::toFoodsharingExtraAutomationAudit)
                 .toList());
     }
 
     @Override
-    public ResponseEntity<List<FoodsharingExtraAutomationAudit>> getFoodsharingOpenSlotAdvertisementAudit() {
-        currentActorService.requirePermission(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS);
-        return ResponseEntity.ok(foodsharingPickupAutomationService.openSlotAdvertisementAudit().stream()
+    public ResponseEntity<List<FoodsharingExtraAutomationAudit>> getFoodsharingOpenSlotAdvertisementAudit(Boolean onlyMine) {
+        requireAuditAccess(UserPermission.CAN_USE_AUTOMATION_OPEN_SLOT_ADVERTISING);
+        return ResponseEntity.ok(foodsharingPickupAutomationService.openSlotAdvertisementAudit(Boolean.TRUE.equals(onlyMine)).stream()
                 .map(this::toFoodsharingExtraAutomationAudit)
                 .toList());
     }
 
     @Override
-    public ResponseEntity<List<FoodsharingExtraAutomationAudit>> getFoodsharingExtraAutomationAudit() {
-        currentActorService.requirePermission(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS);
-        return ResponseEntity.ok(foodsharingPickupAutomationService.extraAutomationAudit().stream()
+    public ResponseEntity<List<FoodsharingExtraAutomationAudit>> getFoodsharingExtraAutomationAudit(Boolean onlyMine) {
+        currentActorService.requireAutomationUser();
+        return ResponseEntity.ok(foodsharingPickupAutomationService.extraAutomationAudit(Boolean.TRUE.equals(onlyMine)).stream()
                 .map(this::toFoodsharingExtraAutomationAudit)
                 .toList());
     }
@@ -436,9 +436,9 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<List<FoodsharingAutomationAudit>> getFoodsharingAutomationAudit(String bezirkSlug) {
-        currentActorService.requirePermission(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS);
-        return ResponseEntity.ok(foodsharingPickupAutomationService.audit(bezirkSlug).stream()
+    public ResponseEntity<List<FoodsharingAutomationAudit>> getFoodsharingAutomationAudit(String bezirkSlug, Boolean onlyMine) {
+        requireAuditAccess(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
+        return ResponseEntity.ok(foodsharingPickupAutomationService.audit(bezirkSlug, Boolean.TRUE.equals(onlyMine)).stream()
                 .map(this::toFoodsharingAutomationAudit)
                 .toList());
     }
@@ -449,6 +449,12 @@ public class AdminController implements AdminApi {
         return ResponseEntity.ok(foodsharingPickupAutomationService.futurePickupUsers(bezirkSlug).stream()
                 .map(this::toFoodsharingFuturePickupUser)
                 .toList());
+    }
+
+    private void requireAuditAccess(UserPermission automationPermission) {
+        if (!currentActorService.hasPermission(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS)) {
+            currentActorService.requirePermission(automationPermission);
+        }
     }
 
     private FoodsharingConnectionStatus toFoodsharingConnectionStatus(FoodsharingPickupAutomationService.ConnectionStatus status) {

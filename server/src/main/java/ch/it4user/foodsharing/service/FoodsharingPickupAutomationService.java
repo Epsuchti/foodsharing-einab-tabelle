@@ -640,21 +640,24 @@ public class FoodsharingPickupAutomationService {
     }
 
     @Transactional(readOnly = true)
-    public List<AuditView> audit() {
-        User user = currentActorService.requirePermission(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS);
-        return audit(requireBezirk(user));
+    public List<AuditView> audit(boolean onlyMine) {
+        User user = currentActorService.requireAutomationUser();
+        return audit(requireBezirk(user), onlyMine);
     }
 
     @Transactional(readOnly = true)
-    public List<AuditView> audit(String bezirkSlug) {
-        User user = currentActorService.requirePermission(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS);
-        return audit(requireBezirk(bezirkSlug, user));
+    public List<AuditView> audit(String bezirkSlug, boolean onlyMine) {
+        User user = currentActorService.requireAutomationUser();
+        return audit(requireBezirk(bezirkSlug, user), onlyMine);
     }
 
-    private List<AuditView> audit(Bezirk bezirk) {
+    private List<AuditView> audit(Bezirk bezirk, boolean onlyMine) {
         Map<Long, String> storeNames = automationRepository.findAllByBezirk(bezirk).stream()
                 .collect(java.util.stream.Collectors.toMap(FoodsharingStoreAutomation::getStoreId, FoodsharingStoreAutomation::getStoreName, (left, right) -> left));
-        return auditRepository.findTop100ByBezirkOrderByCreatedAtDesc(bezirk).stream().map(a -> view(a, storeNames)).toList();
+        List<FoodsharingPickupAutomationAudit> audits = onlyOwnDecisions(onlyMine)
+                ? currentConnection().map(connection -> auditRepository.findTop100ByBezirkAndAdminConnectionOrderByCreatedAtDesc(bezirk, connection)).orElseGet(List::of)
+                : auditRepository.findTop100ByBezirkOrderByCreatedAtDesc(bezirk);
+        return audits.stream().map(a -> view(a, storeNames)).toList();
     }
 
     @Transactional
@@ -1167,6 +1170,8 @@ public class FoodsharingPickupAutomationService {
 
     private String normalizeRequired(String value) { if (value == null || value.isBlank()) throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED); return value.trim(); }
     private void saveAudit(FoodsharingStoreAutomation a, String userId, String userName, Instant pickupDate, boolean dryRun, FoodsharingPickupAutomationDecision decision, String reasons, String userMessage, String error) { var audit = new FoodsharingPickupAutomationAudit(); audit.setBezirk(a.getBezirk()); audit.setAdminConnection(a.getAdminConnection()); audit.setStoreId(a.getStoreId()); audit.setFoodsharingUserId(userId); audit.setFoodsharingUserName(userName == null || userName.isBlank() ? null : userName); audit.setPickupDate(pickupDate); audit.setDryRun(dryRun); audit.setDecision(decision); audit.setReasons(reasons); audit.setUserMessage(userMessage); audit.setFoodsharingError(error); auditRepository.save(audit); }
+    private boolean onlyOwnDecisions(boolean onlyMine) { return onlyMine || !currentActorService.hasPermission(UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS); }
+    private java.util.Optional<FoodsharingAdminConnection> currentConnection() { return connectionRepository.findByAdminUser(currentActorService.requireAutomationUser()); }
     private FoodsharingAdminConnection requireConnection() { return connectionRepository.findByAdminUser(currentActorService.requireAutomationUser()).orElseThrow(() -> new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED)); }
     private Bezirk requireBezirk(User user) { if (user.getBezirk() == null) throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("User has no Bezirk.")); return user.getBezirk(); }
     private Bezirk requireBezirk(String bezirkSlug, User user) {
@@ -1237,23 +1242,29 @@ public class FoodsharingPickupAutomationService {
     }
 
     @Transactional(readOnly = true)
-    public List<ExtraAutomationAuditView> extraAutomationAudit() {
+    public List<ExtraAutomationAuditView> extraAutomationAudit(boolean onlyMine) {
         List<ExtraAutomationAuditView> result = new ArrayList<>();
-        result.addAll(requestAutomationAudit());
-        result.addAll(openSlotAdvertisementAudit());
+        result.addAll(requestAutomationAudit(onlyMine));
+        result.addAll(openSlotAdvertisementAudit(onlyMine));
         return result.stream().sorted(Comparator.comparing(ExtraAutomationAuditView::createdAt).reversed()).limit(100).toList();
     }
 
     @Transactional(readOnly = true)
-    public List<ExtraAutomationAuditView> requestAutomationAudit() {
-        return requestAutomationAuditRepository.findTop100ByOrderByCreatedAtDesc().stream()
+    public List<ExtraAutomationAuditView> requestAutomationAudit(boolean onlyMine) {
+        List<FoodsharingRequestAutomationAudit> audits = onlyOwnDecisions(onlyMine)
+                ? currentConnection().map(requestAutomationAuditRepository::findTop100ByAutomationAdminConnectionOrderByCreatedAtDesc).orElseGet(List::of)
+                : requestAutomationAuditRepository.findTop100ByOrderByCreatedAtDesc();
+        return audits.stream()
                 .map(a -> new ExtraAutomationAuditView("REQUEST", a.getStoreId(), a.getStoreName(), null, a.getFoodsharingUserId(), a.getFoodsharingUserName(), a.isDryRun(), a.getStatus(), a.getReason(), null, a.getError(), a.getCreatedAt()))
                 .toList();
     }
 
     @Transactional(readOnly = true)
-    public List<ExtraAutomationAuditView> openSlotAdvertisementAudit() {
-        return advertisementAuditRepository.findTop100ByOrderByCreatedAtDesc().stream()
+    public List<ExtraAutomationAuditView> openSlotAdvertisementAudit(boolean onlyMine) {
+        List<FoodsharingOpenSlotAdvertisementAudit> audits = onlyOwnDecisions(onlyMine)
+                ? currentConnection().map(advertisementAuditRepository::findTop100ByAutomationAdminConnectionOrderByCreatedAtDesc).orElseGet(List::of)
+                : advertisementAuditRepository.findTop100ByOrderByCreatedAtDesc();
+        return audits.stream()
                 .map(a -> new ExtraAutomationAuditView("ADVERTISEMENT", a.getStoreId(), a.getStoreName(), a.getPickupDate(), null, null, a.isDryRun(), a.getStatus(), a.getReason(), a.getMessage(), a.getError(), a.getCreatedAt()))
                 .toList();
     }

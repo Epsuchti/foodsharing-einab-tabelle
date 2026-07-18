@@ -222,6 +222,7 @@
   "adminAutomation.confirmed": "bestätigt",
   "adminAutomation.pending": "offe",
   "adminAutomation.audit": "Letschti Automations-Entscheid",
+  "adminAutomation.onlyMyDecisions": "Nur mini Entscheid aazeige",
   "adminAutomation.decision": "Entscheid",
   "adminAutomation.store": "Betrieb",
   "adminAutomation.user": "Nutzer",

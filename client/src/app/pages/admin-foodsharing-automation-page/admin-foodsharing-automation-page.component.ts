@@ -74,6 +74,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly requestRunResult = signal<FoodsharingRunResult | null>(null);
   protected readonly advertisementRunResult = signal<FoodsharingRunResult | null>(null);
   protected readonly onlyMyAutomations = signal(true);
+  protected readonly onlyMyDecisions = signal(true);
   protected readonly activeAutomationTab = signal('applications');
   protected readonly selectedStoreId = signal<number | null>(null);
   protected readonly selectedRequestStoreId = signal<number | null>(null);
@@ -122,6 +123,11 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     }
     const nextTab = String(tab);
     this.activeAutomationTab.set(nextTab);
+    this.loadActiveAutomationTab();
+  }
+
+  setOnlyMyDecisions(onlyMyDecisions: boolean): void {
+    this.onlyMyDecisions.set(onlyMyDecisions);
     this.loadActiveAutomationTab();
   }
 
@@ -695,22 +701,14 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   private loadRequestAutomationAudit(): void {
-    if (!this.sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) {
-      this.requestAutomationAudit.set([]);
-      return;
-    }
-    this.adminApi.getFoodsharingRequestAutomationAudit().subscribe({
+    this.adminApi.getFoodsharingRequestAutomationAudit({ onlyMine: this.onlyMyDecisions() }).subscribe({
       next: (audit) => this.requestAutomationAudit.set(audit),
       error: () => undefined
     });
   }
 
   private loadAdvertisementAutomationAudit(): void {
-    if (!this.sessionService.hasPermission(UserPermission.CanSeeAllAutomationDecisions)) {
-      this.advertisementAutomationAudit.set([]);
-      return;
-    }
-    this.adminApi.getFoodsharingOpenSlotAdvertisementAudit().subscribe({
+    this.adminApi.getFoodsharingOpenSlotAdvertisementAudit({ onlyMine: this.onlyMyDecisions() }).subscribe({
       next: (audit) => this.advertisementAutomationAudit.set(audit),
       error: () => undefined
     });
@@ -751,7 +749,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   }
 
   private loadFoodsharingAudit(): void {
-    this.adminApi.getFoodsharingAutomationAudit({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
+    this.adminApi.getFoodsharingAutomationAudit({ bezirkSlug: this.bezirkContext.currentSlug(), onlyMine: this.onlyMyDecisions() }).subscribe({
       next: (audit) => this.foodsharingAudit.set(audit),
       error: () => undefined
     });

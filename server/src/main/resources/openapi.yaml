@@ -1004,6 +1004,11 @@ paths:
     get:
       tags: [admin]
       operationId: getFoodsharingRequestAutomationAudit
+      parameters:
+        - name: onlyMine
+          in: query
+          schema:
+            type: boolean
       responses:
         '200':
           description: Request automation audit entries
@@ -1019,6 +1024,11 @@ paths:
     get:
       tags: [admin]
       operationId: getFoodsharingOpenSlotAdvertisementAudit
+      parameters:
+        - name: onlyMine
+          in: query
+          schema:
+            type: boolean
       responses:
         '200':
           description: Open-slot advertisement audit entries
@@ -1035,6 +1045,11 @@ paths:
       tags: [admin]
       operationId: getFoodsharingExtraAutomationAudit
       deprecated: true
+      parameters:
+        - name: onlyMine
+          in: query
+          schema:
+            type: boolean
       responses:
         '200':
           description: Request and advertisement automation audit entries
@@ -1331,6 +1346,11 @@ paths:
     get:
       tags: [admin]
       operationId: getFoodsharingAutomationAudit
+      parameters:
+        - name: onlyMine
+          in: query
+          schema:
+            type: boolean
       responses:
         '200':
           description: Recent foodsharing automation decisions

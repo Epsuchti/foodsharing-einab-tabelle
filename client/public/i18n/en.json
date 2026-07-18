@@ -222,6 +222,7 @@
   "adminAutomation.confirmed": "confirmed",
   "adminAutomation.pending": "pending",
   "adminAutomation.audit": "Recent automation decisions",
+  "adminAutomation.onlyMyDecisions": "Show only my decisions",
   "adminAutomation.decision": "Decision",
   "adminAutomation.store": "Store",
   "adminAutomation.user": "User",

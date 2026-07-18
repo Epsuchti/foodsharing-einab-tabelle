@@ -51,7 +51,8 @@ public class CurrentActorService {
                         || hasPermission(user, UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL)
                         || hasPermission(user, UserPermission.CAN_USE_AUTOMATION_REQUEST_APPROVAL)
                         || hasPermission(user, UserPermission.CAN_USE_AUTOMATION_OPEN_SLOT_ADVERTISING)
-                        || hasPermission(user, UserPermission.CAN_SEE_USER_PICKUP_COUNT_GROUPING))
+                        || hasPermission(user, UserPermission.CAN_SEE_USER_PICKUP_COUNT_GROUPING)
+                        || hasPermission(user, UserPermission.CAN_SEE_ALL_AUTOMATION_DECISIONS))
                 .orElseThrow(() -> new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ACCESS_DENIED));
     }
 
