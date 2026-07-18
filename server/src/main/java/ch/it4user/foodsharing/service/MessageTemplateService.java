@@ -48,9 +48,9 @@ public class MessageTemplateService {
 
     public String bookingConfirmationSubject(LanguageCode language) {
         return switch (language) {
-            case EN -> "Your foodsharing pickup details";
-            case GWS -> "Dini Foodsharing Abholig";
-            case DE -> "Deine Foodsharing-Einführungs-Abholung";
+            case EN -> "Your Foodsharing EinAb details";
+            case GWS -> "Dini Foodsharing-EinAb";
+            case DE -> "Dein Foodsharing-EinAb";
         };
     }
 
@@ -66,17 +66,17 @@ public class MessageTemplateService {
                     case DE -> "Du kannst dich später mit der Foodsharing-ID dieser Buchung einloggen.";
                 },
                 switch (language) {
-                    case EN -> "Confirm pickup: " + manageUrl;
-                    case GWS -> "Abholig bestätige: " + manageUrl;
-                    case DE -> "Abholung bestätigen: " + manageUrl;
+                    case EN -> "Confirm EinAb: " + manageUrl;
+                    case GWS -> "EinAb bestätige: " + manageUrl;
+                    case DE -> "EinAb bestätigen: " + manageUrl;
                 });
     }
 
     public String teacherCancellationSubject(LanguageCode language) {
         return switch (language) {
-            case EN -> "Your pickup was cancelled";
-            case GWS -> "Dini Abholig isch abgsagt worde";
-            case DE -> "Deine Abholung wurde abgesagt";
+            case EN -> "Your EinAb was cancelled";
+            case GWS -> "Dini EinAb isch abgsagt worde";
+            case DE -> "Dein EinAb wurde abgesagt";
         };
     }
 
@@ -85,9 +85,9 @@ public class MessageTemplateService {
         return String.join("\n\n",
                 greeting(language, slot.getBookingUser().getName()),
                 switch (language) {
-                    case EN -> "The EinAb giver cancelled your booked pickup.";
-                    case GWS -> "D EinAb-Geberin het dini buechti Abholig abgsagt.";
-                    case DE -> "Die EinAb-Geberin hat deine gebuchte Abholung abgesagt.";
+                    case EN -> "The EinAb giver cancelled your booked EinAb.";
+                    case GWS -> "D EinAb-Geberin het dis buechte EinAb abgsagt.";
+                    case DE -> "Die EinAb-Geberin hat dein gebuchtes EinAb abgesagt.";
                 },
                 formatDetails(details),
                 switch (language) {
@@ -135,23 +135,23 @@ public class MessageTemplateService {
     private String confirmWindowText(LanguageCode language, long minutes) {
         if (minutes == 60) {
             return switch (language) {
-                case EN -> "Please confirm this pickup within the next hour.";
-                case GWS -> "Bitte bestätig die Abholig innerhalb vo de nächste Stund.";
-                case DE -> "Bitte bestätige diese Abholung innerhalb der nächsten Stunde.";
+                case EN -> "Please confirm this EinAb within the next hour.";
+                case GWS -> "Bitte bestätig das EinAb innerhalb vo de nächste Stund.";
+                case DE -> "Bitte bestätige dieses EinAb innerhalb der nächsten Stunde.";
             };
         }
         if (minutes % 60 == 0) {
             long hours = minutes / 60;
             return switch (language) {
-                case EN -> "Please confirm this pickup within the next " + hours + (hours == 1 ? " hour." : " hours.");
-                case GWS -> "Bitte bestätig die Abholig innerhalb vo de nächste " + hours + (hours == 1 ? " Stund." : " Stund.");
-                case DE -> "Bitte bestätige diese Abholung innerhalb der nächsten " + hours + (hours == 1 ? " Stunde." : " Stunden.");
+                case EN -> "Please confirm this EinAb within the next " + hours + (hours == 1 ? " hour." : " hours.");
+                case GWS -> "Bitte bestätig das EinAb innerhalb vo de nächste " + hours + (hours == 1 ? " Stund." : " Stund.");
+                case DE -> "Bitte bestätige dieses EinAb innerhalb der nächsten " + hours + (hours == 1 ? " Stunde." : " Stunden.");
             };
         }
         return switch (language) {
-            case EN -> "Please confirm this pickup within the next " + minutes + " minutes.";
-            case GWS -> "Bitte bestätig die Abholig innerhalb vo de nächste " + minutes + " Minute.";
-            case DE -> "Bitte bestätige diese Abholung innerhalb der nächsten " + minutes + " Minuten.";
+            case EN -> "Please confirm this EinAb within the next " + minutes + " minutes.";
+            case GWS -> "Bitte bestätig das EinAb innerhalb vo de nächste " + minutes + " Minute.";
+            case DE -> "Bitte bestätige dieses EinAb innerhalb der nächsten " + minutes + " Minuten.";
         };
     }
 

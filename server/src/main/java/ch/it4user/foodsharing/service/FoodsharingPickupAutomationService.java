@@ -961,7 +961,7 @@ public class FoodsharingPickupAutomationService {
     private FoodsharingPickupModels.Decision evaluate(FoodsharingStoreAutomation a, Instant pickupDate, String userId, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache) {
         List<String> reasons = new ArrayList<>();
         if (pickupDate.isBefore(Instant.now().plus(Duration.ofHours(72)))) {
-            reasons.add("Die Abholung ist weniger als 72 Stunden entfernt; die Automationsregeln werden übersprungen.");
+            reasons.add("Das EinAb ist weniger als 72 Stunden entfernt; die Automationsregeln werden übersprungen.");
             return new FoodsharingPickupModels.Decision(true, reasons, null);
         }
         if (a.isGapRuleEnabled()) {
@@ -972,12 +972,12 @@ public class FoodsharingPickupAutomationService {
                     .map(d -> calendarGapDays(d, pickupDate))
                     .filter(gapDays -> gapDays < a.getMinimumGapDays())
                     .findAny()
-                    .ifPresent(gapDays -> reasons.add("Zwischen den Abholungen liegt nur " + gapDays + daySuffix(gapDays) + " Abstand; erforderlich sind mindestens " + a.getMinimumGapDays() + daySuffix(a.getMinimumGapDays()) + "."));
+                    .ifPresent(gapDays -> reasons.add("Zwischen den EinAbs liegt nur " + gapDays + daySuffix(gapDays) + " Abstand; erforderlich sind mindestens " + a.getMinimumGapDays() + daySuffix(a.getMinimumGapDays()) + "."));
         }
         if (a.isExperienceRuleEnabled()) {
             List<FoodsharingPickupModels.StoreMember> storeMembers = storeMembers(a.getAdminConnection(), a.getStoreId());
             if (!hasStoreExperience(storeMembers, userId) && !hasExperiencedCoPickup(a, pickupDate, userId, livePickupsCache, storeMembers)) {
-                reasons.add("Diese Abholung benötigt Erfahrung in diesem Betrieb. Weder du noch die eventuelle mitabholende Personen haben diese.");
+                reasons.add("Dieses EinAb benötigt Erfahrung in diesem Betrieb. Weder du noch eine allfällige begleitende Person haben diese.");
             }
         }
         if (a.isCleaningRuleEnabled() && !cleaningRuleExemptionRepository.existsByBezirkAndFoodsharingId(a.getBezirk(), userId)) {
@@ -1022,7 +1022,7 @@ public class FoodsharingPickupAutomationService {
                 }
             }
         }
-        if (reasons.isEmpty()) reasons.add("All enabled pickup automation rules passed.");
+        if (reasons.isEmpty()) reasons.add("All enabled EinAb automation rules passed.");
         String cleaningOverrideMessage = reasons.stream()
                 .filter(reason -> reason.startsWith("Du warst schon länger nicht mehr einen Fairteiler putzen."))
                 .findFirst()

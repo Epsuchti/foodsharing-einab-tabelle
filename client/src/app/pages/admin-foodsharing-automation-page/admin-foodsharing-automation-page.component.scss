@@ -137,6 +137,11 @@
   font-size: 0.95rem;
 }
 
+.automation-help__decision-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .automation-help__decision-table th,
 .automation-help__decision-table td {
   padding: 0.6rem 0.75rem;
@@ -148,6 +153,17 @@
 .automation-help__decision-table th {
   background: #e2e8f0;
   color: #0f172a;
+}
+
+@media (max-width: 40rem) {
+  .automation-help__decision-table {
+    min-width: 40rem;
+  }
+
+  .automation-help__decision-table th,
+  .automation-help__decision-table td {
+    padding: 0.5rem;
+  }
 }
 
 .automation-help__note {
