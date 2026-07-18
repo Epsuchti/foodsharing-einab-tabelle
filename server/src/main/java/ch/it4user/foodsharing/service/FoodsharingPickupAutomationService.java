@@ -134,7 +134,9 @@ public class FoodsharingPickupAutomationService {
         List<FoodsharingPickupModels.Store> managedStores = managedStores(c);
         Map<Long, FoodsharingPickupModels.Store> managedStoresById = managedStores.stream()
                 .collect(java.util.stream.Collectors.toMap(FoodsharingPickupModels.Store::id, store -> store, (left, right) -> left, LinkedHashMap::new));
-        List<StoreAutomationView> automations = automationRepository.findAllByBezirk(bezirk).stream()
+        List<FoodsharingStoreAutomation> configuredAutomations = automationRepository.findAllByBezirk(bezirk);
+        List<StoreAutomationView> automations = configuredAutomations.stream()
+                .filter(automation -> managedStoresById.containsKey(automation.getStoreId()))
                 .sorted(Comparator.comparing(FoodsharingStoreAutomation::getStoreName, Comparator.nullsLast(String::compareToIgnoreCase))
                         .thenComparingLong(FoodsharingStoreAutomation::getStoreId))
                 .map(automation -> view(
@@ -144,7 +146,7 @@ public class FoodsharingPickupAutomationService {
                         c))
                 .toList();
         List<ManagedStoreView> availableStores = managedStores.stream()
-                .filter(store -> automations.stream().noneMatch(automation -> automation.storeId() == store.id()))
+                .filter(store -> configuredAutomations.stream().noneMatch(automation -> automation.getStoreId() == store.id()))
                 .map(store -> new ManagedStoreView(store.id(), store.name()))
                 .sorted(Comparator.comparing(ManagedStoreView::storeName, Comparator.nullsLast(String::compareToIgnoreCase))
                         .thenComparingLong(ManagedStoreView::storeId))

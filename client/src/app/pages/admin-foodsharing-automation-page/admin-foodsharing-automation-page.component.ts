@@ -83,7 +83,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly visibleFoodsharingStores = computed(() => this.onlyMyAutomations()
     ? this.foodsharingStores().filter((store) => store.editable)
     : this.foodsharingStores());
-  protected readonly slotApprovalStores = computed(() => this.visibleFoodsharingStores()
+  protected readonly slotApprovalStores = computed(() => this.foodsharingStores()
     .filter((store) => Boolean((store as FoodsharingStoreAutomation & Record<string, unknown>)['slotApprovalConfigured'])));
   protected readonly requestAutomationStores = computed(() => this.visibleFoodsharingStores()
     .filter((store) => Boolean((store as FoodsharingStoreAutomation & Record<string, unknown>)['requestConfigured'])));
