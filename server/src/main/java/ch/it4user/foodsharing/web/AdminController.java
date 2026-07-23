@@ -559,6 +559,9 @@ public class AdminController implements AdminApi {
         response.setTelegramChatId(advertisement.telegramChatId());
         response.setStoreMessages(advertisement.storeMessages());
         response.setTelegramMessages(advertisement.telegramMessages());
+        response.setLateCancellationMessage(advertisement.lateCancellationMessage());
+        response.setSendLateCancellationMessage(advertisement.sendLateCancellationMessage());
+        response.setSendLatestAdvertisementAfterLateCancellation(advertisement.sendLatestAdvertisementAfterLateCancellation());
         response.setEditable(advertisement.editable());
         return response;
     }

@@ -7,8 +7,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -52,15 +50,12 @@ public class FoodsharingOpenSlotAdvertisementAutomation extends BaseEntity {
     @Column(length = 255)
     private String telegramChatId;
 
-    @JdbcTypeCode(SqlTypes.CLOB)
     @Column(name = "store_messages_json", nullable = false, columnDefinition = "TEXT")
     private String storeMessagesJson = "[]";
 
-    @JdbcTypeCode(SqlTypes.CLOB)
     @Column(name = "telegram_messages_json", nullable = false, columnDefinition = "TEXT")
     private String telegramMessagesJson = "[]";
 
-    @JdbcTypeCode(SqlTypes.CLOB)
     @Column(name = "late_cancellation_message", nullable = false, columnDefinition = "TEXT")
     private String lateCancellationMessage = "Du hast gerade den Slot {{datetimeDe}} freigegeben. Du bist trotzdem verantwortlich für diesen Slot! Bitte sorge für Ersatz und notifiziere sowohl das Team als auch den Notfallchat.";
 
