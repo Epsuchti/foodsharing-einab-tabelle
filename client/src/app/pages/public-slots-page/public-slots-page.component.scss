@@ -5,11 +5,12 @@
 
 .slot-card {
   display: grid;
-  gap: 0.75rem;
+  gap: 1rem;
   padding: 0.875rem;
   border: 1px solid #d9e0ea;
   border-radius: 8px;
   background: #ffffff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
 }
 
 .slot-card__header {
@@ -21,17 +22,20 @@
 
 .slot-card__title {
   font-weight: 700;
+  font-size: 1.0625rem;
   color: #1f2937;
 }
 
 .slot-card__meta {
   display: grid;
-  gap: 0.625rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.875rem 1.25rem;
 }
 
-.slot-card__meta > div {
+.slot-card__detail {
   display: grid;
   gap: 0.2rem;
+  min-width: 0;
 }
 
 .slot-card__label {
@@ -45,6 +49,14 @@
 .slot-card__actions {
   display: flex;
   justify-content: flex-end;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eef2f6;
+}
+
+@media (max-width: 360px) {
+  .slot-card__meta {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {

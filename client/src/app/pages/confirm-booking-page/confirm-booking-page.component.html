@@ -26,7 +26,18 @@
 
       <div class="confirm-identity">
         <div class="confirm-identity__name">{{ booking()?.bookingUser?.name }}</div>
-        <div class="confirm-identity__meta">{{ booking()?.bookingUser?.foodsharingId }}</div>
+        @if (booking()?.bookingUser?.foodsharingId; as foodsharingId) {
+          <a
+            pButton
+            size="small"
+            severity="secondary"
+            icon="pi pi-user"
+            class="confirm-identity__profile"
+            [label]="i18n.t('common.viewProfile')"
+            [href]="'https://foodsharing.de/user/' + foodsharingId + '/profile'"
+            target="_blank"
+            rel="noopener noreferrer"></a>
+        }
       </div>
 
       <div class="confirm-grid">

@@ -968,8 +968,9 @@ public class FoodsharingPickupAutomationService {
 
     private FoodsharingPickupModels.Decision evaluate(FoodsharingStoreAutomation a, Instant pickupDate, String userId, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache) {
         List<String> reasons = new ArrayList<>();
-        if (pickupDate.isBefore(Instant.now().plus(Duration.ofHours(72)))) {
-            reasons.add(userMessage("message.automation.less-than-72-hours"));
+        Instant rulesSkippedFrom = pickupDate.atZone(SWISS_ZONE).toLocalDate().minusDays(2).atStartOfDay(SWISS_ZONE).toInstant();
+        if (!Instant.now().isBefore(rulesSkippedFrom)) {
+            reasons.add(userMessage("message.automation.rules-skipped-from-two-days-before"));
             return new FoodsharingPickupModels.Decision(true, reasons, null);
         }
         if (a.isGapRuleEnabled()) {

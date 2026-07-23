@@ -58,25 +58,22 @@
           <article class="slot-card">
             <div class="slot-card__header">
               <div class="slot-card__title">{{ i18n.categoryLabel(slot.category) }}</div>
-              <p-tag
-                [severity]="slot.visitFairteiler ? 'success' : 'secondary'"
-                [value]="i18n.t('common.visitFairteiler') + ': ' + (slot.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no'))"></p-tag>
             </div>
 
             <div class="slot-card__meta">
-              <div>
+              <div class="slot-card__detail">
                 <span class="slot-card__label">{{ i18n.t('slots.date') }}</span>
                 <div>{{ slot.startDateTime | zurichDateTime }}</div>
               </div>
-              <div>
+              <div class="slot-card__detail">
                 <span class="slot-card__label">{{ i18n.t('common.location') }}</span>
                 <div>{{ displayPublicLocation(slot) }}</div>
               </div>
-              <div>
+              <div class="slot-card__detail">
                 <span class="slot-card__label">{{ i18n.t('slots.teacher') }}</span>
                 <div>{{ slot.teacherName }}</div>
               </div>
-              <div>
+              <div class="slot-card__detail">
                 <span class="slot-card__label">{{ i18n.t('common.visitFairteiler') }}</span>
                 <div>{{ slot.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no') }}</div>
               </div>

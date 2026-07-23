@@ -41,11 +41,11 @@ public class IcalImportService {
                 } else if (line.startsWith("DTSTART;")) {
                     currentStart = parseDateTime(line.substring(line.indexOf(':') + 1));
                 } else if (line.startsWith("SUMMARY:")) {
-                    currentSummary = line.substring("SUMMARY:".length()).trim();
+                    currentSummary = unescapeText(line.substring("SUMMARY:".length())).trim();
                 } else if (line.startsWith("LOCATION:")) {
-                    currentLocation = line.substring("LOCATION:".length()).trim();
+                    currentLocation = unescapeText(line.substring("LOCATION:".length())).trim();
                 } else if (line.startsWith("LOCATION;")) {
-                    currentLocation = line.substring(line.indexOf(':') + 1).trim();
+                    currentLocation = unescapeText(line.substring(line.indexOf(':') + 1)).trim();
                 } else if (line.equals("END:VEVENT") && currentStart != null) {
                     if (!currentStart.isBefore(now)) {
                         IcalCandidate candidate = new IcalCandidate();
@@ -90,5 +90,27 @@ public class IcalImportService {
             return OffsetDateTime.of(LocalDateTime.parse(rawValue, ZULU), ZoneOffset.UTC).toInstant();
         }
         return LocalDateTime.parse(rawValue, LOCAL).atZone(ZURICH).toInstant();
+    }
+
+    private String unescapeText(String value) {
+        StringBuilder unescaped = new StringBuilder(value.length());
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (character != '\\' || index == value.length() - 1) {
+                unescaped.append(character);
+                continue;
+            }
+
+            char escapedCharacter = value.charAt(++index);
+            switch (escapedCharacter) {
+                case 'n', 'N' -> unescaped.append('\n');
+                case ',', ';', '\\' -> unescaped.append(escapedCharacter);
+                default -> {
+                    unescaped.append('\\');
+                    unescaped.append(escapedCharacter);
+                }
+            }
+        }
+        return unescaped.toString();
     }
 }

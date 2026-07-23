@@ -10,12 +10,13 @@ import { I18nService } from '../../core/i18n.service';
 import { SessionService } from '../../core/session.service';
 import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
 import { CardModule } from 'primeng/card';
+import { ButtonModule } from 'primeng/button';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 
 @Component({
   selector: 'app-confirm-booking-page',
   standalone: true,
-  imports: [CommonModule, CardModule, ProgressSpinnerModule, ZurichDateTimePipe],
+  imports: [CommonModule, ButtonModule, CardModule, ProgressSpinnerModule, ZurichDateTimePipe],
   templateUrl: './confirm-booking-page.component.html',
   styleUrl: './confirm-booking-page.component.scss'
 })
