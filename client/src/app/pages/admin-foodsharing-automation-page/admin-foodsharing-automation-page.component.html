@@ -26,49 +26,57 @@
             <p-tabpanel value="applications">
               @if (activeAutomationTab() === 'applications') {
               <div class="automation-tabpanel">
-              <div class="automation-help">
-                <h3 class="automation-help__title">{{ i18n.t('automation.applicationsInstructionsTitle') }}</h3>
-                <ol class="automation-help__list">
-                  <li>{{ i18n.t('automation.applicationsInstruction1') }}</li>
-                  <li>{{ i18n.t('automation.applicationsInstruction2') }}</li>
-                  <li>{{ i18n.t('automation.applicationsInstruction3') }}</li>
-                  <li>{{ i18n.t('automation.applicationsInstruction4') }}</li>
-                </ol>
-                <h4 class="automation-help__section">{{ i18n.t('automation.requestDecisionTableTitle') }}</h4>
-                <div class="automation-help__decision-table-wrapper">
-                <table class="automation-help__decision-table">
-                  <thead>
-                    <tr>
-                      <th>{{ i18n.t('automation.requestDecisionCondition') }}</th>
-                      <th>{{ i18n.t('automation.requestDecisionAction') }}</th>
-                      <th>{{ i18n.t('automation.requestDecisionAudit') }}</th>
-                      <th>{{ i18n.t('automation.requestDecisionCustomerMessage') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>{{ i18n.t('automation.requestDecisionMissingData') }}</td>
-                      <td>{{ i18n.t('automation.requestDecisionSkip') }}</td>
-                      <td>SKIPPED</td>
-                      <td>{{ i18n.t('automation.requestDecisionNoMessage') }}</td>
-                    </tr>
-                    <tr>
-                      <td>{{ i18n.t('automation.requestDecisionTooFar') }}</td>
-                      <td>{{ i18n.t('automation.requestDecisionDecline') }}</td>
-                      <td>WOULD_DECLINE / DECLINED</td>
-                      <td>{{ i18n.t('automation.requestDecisionTooFarMessage') }}</td>
-                    </tr>
-                    <tr>
-                      <td>{{ i18n.t('automation.requestDecisionOtherwise') }}</td>
-                      <td>{{ i18n.t('automation.requestDecisionApprove') }}</td>
-                      <td>WOULD_APPROVE / APPROVED</td>
-                      <td>{{ i18n.t('automation.requestDecisionNoMessage') }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                </div>
-                <p class="automation-help__note">{{ i18n.t('automation.requestDecisionDryRunNote') }}</p>
-              </div>
+              <p-accordion [multiple]="false" class="automation-help-accordion">
+                <p-accordion-panel [value]="'applications-help'">
+                  <p-accordion-header>
+                    <strong>{{ i18n.t('automation.applicationsInstructionsTitle') }}</strong>
+                  </p-accordion-header>
+                  <p-accordion-content>
+                    <div class="automation-help">
+                      <ol class="automation-help__list">
+                        <li>{{ i18n.t('automation.applicationsInstruction1') }}</li>
+                        <li>{{ i18n.t('automation.applicationsInstruction2') }}</li>
+                        <li>{{ i18n.t('automation.applicationsInstruction3') }}</li>
+                        <li>{{ i18n.t('automation.applicationsInstruction4') }}</li>
+                      </ol>
+                      <h4 class="automation-help__section">{{ i18n.t('automation.requestDecisionTableTitle') }}</h4>
+                      <div class="automation-help__decision-table-wrapper">
+                      <table class="automation-help__decision-table">
+                        <thead>
+                          <tr>
+                            <th>{{ i18n.t('automation.requestDecisionCondition') }}</th>
+                            <th>{{ i18n.t('automation.requestDecisionAction') }}</th>
+                            <th>{{ i18n.t('automation.requestDecisionAudit') }}</th>
+                            <th>{{ i18n.t('automation.requestDecisionCustomerMessage') }}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>{{ i18n.t('automation.requestDecisionMissingData') }}</td>
+                            <td>{{ i18n.t('automation.requestDecisionSkip') }}</td>
+                            <td>SKIPPED</td>
+                            <td>{{ i18n.t('automation.requestDecisionNoMessage') }}</td>
+                          </tr>
+                          <tr>
+                            <td>{{ i18n.t('automation.requestDecisionTooFar') }}</td>
+                            <td>{{ i18n.t('automation.requestDecisionDecline') }}</td>
+                            <td>WOULD_DECLINE / DECLINED</td>
+                            <td>{{ i18n.t('automation.requestDecisionTooFarMessage') }}</td>
+                          </tr>
+                          <tr>
+                            <td>{{ i18n.t('automation.requestDecisionOtherwise') }}</td>
+                            <td>{{ i18n.t('automation.requestDecisionApprove') }}</td>
+                            <td>WOULD_APPROVE / APPROVED</td>
+                            <td>{{ i18n.t('automation.requestDecisionNoMessage') }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      </div>
+                      <p class="automation-help__note">{{ i18n.t('automation.requestDecisionDryRunNote') }}</p>
+                    </div>
+                  </p-accordion-content>
+                </p-accordion-panel>
+              </p-accordion>
               <div class="automation-toolbar"><button pButton type="button" [label]="i18n.t('adminAutomation.runDryRun')" (click)="runRequestAutomationDryRun()"></button><div class="automation-toolbar__add"><p-select [options]="availableRequestStoreOptions()" optionLabel="label" optionValue="value" [ngModel]="selectedRequestStoreId()" (ngModelChange)="selectedRequestStoreId.set(normalizeStoreId($event))" [placeholder]="i18n.t('adminAutomation.addStorePlaceholder')" appendTo="body"></p-select><button pButton type="button" icon="pi pi-plus" [label]="i18n.t('adminAutomation.addStore')" [disabled]="selectedRequestStoreId() == null" (click)="addRequestAutomation()"></button></div></div>
               @if (requestRunResult(); as result) { <div class="automation-run-result"><strong>{{ i18n.t('adminAutomation.dryRunSummary') }}</strong>: {{ result.evaluated }} {{ i18n.t('automation.evaluated') }}, {{ result.confirmed }} {{ i18n.t('automation.wouldAct') }}, {{ result.declined }} {{ i18n.t('automation.skipped') }}.</div> }
               <p-table [value]="requestAutomationStores()"><ng-template pTemplate="header"><tr><th>{{ i18n.t('common.name') }}</th><th>{{ i18n.t('adminAutomation.enabled') }}</th><th>{{ i18n.t('adminAutomation.storeDryRun') }}</th><th>{{ i18n.t('adminAutomation.distanceRule') }}</th><th>{{ i18n.t('adminAutomation.maximumDistanceKm') }}</th><th>{{ i18n.t('common.actions') }}</th></tr></ng-template><ng-template pTemplate="body" let-store><tr><td>{{ store.storeName }}</td><td><p-checkbox [binary]="true" [(ngModel)]="store.requestEnabled" [disabled]="!store.editable"></p-checkbox></td><td><p-checkbox [binary]="true" [(ngModel)]="store.requestDryRunEnabled" [disabled]="!store.editable"></p-checkbox></td><td><p-checkbox [binary]="true" [(ngModel)]="store.requestDistanceRuleEnabled" [disabled]="!store.editable"></p-checkbox></td><td><p-inputNumber [(ngModel)]="store.requestMaximumDistanceKm" [min]="0" [minFractionDigits]="0" [maxFractionDigits]="2" [disabled]="!store.editable || !store.requestDistanceRuleEnabled"></p-inputNumber></td><td><button pButton type="button" size="small" [label]="i18n.t('common.save')" [disabled]="!store.editable" (click)="saveRequestAutomation(store)"></button><button pButton type="button" size="small" severity="danger" [label]="i18n.t('common.delete')" [disabled]="!store.editable" (click)="deleteRequestAutomation(store)"></button></td></tr></ng-template></p-table>
@@ -81,67 +89,75 @@
             <p-tabpanel value="slots">
               @if (activeAutomationTab() === 'slots') {
               <div class="automation-tabpanel">
-              <div class="automation-help">
-                <h3 class="automation-help__title">{{ i18n.t('automation.slotsInstructionsTitle') }}</h3>
-                <ol class="automation-help__list">
-                  <li>{{ i18n.t('automation.slotsInstruction1') }}</li>
-                  <li>{{ i18n.t('automation.slotsInstruction2') }}</li>
-                  <li>{{ i18n.t('automation.slotsInstruction3') }}</li>
-                  <li>{{ i18n.t('automation.slotsInstruction4') }}</li>
-                </ol>
-                <h4 class="automation-help__section">{{ i18n.t('automation.slotsDecisionTableTitle') }}</h4>
-                <div class="automation-help__decision-table-wrapper">
-                <table class="automation-help__decision-table">
-                  <thead>
-                    <tr>
-                      <th>{{ i18n.t('automation.requestDecisionCondition') }}</th>
-                      <th>{{ i18n.t('automation.requestDecisionAction') }}</th>
-                      <th>{{ i18n.t('automation.requestDecisionAudit') }}</th>
-                      <th>{{ i18n.t('automation.requestDecisionCustomerMessage') }}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>{{ i18n.t('automation.slotsDecisionRecentPickup') }}</td>
-                      <td>{{ i18n.t('automation.slotsDecisionAllow') }}</td>
-                      <td>WOULD_CONFIRM / CONFIRMED</td>
-                      <td>{{ i18n.t('automation.slotsDecisionRecentPickupMessage') }}</td>
-                    </tr>
-                    <tr>
-                      <td>{{ i18n.t('automation.slotsDecisionGapRule') }}</td>
-                      <td>{{ i18n.t('automation.slotsDecisionDecline') }}</td>
-                      <td>WOULD_DECLINE / DECLINED</td>
-                      <td>{{ i18n.t('automation.slotsDecisionGapRuleMessage') }}</td>
-                    </tr>
-                    <tr>
-                      <td>{{ i18n.t('automation.slotsDecisionExperienceRule') }}</td>
-                      <td>{{ i18n.t('automation.slotsDecisionDecline') }}</td>
-                      <td>WOULD_DECLINE / DECLINED</td>
-                      <td>{{ i18n.t('automation.slotsDecisionExperienceRuleMessage') }}</td>
-                    </tr>
-                    <tr>
-                      <td>{{ i18n.t('automation.slotsDecisionCleaningRuleOverride') }}</td>
-                      <td>{{ i18n.t('automation.slotsDecisionAllow') }}</td>
-                      <td>WOULD_CONFIRM / CONFIRMED</td>
-                      <td>{{ i18n.t('automation.slotsDecisionCleaningRuleOverrideMessage') }}</td>
-                    </tr>
-                    <tr>
-                      <td>{{ i18n.t('automation.slotsDecisionCleaningRuleDecline') }}</td>
-                      <td>{{ i18n.t('automation.slotsDecisionDecline') }}</td>
-                      <td>WOULD_DECLINE / DECLINED</td>
-                      <td>{{ i18n.t('automation.slotsDecisionCleaningRuleDeclineMessage') }}</td>
-                    </tr>
-                    <tr>
-                      <td>{{ i18n.t('automation.slotsDecisionOtherwise') }}</td>
-                      <td>{{ i18n.t('automation.slotsDecisionAllow') }}</td>
-                      <td>WOULD_CONFIRM / CONFIRMED</td>
-                      <td>{{ i18n.t('automation.slotsDecisionOtherwiseMessage') }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                </div>
-                <p class="automation-help__note">{{ i18n.t('automation.slotsDecisionDryRunNote') }}</p>
-              </div>
+              <p-accordion [multiple]="false" class="automation-help-accordion">
+                <p-accordion-panel [value]="'slots-help'">
+                  <p-accordion-header>
+                    <strong>{{ i18n.t('automation.slotsInstructionsTitle') }}</strong>
+                  </p-accordion-header>
+                  <p-accordion-content>
+                    <div class="automation-help">
+                      <ol class="automation-help__list">
+                        <li>{{ i18n.t('automation.slotsInstruction1') }}</li>
+                        <li>{{ i18n.t('automation.slotsInstruction2') }}</li>
+                        <li>{{ i18n.t('automation.slotsInstruction3') }}</li>
+                        <li>{{ i18n.t('automation.slotsInstruction4') }}</li>
+                      </ol>
+                      <h4 class="automation-help__section">{{ i18n.t('automation.slotsDecisionTableTitle') }}</h4>
+                      <div class="automation-help__decision-table-wrapper">
+                      <table class="automation-help__decision-table">
+                        <thead>
+                          <tr>
+                            <th>{{ i18n.t('automation.requestDecisionCondition') }}</th>
+                            <th>{{ i18n.t('automation.requestDecisionAction') }}</th>
+                            <th>{{ i18n.t('automation.requestDecisionAudit') }}</th>
+                            <th>{{ i18n.t('automation.requestDecisionCustomerMessage') }}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td>{{ i18n.t('automation.slotsDecisionRecentPickup') }}</td>
+                            <td>{{ i18n.t('automation.slotsDecisionAllow') }}</td>
+                            <td>WOULD_CONFIRM / CONFIRMED</td>
+                            <td>{{ i18n.t('automation.slotsDecisionRecentPickupMessage') }}</td>
+                          </tr>
+                          <tr>
+                            <td>{{ i18n.t('automation.slotsDecisionGapRule') }}</td>
+                            <td>{{ i18n.t('automation.slotsDecisionDecline') }}</td>
+                            <td>WOULD_DECLINE / DECLINED</td>
+                            <td>{{ i18n.t('automation.slotsDecisionGapRuleMessage') }}</td>
+                          </tr>
+                          <tr>
+                            <td>{{ i18n.t('automation.slotsDecisionExperienceRule') }}</td>
+                            <td>{{ i18n.t('automation.slotsDecisionDecline') }}</td>
+                            <td>WOULD_DECLINE / DECLINED</td>
+                            <td>{{ i18n.t('automation.slotsDecisionExperienceRuleMessage') }}</td>
+                          </tr>
+                          <tr>
+                            <td>{{ i18n.t('automation.slotsDecisionCleaningRuleOverride') }}</td>
+                            <td>{{ i18n.t('automation.slotsDecisionAllow') }}</td>
+                            <td>WOULD_CONFIRM / CONFIRMED</td>
+                            <td>{{ i18n.t('automation.slotsDecisionCleaningRuleOverrideMessage') }}</td>
+                          </tr>
+                          <tr>
+                            <td>{{ i18n.t('automation.slotsDecisionCleaningRuleDecline') }}</td>
+                            <td>{{ i18n.t('automation.slotsDecisionDecline') }}</td>
+                            <td>WOULD_DECLINE / DECLINED</td>
+                            <td>{{ i18n.t('automation.slotsDecisionCleaningRuleDeclineMessage') }}</td>
+                          </tr>
+                          <tr>
+                            <td>{{ i18n.t('automation.slotsDecisionOtherwise') }}</td>
+                            <td>{{ i18n.t('automation.slotsDecisionAllow') }}</td>
+                            <td>WOULD_CONFIRM / CONFIRMED</td>
+                            <td>{{ i18n.t('automation.slotsDecisionOtherwiseMessage') }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      </div>
+                      <p class="automation-help__note">{{ i18n.t('automation.slotsDecisionDryRunNote') }}</p>
+                    </div>
+                  </p-accordion-content>
+                </p-accordion-panel>
+              </p-accordion>
               @if (cleaningStoreConfigured() === false) { <p class="empty-state">{{ i18n.t('adminAutomation.cleaningStoreMissing') }}</p> }
               <div class="automation-toolbar"><button pButton type="button" [label]="i18n.t('adminAutomation.runDryRun')" (click)="runFoodsharingDryRun()"></button><div class="automation-toolbar__add"><p-select [options]="availableStoreOptions()" optionLabel="label" optionValue="value" [ngModel]="selectedStoreId()" (ngModelChange)="selectedStoreId.set(normalizeStoreId($event))" [placeholder]="i18n.t('adminAutomation.addStorePlaceholder')" appendTo="body"></p-select><button pButton type="button" icon="pi pi-plus" [label]="i18n.t('adminAutomation.addStore')" [disabled]="selectedStoreId() == null" (click)="addFoodsharingStore()"></button></div></div>
               @if (slotRunResult(); as result) { <div class="automation-run-result"><strong>{{ i18n.t('adminAutomation.dryRunSummary') }}</strong>: {{ result.evaluated }} {{ i18n.t('automation.evaluated') }}, {{ result.confirmed }} {{ i18n.t('adminAutomation.dryRunWouldConfirm') }}, {{ result.declined }} {{ i18n.t('adminAutomation.dryRunWouldDecline') }}, {{ result.failed }} {{ i18n.t('adminAutomation.dryRunFailed') }}.</div> }
@@ -157,51 +173,82 @@
             <p-tabpanel value="advertisements">
               @if (activeAutomationTab() === 'advertisements') {
               <div class="automation-tabpanel">
-              <div class="automation-help"><h3>{{ i18n.t('automation.advertisementsInstructionsTitle') }}</h3><ol><li>{{ i18n.t('automation.advertisementsInstruction1') }}</li><li>{{ i18n.t('automation.advertisementsInstruction2') }}</li><li>{{ i18n.t('automation.advertisementsInstruction3') }}</li><li>{{ i18n.t('automation.advertisementsInstruction4') }}</li><li>{{ i18n.t('automation.advertisementsInstruction5') }}</li></ol><p>{{ i18n.t('automation.advertisementVariables') }}</p></div>
-              @if (foodsharingStatus()?.telegramBotTokenConfigured) {
-                <div class="automation-form-grid automation-form-grid--telegram">
-                  <div class="automation-form-grid__status">
-                    <strong>{{ i18n.t('automation.telegramBotTokenConfigured') }}</strong>
-                  </div>
-                  <div class="automation-form-grid__actions">
-                    <button pButton type="button" severity="secondary" [label]="i18n.t('automation.removeTelegramBotToken')" (click)="removeTelegramBotToken()"></button>
-                  </div>
-                </div>
-              } @else {
-                <div class="automation-form-grid automation-form-grid--telegram">
-                  <label>{{ i18n.t('automation.telegramBotToken') }}<input pInputText type="password" [ngModel]="telegramBotToken" (ngModelChange)="telegramBotToken = $event"></label>
-                  <div class="automation-form-grid__actions">
-                    <button pButton type="button" [label]="i18n.t('common.save')" (click)="saveTelegramBotToken()"></button>
-                  </div>
-                </div>
-              }
-              <div class="automation-toolbar"><button pButton type="button" [label]="i18n.t('adminAutomation.runDryRun')" (click)="runAdvertisementAutomationDryRun()"></button><button pButton type="button" severity="secondary" [label]="i18n.t('automation.refreshTelegramChats')" (click)="refreshTelegramChats()"></button><div class="automation-toolbar__add"><p-select [options]="availableAdvertisementStoreOptions()" optionLabel="label" optionValue="value" [ngModel]="selectedAdvertisementStoreId()" (ngModelChange)="selectedAdvertisementStoreId.set(normalizeStoreId($event))" [placeholder]="i18n.t('adminAutomation.addStorePlaceholder')" appendTo="body"></p-select><button pButton type="button" icon="pi pi-plus" [label]="i18n.t('adminAutomation.addStore')" [disabled]="selectedAdvertisementStoreId() == null" (click)="addAdvertisementAutomation()"></button></div></div>
-              <div class="automation-help automation-help--telegram">
-                <h3 class="automation-help__title">{{ i18n.t('automation.telegramSetupTitle') }}</h3>
-                <ol class="automation-help__list">
-                  <li>{{ i18n.t('automation.telegramSetupInstruction1') }}</li>
-                  <li>{{ i18n.t('automation.telegramSetupInstruction2') }}</li>
-                  <li>{{ i18n.t('automation.telegramSetupInstruction3') }}</li>
-                  <li>{{ i18n.t('automation.telegramSetupInstruction4') }}</li>
-                </ol>
-              </div>
+              <p-accordion [multiple]="false" class="automation-help-accordion">
+                <p-accordion-panel [value]="'advertisements-help'">
+                  <p-accordion-header>
+                    <strong>{{ i18n.t('automation.advertisementsInstructionsTitle') }}</strong>
+                  </p-accordion-header>
+                  <p-accordion-content>
+                    <div class="automation-help">
+                      <ol class="automation-help__list">
+                        <li>{{ i18n.t('automation.advertisementsInstruction1') }}</li>
+                        <li>{{ i18n.t('automation.advertisementsInstruction2') }}</li>
+                        <li>{{ i18n.t('automation.advertisementsInstruction3') }}</li>
+                        <li>{{ i18n.t('automation.advertisementsInstruction4') }}</li>
+                        <li>{{ i18n.t('automation.advertisementsInstruction5') }}</li>
+                      </ol>
+                      <p>{{ i18n.t('automation.advertisementVariables') }}</p>
+                    </div>
+                  </p-accordion-content>
+                </p-accordion-panel>
+              </p-accordion>
+              <p-accordion [multiple]="false" class="telegram-bot-accordion">
+                <p-accordion-panel [value]="'telegram-bot'">
+                  <p-accordion-header>
+                    <strong>{{ i18n.t('automation.telegramSetupTitle') }}</strong>
+                  </p-accordion-header>
+                  <p-accordion-content>
+                    <div class="automation-help automation-help--telegram">
+                      <ol class="automation-help__list">
+                        <li>{{ i18n.t('automation.telegramSetupInstruction1') }}</li>
+                        <li>{{ i18n.t('automation.telegramSetupInstruction2') }}</li>
+                        <li>{{ i18n.t('automation.telegramSetupInstruction3') }}</li>
+                        <li>{{ i18n.t('automation.telegramSetupInstruction4') }}</li>
+                      </ol>
+                    </div>
+                    @if (telegramBotTokenConfigured()) {
+                      <div class="automation-form-grid automation-form-grid--telegram">
+                        <div class="automation-form-grid__status">
+                          <strong>{{ i18n.t('automation.telegramBotTokenConfigured') }}</strong>
+                        </div>
+                        <div class="automation-form-grid__actions">
+                          <button pButton type="button" severity="secondary" [label]="i18n.t('automation.removeTelegramBotToken')" (click)="removeTelegramBotToken()"></button>
+                        </div>
+                      </div>
+                    } @else {
+                      <div class="automation-form-grid automation-form-grid--telegram">
+                        <label>{{ i18n.t('automation.telegramBotToken') }}<input pInputText type="password" [ngModel]="telegramBotToken" (ngModelChange)="telegramBotToken = $event"></label>
+                        <div class="automation-form-grid__actions">
+                          <button pButton type="button" [label]="i18n.t('common.save')" (click)="saveTelegramBotToken()"></button>
+                        </div>
+                      </div>
+                    }
+                  </p-accordion-content>
+                </p-accordion-panel>
+              </p-accordion>
+              <div class="automation-toolbar"><button pButton type="button" [label]="i18n.t('adminAutomation.runDryRun')" (click)="runAdvertisementAutomationDryRun()"></button>@if (telegramBotTokenConfigured()) {<button pButton type="button" severity="secondary" [label]="i18n.t('automation.refreshTelegramChats')" (click)="refreshTelegramChats()"></button>}<div class="automation-toolbar__add"><p-select [options]="availableAdvertisementStoreOptions()" optionLabel="label" optionValue="value" [ngModel]="selectedAdvertisementStoreId()" (ngModelChange)="selectedAdvertisementStoreId.set(normalizeStoreId($event))" [placeholder]="i18n.t('adminAutomation.addStorePlaceholder')" appendTo="body"></p-select><button pButton type="button" icon="pi pi-plus" [label]="i18n.t('adminAutomation.addStore')" [disabled]="selectedAdvertisementStoreId() == null" (click)="addAdvertisementAutomation()"></button></div></div>
               @if (advertisementRunResult(); as result) { <div class="automation-run-result"><strong>{{ i18n.t('adminAutomation.dryRunSummary') }}</strong>: {{ result.evaluated }} {{ i18n.t('automation.evaluated') }}, {{ result.confirmed }} {{ i18n.t('automation.wouldAct') }}, {{ result.declined }} {{ i18n.t('automation.skipped') }}.</div> }
               @for (store of advertisementAutomationStores(); track store.storeId) { <p-card><ng-template pTemplate="title">{{ store.storeName }}</ng-template>
                 @if (advertisementNumbers(store).length === 0) { <p class="empty-state">{{ i18n.t('automation.noAdvertisements') }}</p> }
                 @for (advertNumber of advertisementNumbers(store); track advertNumber) {
-                  <div class="advert-config">
+                  <article class="advert-config">
                     <h4>{{ i18n.t('automation.alert') }} {{ advertNumber }}</h4>
                     <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertEnabled' + advertNumber]"></p-checkbox> {{ i18n.t('adminAutomation.enabled') }}</label>
                     <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertDryRunEnabled' + advertNumber]"></p-checkbox> {{ i18n.t('adminAutomation.storeDryRun') }}</label>
                     <p-inputNumber [(ngModel)]="$any(store)['advertHoursBefore' + advertNumber]" [min]="1" [max]="168" [suffix]="' ' + i18n.t('automation.hoursBefore')"></p-inputNumber>
                     <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendToStoreChat' + advertNumber]"></p-checkbox> {{ i18n.t('automation.storeChat') }}</label>
-                    <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendToTelegram' + advertNumber]"></p-checkbox> {{ i18n.t('automation.telegram') }}</label>
-                    <p-select [options]="telegramChatOptions()" [(ngModel)]="$any(store)['advertTelegramChatId' + advertNumber]" [editable]="true" [placeholder]="i18n.t('automation.telegramChat')" appendTo="body"></p-select>
+                    @if (telegramBotTokenConfigured()) {
+                      <label><p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendToTelegram' + advertNumber]"></p-checkbox> {{ i18n.t('automation.telegram') }}</label>
+                      <p-select [options]="telegramChatOptions()" [(ngModel)]="$any(store)['advertTelegramChatId' + advertNumber]" [editable]="true" [placeholder]="i18n.t('automation.telegramChat')" appendTo="body"></p-select>
+                    }
 
                     <p-tabs class="advert-message-tabs" [value]="advertisementMessageTab(store, advertNumber)" (valueChange)="setAdvertisementMessageTab(store, advertNumber, $event)">
                       <p-tablist>
                         <p-tab value="store">{{ i18n.t('automation.storeChatMessages') }}</p-tab>
-                        <p-tab value="telegram">{{ i18n.t('automation.telegramMessages') }}</p-tab>
+                        @if (telegramBotTokenConfigured()) {
+                          <p-tab value="telegram">{{ i18n.t('automation.telegramMessages') }}</p-tab>
+                        }
+                        <p-tab value="preview">{{ i18n.t('automation.preview') }}</p-tab>
                       </p-tablist>
                       <p-tabpanels>
                         <p-tabpanel value="store">
@@ -221,49 +268,58 @@
                             </div>
                           </div>
                         </p-tabpanel>
-                        <p-tabpanel value="telegram">
-                          <div class="advert-messages">
-                            <div class="advert-messages__header">
-                              <strong>{{ i18n.t('automation.telegramMessages') }}</strong>
-                              <button pButton type="button" size="small" icon="pi pi-plus" [label]="i18n.t('automation.addTelegramMessage')" (click)="addAdvertisementMessage(store, advertNumber, 'telegram')"></button>
+                        @if (telegramBotTokenConfigured()) {
+                          <p-tabpanel value="telegram">
+                            <div class="advert-messages">
+                              <div class="advert-messages__header">
+                                <strong>{{ i18n.t('automation.telegramMessages') }}</strong>
+                                <button pButton type="button" size="small" icon="pi pi-plus" [label]="i18n.t('automation.addTelegramMessage')" (click)="addAdvertisementMessage(store, advertNumber, 'telegram')"></button>
+                              </div>
+                              <div class="advert-messages__note">{{ i18n.t('automation.messagesRandomizedNote') }}</div>
+                              <div class="advert-message-list">
+                                @for (message of advertisementMessages(store, advertNumber, 'telegram'); track $index) {
+                                  <div class="advert-message-row">
+                                    <textarea pInputText rows="4" [ngModel]="message" (ngModelChange)="updateAdvertisementMessage(store, advertNumber, 'telegram', $index, $event)" [placeholder]="i18n.t('automation.messageTemplatePlaceholder')"></textarea>
+                                    <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('common.delete')" (click)="removeAdvertisementMessage(store, advertNumber, 'telegram', $index)" [disabled]="advertisementMessages(store, advertNumber, 'telegram').length === 1"></button>
+                                  </div>
+                                }
+                              </div>
                             </div>
-                            <div class="advert-messages__note">{{ i18n.t('automation.messagesRandomizedNote') }}</div>
-                            <div class="advert-message-list">
-                              @for (message of advertisementMessages(store, advertNumber, 'telegram'); track $index) {
-                                <div class="advert-message-row">
-                                  <textarea pInputText rows="4" [ngModel]="message" (ngModelChange)="updateAdvertisementMessage(store, advertNumber, 'telegram', $index, $event)" [placeholder]="i18n.t('automation.messageTemplatePlaceholder')"></textarea>
-                                  <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('common.delete')" (click)="removeAdvertisementMessage(store, advertNumber, 'telegram', $index)" [disabled]="advertisementMessages(store, advertNumber, 'telegram').length === 1"></button>
+                          </p-tabpanel>
+                        }
+                        <p-tabpanel value="preview">
+                          <p-accordion [multiple]="true" class="advert-preview-accordion">
+                            <p-accordion-panel [value]="'store-preview'">
+                              <p-accordion-header>
+                                <strong>{{ i18n.t('automation.preview') }} {{ i18n.t('automation.storeChat') }}</strong>
+                              </p-accordion-header>
+                              <p-accordion-content>
+                                <div class="advert-preview">
+                                  {{ previewOpenSlotAdvertisement(store, advertNumber, 'store') }}
                                 </div>
-                              }
-                            </div>
-                          </div>
+                              </p-accordion-content>
+                              </p-accordion-panel>
+                            @if (telegramBotTokenConfigured()) {
+                              <p-accordion-panel [value]="'telegram-preview'">
+                                <p-accordion-header>
+                                  <strong>{{ i18n.t('automation.preview') }} {{ i18n.t('automation.telegram') }}</strong>
+                                </p-accordion-header>
+                                <p-accordion-content>
+                                  <div class="advert-preview">
+                                    {{ previewOpenSlotAdvertisement(store, advertNumber, 'telegram') }}
+                                  </div>
+                                </p-accordion-content>
+                              </p-accordion-panel>
+                            }
+                          </p-accordion>
                         </p-tabpanel>
                       </p-tabpanels>
                     </p-tabs>
-
-                    <p-accordion [multiple]="false" class="advert-preview-accordion">
-                      <p-accordion-panel [value]="'store-preview'">
-                        <p-accordion-header>
-                          <strong>{{ i18n.t('automation.preview') }} {{ i18n.t('automation.storeChat') }}</strong>
-                        </p-accordion-header>
-                        <p-accordion-content>
-                          <div class="advert-preview">
-                            {{ previewOpenSlotAdvertisement(store, advertNumber, 'store') }}
-                          </div>
-                        </p-accordion-content>
-                      </p-accordion-panel>
-                    </p-accordion>
-
-                    <div class="advert-preview">
-                      <strong>{{ i18n.t('automation.preview') }} {{ i18n.t('automation.telegram') }}:</strong>
-                      {{ previewOpenSlotAdvertisement(store, advertNumber, 'telegram') }}
-                    </div>
                     <div class="actions-cell">
-                      <button pButton type="button" size="small" severity="secondary" [label]="i18n.t('automation.sendTelegramTest')" (click)="sendTelegramTestMessage(store, advertNumber)"></button>
                       <button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveOpenSlotAdvertisement(store, advertNumber)"></button>
                       <button pButton type="button" size="small" severity="danger" [label]="i18n.t('common.delete')" (click)="deleteAdvertisementAutomation(store, advertNumber)"></button>
                     </div>
-                  </div>
+                  </article>
                 }
                 <button pButton type="button" icon="pi pi-plus" [label]="i18n.t('automation.createAlert')" [disabled]="advertisementNumbers(store).length >= 3" (click)="addAdvertisement(store)"></button>
               </p-card> }

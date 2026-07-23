@@ -14,7 +14,8 @@ import { ProgressSpinnerModule } from 'primeng/progressspinner';
   selector: 'app-bezirk-landing-page',
   standalone: true,
   imports: [CommonModule, RouterLink, ButtonModule, CardModule, ProgressSpinnerModule],
-  templateUrl: './bezirk-landing-page.component.html'
+  templateUrl: './bezirk-landing-page.component.html',
+  styleUrl: './bezirk-landing-page.component.scss'
 })
 export class BezirkLandingPageComponent implements OnInit {
   readonly i18n = inject(I18nService);
@@ -25,6 +26,16 @@ export class BezirkLandingPageComponent implements OnInit {
   private readonly bezirkContext = inject(BezirkContextService);
 
   ngOnInit(): void {
+    this.loadBezirke();
+  }
+
+  retry(): void {
+    this.loadBezirke();
+  }
+
+  private loadBezirke(): void {
+    this.loading.set(true);
+    this.error.set('');
     this.bezirkContext.selectedBezirk.set(null);
     this.bezirkContext.loadBezirke().subscribe({
       next: (bezirke) => {

@@ -82,8 +82,9 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly selectedRequestStoreId = signal<number | null>(null);
   protected readonly selectedAdvertisementStoreId = signal<number | null>(null);
   protected readonly telegramChatOptions = signal<{ label: string; value: string }[]>([]);
-  protected readonly advertisementMessageTabs = signal<Record<string, 'store' | 'telegram'>>({});
+  protected readonly advertisementMessageTabs = signal<Record<string, 'store' | 'telegram' | 'preview'>>({});
   protected telegramBotToken = "";
+  protected readonly telegramBotTokenConfigured = computed(() => this.foodsharingStatus()?.telegramBotTokenConfigured ?? false);
   protected readonly visibleFoodsharingStores = computed(() => this.onlyMyAutomations()
     ? this.foodsharingStores().filter((store) => store.editable)
     : this.foodsharingStores());
@@ -276,13 +277,17 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     return messages.length > 0 ? messages : [''];
   }
 
-  advertisementMessageTab(store: FoodsharingStoreAutomation, advertNumber: number): 'store' | 'telegram' {
+  advertisementMessageTab(store: FoodsharingStoreAutomation, advertNumber: number): 'store' | 'telegram' | 'preview' {
     const tabKey = this.advertisementMessageTabKey(store, advertNumber);
-    return this.advertisementMessageTabs()[tabKey] ?? 'store';
+    const tab = this.advertisementMessageTabs()[tabKey] ?? 'store';
+    return tab === 'telegram' && !this.telegramBotTokenConfigured() ? 'store' : tab;
   }
 
   setAdvertisementMessageTab(store: FoodsharingStoreAutomation, advertNumber: number, tab: string | number | undefined): void {
-    if (tab !== 'store' && tab !== 'telegram') {
+    if (tab !== 'store' && tab !== 'telegram' && tab !== 'preview') {
+      return;
+    }
+    if (tab === 'telegram' && !this.telegramBotTokenConfigured()) {
       return;
     }
     const tabKey = this.advertisementMessageTabKey(store, advertNumber);
@@ -387,25 +392,6 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
         this.advertisementRunResult.set(this.toRunResult(result));
         this.loadAdvertisementAutomationAuditIfActive();
       },
-      error: (error) => this.toastError(resolveApiError(error, this.i18n))
-    });
-  }
-
-
-  sendTelegramTestMessage(store: FoodsharingStoreAutomation, advertNumber: number): void {
-    const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
-    const chatId = String(data[`advertTelegramChatId${advertNumber}`] || '').trim();
-    if (!chatId) {
-      this.toastError(this.i18n.t('automation.selectTelegramChat'));
-      return;
-    }
-    this.adminApi.sendFoodsharingTelegramTestMessage({
-      telegramTestMessageRequest: {
-        chatId,
-        message: this.previewOpenSlotAdvertisement(store, advertNumber, 'telegram')
-      }
-    }).subscribe({
-      next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('automation.telegramTestSent') }),
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
   }

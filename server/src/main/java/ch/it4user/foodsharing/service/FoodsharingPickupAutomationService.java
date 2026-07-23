@@ -712,12 +712,7 @@ public class FoodsharingPickupAutomationService {
     private List<StorePickupUserView> loadFuturePickupUsers(FoodsharingAdminConnection connection, Bezirk bezirk) {
         Map<String, StorePickupUserBuilder> users = new LinkedHashMap<>();
         Instant now = Instant.now();
-        Set<Long> bezirkStoreIds = automationRepository.findAllByBezirk(bezirk).stream()
-                .map(FoodsharingStoreAutomation::getStoreId)
-                .collect(java.util.stream.Collectors.toSet());
-        for (FoodsharingPickupModels.Store store : managedStores(connection).stream()
-                .filter(store -> bezirkStoreIds.contains(store.id()))
-                .toList()) {
+        for (FoodsharingPickupModels.Store store : managedStores(connection)) {
             for (FoodsharingPickupModels.Pickup pickup : storePickups(connection, store.id())) {
                 if (pickup.date().isBefore(now)) {
                     continue;
