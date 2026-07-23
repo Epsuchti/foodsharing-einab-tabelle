@@ -228,6 +228,7 @@
   "adminAutomation.store": "Store",
   "adminAutomation.user": "User",
   "adminAutomation.pickup": "EinAb",
+  "adminAutomation.notificationTime": "Notification time",
   "adminAutomation.dryRun": "Dry-run",
   "adminAutomation.reasons": "Reasons",
   "adminAutomation.cleaningRuleExemptions": "Cleaning rule exemptions",

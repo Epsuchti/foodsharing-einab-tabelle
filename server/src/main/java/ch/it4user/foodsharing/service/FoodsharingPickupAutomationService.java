@@ -49,9 +49,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.client.RestClient;
 import org.springframework.http.MediaType;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class FoodsharingPickupAutomationService {
@@ -75,11 +77,12 @@ public class FoodsharingPickupAutomationService {
     private final FoodsharingCleaningRuleExemptionRepository cleaningRuleExemptionRepository;
     private final FoodsharingMessageService messageService;
     private final ObjectMapper objectMapper;
+    private final TransactionTemplate scheduledPhaseTransaction;
     private final RestClient telegramClient = RestClient.create("https://api.telegram.org");
     private final AtomicBoolean scheduledRunInProgress = new AtomicBoolean(false);
 
-    public FoodsharingPickupAutomationService(AppProperties appProperties, BezirkService bezirkService, CurrentActorService currentActorService, CryptoService cryptoService, FoodsharingPickupApiClient client, FoodsharingAdminConnectionRepository connectionRepository, FoodsharingStoreAutomationRepository automationRepository, FoodsharingRequestAutomationRepository requestAutomationRepository, FoodsharingRequestAutomationAuditRepository requestAutomationAuditRepository, FoodsharingOpenSlotAdvertisementAutomationRepository advertisementAutomationRepository, FoodsharingOpenSlotAdvertisementAuditRepository advertisementAuditRepository, FoodsharingPickupAutomationAuditRepository auditRepository, FoodsharingFuturePickupUsersCacheRepository futurePickupUsersCacheRepository, FoodsharingStoreMembersCacheRepository storeMembersCacheRepository, FoodsharingStorePickupsCacheRepository storePickupsCacheRepository, FoodsharingCleaningRuleExemptionRepository cleaningRuleExemptionRepository, FoodsharingMessageService messageService, ObjectMapper objectMapper) {
-        this.appProperties = appProperties; this.bezirkService = bezirkService; this.currentActorService = currentActorService; this.cryptoService = cryptoService; this.client = client; this.connectionRepository = connectionRepository; this.automationRepository = automationRepository; this.requestAutomationRepository = requestAutomationRepository; this.requestAutomationAuditRepository = requestAutomationAuditRepository; this.advertisementAutomationRepository = advertisementAutomationRepository; this.advertisementAuditRepository = advertisementAuditRepository; this.auditRepository = auditRepository; this.futurePickupUsersCacheRepository = futurePickupUsersCacheRepository; this.storeMembersCacheRepository = storeMembersCacheRepository; this.storePickupsCacheRepository = storePickupsCacheRepository; this.cleaningRuleExemptionRepository = cleaningRuleExemptionRepository; this.messageService = messageService; this.objectMapper = objectMapper;
+    public FoodsharingPickupAutomationService(AppProperties appProperties, BezirkService bezirkService, CurrentActorService currentActorService, CryptoService cryptoService, FoodsharingPickupApiClient client, FoodsharingAdminConnectionRepository connectionRepository, FoodsharingStoreAutomationRepository automationRepository, FoodsharingRequestAutomationRepository requestAutomationRepository, FoodsharingRequestAutomationAuditRepository requestAutomationAuditRepository, FoodsharingOpenSlotAdvertisementAutomationRepository advertisementAutomationRepository, FoodsharingOpenSlotAdvertisementAuditRepository advertisementAuditRepository, FoodsharingPickupAutomationAuditRepository auditRepository, FoodsharingFuturePickupUsersCacheRepository futurePickupUsersCacheRepository, FoodsharingStoreMembersCacheRepository storeMembersCacheRepository, FoodsharingStorePickupsCacheRepository storePickupsCacheRepository, FoodsharingCleaningRuleExemptionRepository cleaningRuleExemptionRepository, FoodsharingMessageService messageService, ObjectMapper objectMapper, PlatformTransactionManager transactionManager) {
+        this.appProperties = appProperties; this.bezirkService = bezirkService; this.currentActorService = currentActorService; this.cryptoService = cryptoService; this.client = client; this.connectionRepository = connectionRepository; this.automationRepository = automationRepository; this.requestAutomationRepository = requestAutomationRepository; this.requestAutomationAuditRepository = requestAutomationAuditRepository; this.advertisementAutomationRepository = advertisementAutomationRepository; this.advertisementAuditRepository = advertisementAuditRepository; this.auditRepository = auditRepository; this.futurePickupUsersCacheRepository = futurePickupUsersCacheRepository; this.storeMembersCacheRepository = storeMembersCacheRepository; this.storePickupsCacheRepository = storePickupsCacheRepository; this.cleaningRuleExemptionRepository = cleaningRuleExemptionRepository; this.messageService = messageService; this.objectMapper = objectMapper; this.scheduledPhaseTransaction = new TransactionTemplate(transactionManager);
     }
 
     @Transactional
@@ -366,18 +369,25 @@ public class FoodsharingPickupAutomationService {
     }
 
     @Scheduled(fixedDelayString = "#{T(java.time.Duration).parse('${app.foodsharing.automation.poll-interval:PT5M}').toMillis()}")
-    @Transactional
     public void scheduledAutomationRun() {
         if (!scheduledRunInProgress.compareAndSet(false, true)) {
             log.info("Foodsharing automation poll skipped because another run is still in progress.");
             return;
         }
         try {
-            runRequestAutomations();
-            scheduledRun();
-            runAdvertisementAutomations(false);
+            runScheduledPhase("request", this::runRequestAutomations);
+            runScheduledPhase("slot", this::scheduledRun);
+            runScheduledPhase("advertisement", () -> runAdvertisementAutomations(false));
         } finally {
             scheduledRunInProgress.set(false);
+        }
+    }
+
+    private void runScheduledPhase(String phaseName, Runnable phase) {
+        try {
+            scheduledPhaseTransaction.executeWithoutResult(status -> phase.run());
+        } catch (RuntimeException ex) {
+            log.error("Foodsharing {} automation failed; other automation types will continue.", phaseName, ex);
         }
     }
 
@@ -1255,7 +1265,7 @@ public class FoodsharingPickupAutomationService {
                 ? currentConnection().map(requestAutomationAuditRepository::findTop100ByAutomationAdminConnectionOrderByCreatedAtDesc).orElseGet(List::of)
                 : requestAutomationAuditRepository.findTop100ByOrderByCreatedAtDesc();
         return audits.stream()
-                .map(a -> new ExtraAutomationAuditView("REQUEST", a.getStoreId(), a.getStoreName(), null, a.getFoodsharingUserId(), a.getFoodsharingUserName(), a.isDryRun(), a.getStatus(), a.getReason(), null, a.getError(), a.getCreatedAt()))
+                .map(a -> new ExtraAutomationAuditView("REQUEST", a.getStoreId(), a.getStoreName(), null, null, a.getFoodsharingUserId(), a.getFoodsharingUserName(), a.isDryRun(), a.getStatus(), a.getReason(), null, a.getError(), a.getCreatedAt()))
                 .toList();
     }
 
@@ -1264,9 +1274,44 @@ public class FoodsharingPickupAutomationService {
         List<FoodsharingOpenSlotAdvertisementAudit> audits = onlyOwnDecisions(onlyMine)
                 ? currentConnection().map(advertisementAuditRepository::findTop100ByAutomationAdminConnectionOrderByCreatedAtDesc).orElseGet(List::of)
                 : advertisementAuditRepository.findTop100ByOrderByCreatedAtDesc();
-        return audits.stream()
-                .map(a -> new ExtraAutomationAuditView("ADVERTISEMENT", a.getStoreId(), a.getStoreName(), a.getPickupDate(), null, null, a.isDryRun(), a.getStatus(), a.getReason(), a.getMessage(), a.getError(), a.getCreatedAt()))
+        List<ExtraAutomationAuditView> result = new ArrayList<>(audits.stream()
+                .map(a -> new ExtraAutomationAuditView("ADVERTISEMENT", a.getStoreId(), a.getStoreName(), a.getPickupDate(), a.getPickupDate().minus(Duration.ofHours(a.getTriggerHoursBefore())), null, null, a.isDryRun(), a.getStatus(), a.getReason(), a.getMessage(), a.getError(), a.getCreatedAt()))
+                .toList());
+        result.addAll(plannedAdvertisementNotifications(onlyMine));
+        return result.stream()
+                .sorted(Comparator.comparing((ExtraAutomationAuditView audit) -> !"PLANNED".equals(audit.status()))
+                        .thenComparing(ExtraAutomationAuditView::notificationDate, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(ExtraAutomationAuditView::createdAt, Comparator.reverseOrder()))
+                .limit(100)
                 .toList();
+    }
+
+    private List<ExtraAutomationAuditView> plannedAdvertisementNotifications(boolean onlyMine) {
+        Instant now = Instant.now();
+        List<FoodsharingOpenSlotAdvertisementAutomation> automations = advertisementAutomationRepository.findAllByEnabledTrue();
+        if (onlyOwnDecisions(onlyMine)) {
+            FoodsharingAdminConnection connection = currentConnection().orElse(null);
+            if (connection == null) return List.of();
+            automations = automations.stream()
+                    .filter(automation -> automation.getAdminConnection().getId().equals(connection.getId()))
+                    .toList();
+        }
+        List<ExtraAutomationAuditView> planned = new ArrayList<>();
+        for (FoodsharingOpenSlotAdvertisementAutomation automation : automations) {
+            try {
+                for (FoodsharingPickupModels.Pickup pickup : storePickups(automation.getAdminConnection(), automation.getStoreId())) {
+                    Instant notificationDate = pickup.date().minus(Duration.ofHours(automation.getTriggerHoursBefore()));
+                    if (!pickup.date().isAfter(now) || !pickup.users().isEmpty()
+                            || advertisementAuditRepository.existsByAutomationAndPickupDateAndTriggerHoursBefore(automation, pickup.date(), automation.getTriggerHoursBefore())) {
+                        continue;
+                    }
+                    planned.add(new ExtraAutomationAuditView("ADVERTISEMENT", automation.getStoreId(), automation.getStoreName(), pickup.date(), notificationDate, null, null, false, "PLANNED", "Notification is pending while this pickup remains empty.", null, null, now));
+                }
+            } catch (RuntimeException exception) {
+                log.warn("Could not load planned advertisements for storeId={}", automation.getStoreId(), exception);
+            }
+        }
+        return planned;
     }
 
     public record RequestAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled, boolean distanceRuleEnabled, Double maximumDistanceKm) {}
@@ -1276,5 +1321,5 @@ public class FoodsharingPickupAutomationService {
     public record TelegramChatView(String id, String title, String type) {}
     public record AutomationRunSummary(int evaluated, int acted, int skipped, boolean dryRun, List<String> messages) {}
     public record ExtraAutomationOverviewView(List<RequestAutomationView> requestAutomations, List<AdvertisementAutomationView> advertisementAutomations) {}
-    public record ExtraAutomationAuditView(String automationType, long storeId, String storeName, Instant pickupDate, String foodsharingUserId, String foodsharingUserName, boolean dryRun, String status, String reason, String message, String error, Instant createdAt) {}
+    public record ExtraAutomationAuditView(String automationType, long storeId, String storeName, Instant pickupDate, Instant notificationDate, String foodsharingUserId, String foodsharingUserName, boolean dryRun, String status, String reason, String message, String error, Instant createdAt) {}
 }

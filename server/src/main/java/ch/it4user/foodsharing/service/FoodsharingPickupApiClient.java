@@ -143,9 +143,18 @@ public class FoodsharingPickupApiClient {
 
     public void sendStoreChatMessage(FoodsharingAdminConnection connection, long storeId, String body) {
         runWithSessionRetry(connection, false, () -> {
-            log.info("Foodsharing request: POST /api/stores/{}/messages user={} cookie={} csrf={}",
+            log.info("Foodsharing request: GET /api/stores/{}/permissions user={} cookie={} csrf={}",
                     storeId, connection.getFoodsharingEmail(), fingerprint(cookie(connection)), fingerprint(csrfToken(connection)));
-            restClient.post().uri("/api/stores/{storeId}/messages", storeId)
+            Map<?, ?> permissions = restClient.get().uri("/api/stores/{storeId}/permissions", storeId)
+                    .headers(h -> apply(h, connection)).retrieve().body(Map.class);
+            Object teamConversationId = permissions == null ? null : first(permissions, "teamConversationId");
+            if (teamConversationId == null || longValue(teamConversationId) <= 0) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED,
+                        List.of("Foodsharing store " + storeId + " has no team conversation."));
+            }
+            log.info("Foodsharing request: POST /api/conversations/{}/messages user={} cookie={} csrf={}",
+                    teamConversationId, connection.getFoodsharingEmail(), fingerprint(cookie(connection)), fingerprint(csrfToken(connection)));
+            restClient.post().uri("/api/conversations/{conversationId}/messages", teamConversationId)
                     .contentType(MediaType.APPLICATION_JSON).headers(h -> apply(h, connection))
                     .body(Map.of("body", body)).retrieve().toBodilessEntity();
             return null;

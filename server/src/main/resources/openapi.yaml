@@ -1797,6 +1797,9 @@ components:
         pickupDate:
           type: string
           format: date-time
+        notificationDate:
+          type: string
+          format: date-time
         foodsharingUserId:
           type: string
         foodsharingUserName:

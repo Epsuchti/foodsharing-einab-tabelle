@@ -564,6 +564,7 @@ public class AdminController implements AdminApi {
         response.setStoreId(audit.storeId());
         response.setStoreName(audit.storeName());
         response.setPickupDate(toOffsetDateTime(audit.pickupDate()));
+        response.setNotificationDate(toOffsetDateTime(audit.notificationDate()));
         response.setFoodsharingUserId(audit.foodsharingUserId());
         response.setFoodsharingUserName(audit.foodsharingUserName());
         response.setDryRun(audit.dryRun());
