@@ -226,6 +226,8 @@
   "adminAutomation.confirmed": "bestätigt",
   "adminAutomation.pending": "offe",
   "adminAutomation.audit": "Letschti Automations-Entscheid",
+  "adminAutomation.plannedNotifications": "Plant Benachrichtigige",
+  "adminAutomation.sentAdvertisements": "Gsendeti Benachrichtigige",
   "adminAutomation.onlyMyDecisions": "Nur mini Entscheid aazeige",
   "adminAutomation.decision": "Entscheid",
   "adminAutomation.store": "Betrieb",

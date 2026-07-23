@@ -94,6 +94,10 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     .filter((store) => Boolean((store as FoodsharingStoreAutomation & Record<string, unknown>)['requestConfigured'])));
   protected readonly advertisementAutomationStores = computed(() => this.visibleFoodsharingStores()
     .filter((store) => this.advertisementNumbers(store).length > 0));
+  protected readonly plannedAdvertisementNotifications = computed(() => this.advertisementAutomationAudit()
+    .filter((entry) => entry.status === 'PLANNED'));
+  protected readonly sentAdvertisementAudit = computed(() => this.advertisementAutomationAudit()
+    .filter((entry) => entry.status !== 'PLANNED'));
   protected readonly availableStoreOptions = computed(() => this.availableStores().map((store) => ({
     label: `${store.storeName} (${store.storeId})`,
     value: store.storeId
@@ -456,10 +460,6 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
 
   requestAudit(): FoodsharingExtraAutomationAudit[] {
     return this.requestAutomationAudit();
-  }
-
-  advertisementAudit(): FoodsharingExtraAutomationAudit[] {
-    return this.advertisementAutomationAudit();
   }
 
   addFoodsharingStore(): void {

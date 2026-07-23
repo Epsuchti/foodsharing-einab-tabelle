@@ -1297,6 +1297,7 @@ public class FoodsharingPickupAutomationService {
         }
         List<ExtraAutomationAuditView> planned = new ArrayList<>();
         for (FoodsharingOpenSlotAdvertisementAutomation automation : automations) {
+            boolean dryRun = appProperties.getFoodsharing().getAutomation().isDryRun() || automation.isDryRunEnabled();
             try {
                 for (FoodsharingPickupModels.Pickup pickup : storePickups(automation.getAdminConnection(), automation.getStoreId())) {
                     Instant notificationDate = pickup.date().minus(Duration.ofHours(automation.getTriggerHoursBefore()));
@@ -1304,7 +1305,7 @@ public class FoodsharingPickupAutomationService {
                             || advertisementAuditRepository.existsByAutomationAndPickupDateAndTriggerHoursBefore(automation, pickup.date(), automation.getTriggerHoursBefore())) {
                         continue;
                     }
-                    planned.add(new ExtraAutomationAuditView("ADVERTISEMENT", automation.getStoreId(), automation.getStoreName(), pickup.date(), notificationDate, null, null, false, "PLANNED", "Notification is pending while this pickup remains empty.", null, null, now));
+                    planned.add(new ExtraAutomationAuditView("ADVERTISEMENT", automation.getStoreId(), automation.getStoreName(), pickup.date(), notificationDate, null, null, dryRun, "PLANNED", "Notification is pending while this pickup remains empty.", null, null, now));
                 }
             } catch (RuntimeException exception) {
                 log.warn("Could not load planned advertisements for storeId={}", automation.getStoreId(), exception);
