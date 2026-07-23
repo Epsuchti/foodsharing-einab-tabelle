@@ -33,6 +33,12 @@ public class FoodsharingOpenSlotAdvertisementAudit extends BaseEntity {
     @Column(nullable = false)
     private int triggerHoursBefore;
 
+    @Column(length = 100)
+    private String foodsharingUserId;
+
+    @Column(length = 255)
+    private String foodsharingUserName;
+
     @Column
     private Integer telegramMessageId;
 

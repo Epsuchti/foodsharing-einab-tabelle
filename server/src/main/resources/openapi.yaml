@@ -1678,7 +1678,7 @@ components:
           format: double
     FoodsharingOpenSlotAdvertisementAutomationRequest:
       type: object
-      required: [storeName, enabled, dryRunEnabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages]
+      required: [storeName, enabled, dryRunEnabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages, lateCancellationMessage, sendLateCancellationMessage, sendLatestAdvertisementAfterLateCancellation]
       properties:
         storeName:
           type: string
@@ -1703,6 +1703,12 @@ components:
           type: array
           items:
             type: string
+        lateCancellationMessage:
+          type: string
+        sendLateCancellationMessage:
+          type: boolean
+        sendLatestAdvertisementAfterLateCancellation:
+          type: boolean
     FoodsharingRequestAutomation:
       type: object
       required: [storeId, storeName, enabled, dryRunEnabled, distanceRuleEnabled, maximumDistanceKm, editable]
@@ -1725,7 +1731,7 @@ components:
           type: boolean
     FoodsharingOpenSlotAdvertisementAutomation:
       type: object
-      required: [storeId, storeName, advertNumber, enabled, dryRunEnabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages, editable]
+      required: [storeId, storeName, advertNumber, enabled, dryRunEnabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages, lateCancellationMessage, sendLateCancellationMessage, sendLatestAdvertisementAfterLateCancellation, editable]
       properties:
         storeId:
           type: integer
@@ -1756,6 +1762,12 @@ components:
           type: array
           items:
             type: string
+        lateCancellationMessage:
+          type: string
+        sendLateCancellationMessage:
+          type: boolean
+        sendLatestAdvertisementAfterLateCancellation:
+          type: boolean
         editable:
           type: boolean
     FoodsharingExtraAutomationOverview:

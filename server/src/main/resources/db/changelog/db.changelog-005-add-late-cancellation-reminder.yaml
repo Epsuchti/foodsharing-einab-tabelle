@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-add-late-cancellation-reminder
+      author: codex
+      changes:
+        - addColumn:
+            tableName: foodsharing_open_slot_advertisement_automations
+            columns:
+              - column:
+                  name: late_cancellation_message
+                  type: TEXT
+                  defaultValue: 'Du hast gerade den Slot {{datetimeDe}} freigegeben. Du bist trotzdem verantwortlich für diesen Slot! Bitte sorge für Ersatz und notifiziere sowohl das Team als auch den Notfallchat.'
+                  constraints:
+                    nullable: false
+        - addColumn:
+            tableName: foodsharing_open_slot_advertisement_audits
+            columns:
+              - column:
+                  name: foodsharing_user_id
+                  type: VARCHAR(100)
+              - column:
+                  name: foodsharing_user_name
+                  type: VARCHAR(255)

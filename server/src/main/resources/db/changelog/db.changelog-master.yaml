@@ -11,3 +11,9 @@ databaseChangeLog:
   - include:
       file: db.changelog-004-add-online-einabs.yaml
       relativeToChangelogFile: true
+  - include:
+      file: db.changelog-005-add-late-cancellation-reminder.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: db.changelog-006-add-late-cancellation-actions.yaml
+      relativeToChangelogFile: true

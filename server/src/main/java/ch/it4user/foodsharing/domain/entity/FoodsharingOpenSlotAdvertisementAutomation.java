@@ -59,4 +59,14 @@ public class FoodsharingOpenSlotAdvertisementAutomation extends BaseEntity {
     @JdbcTypeCode(SqlTypes.CLOB)
     @Column(name = "telegram_messages_json", nullable = false, columnDefinition = "TEXT")
     private String telegramMessagesJson = "[]";
+
+    @JdbcTypeCode(SqlTypes.CLOB)
+    @Column(name = "late_cancellation_message", nullable = false, columnDefinition = "TEXT")
+    private String lateCancellationMessage = "Du hast gerade den Slot {{datetimeDe}} freigegeben. Du bist trotzdem verantwortlich für diesen Slot! Bitte sorge für Ersatz und notifiziere sowohl das Team als auch den Notfallchat.";
+
+    @Column(name = "send_late_cancellation_message", nullable = false)
+    private boolean sendLateCancellationMessage = true;
+
+    @Column(name = "send_latest_advertisement_after_late_cancellation", nullable = false)
+    private boolean sendLatestAdvertisementAfterLateCancellation = false;
 }

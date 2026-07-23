@@ -77,6 +77,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly advertisementRunResult = signal<FoodsharingRunResult | null>(null);
   protected readonly onlyMyAutomations = signal(true);
   protected readonly onlyMyDecisions = signal(true);
+  protected readonly auditConsoleExpanded = signal(false);
   protected readonly activeAutomationTab = signal('slots');
   protected readonly selectedStoreId = signal<number | null>(null);
   protected readonly selectedRequestStoreId = signal<number | null>(null);
@@ -326,6 +327,9 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     const sendToStoreChat = Boolean(data[`advertSendToStoreChat${advertNumber}`]);
     const sendToTelegram = Boolean(data[`advertSendToTelegram${advertNumber}`]);
     const telegramChatId = String(data[`advertTelegramChatId${advertNumber}`] || '').trim();
+    const lateCancellationMessage = String(data[`advertLateCancellationMessage${advertNumber}`] || '').trim();
+    const sendLateCancellationMessage = Boolean(data[`advertSendLateCancellationMessage${advertNumber}`]);
+    const sendLatestAdvertisementAfterLateCancellation = Boolean(data[`advertSendLatestAdvertisementAfterLateCancellation${advertNumber}`]);
     if (!sendToStoreChat && !sendToTelegram) {
       this.toastError(this.i18n.t('automation.selectDestination'));
       return;
@@ -342,6 +346,10 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       this.toastError(this.i18n.t('automation.addTelegramMessage'));
       return;
     }
+    if (!lateCancellationMessage) {
+      this.toastError(this.i18n.t('automation.lateCancellationMessageRequired'));
+      return;
+    }
     this.adminApi.saveFoodsharingOpenSlotAdvertisementAutomation({
       storeId: store.storeId,
       advertNumber,
@@ -354,7 +362,10 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
         sendToTelegram,
         telegramChatId: telegramChatId || undefined,
         storeMessages,
-        telegramMessages
+        telegramMessages,
+        lateCancellationMessage,
+        sendLateCancellationMessage,
+        sendLatestAdvertisementAfterLateCancellation
       }
     }).subscribe({ next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') }), error: (error) => this.toastError(resolveApiError(error, this.i18n)) });
   }
@@ -445,6 +456,9 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     data[`advertSendToTelegram${advertNumber}`] = false;
     data[`advertStoreMessages${advertNumber}`] = '';
     data[`advertTelegramMessages${advertNumber}`] = '';
+    data[`advertLateCancellationMessage${advertNumber}`] = 'Du hast gerade den Slot {{datetimeDe}} freigegeben. Du bist trotzdem verantwortlich für diesen Slot! Bitte sorge für Ersatz und notifiziere sowohl das Team als auch den Notfallchat.';
+    data[`advertSendLateCancellationMessage${advertNumber}`] = true;
+    data[`advertSendLatestAdvertisementAfterLateCancellation${advertNumber}`] = false;
     this.foodsharingStores.update((stores) => [...stores]);
   }
 
@@ -696,6 +710,9 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
             store[`advertTelegramChatId${number}`] = advert.telegramChatId;
             store[`advertStoreMessages${number}`] = (advert.storeMessages || []).join('\n---\n');
             store[`advertTelegramMessages${number}`] = (advert.telegramMessages || []).join('\n---\n');
+            store[`advertLateCancellationMessage${number}`] = advert.lateCancellationMessage;
+            store[`advertSendLateCancellationMessage${number}`] = advert.sendLateCancellationMessage;
+            store[`advertSendLatestAdvertisementAfterLateCancellation${number}`] = advert.sendLatestAdvertisementAfterLateCancellation;
           }
         }
         this.foodsharingStores.set(stores as FoodsharingStoreAutomation[]);

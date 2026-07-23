@@ -1,0 +1,20 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-add-late-cancellation-actions
+      author: codex
+      changes:
+        - addColumn:
+            tableName: foodsharing_open_slot_advertisement_automations
+            columns:
+              - column:
+                  name: send_late_cancellation_message
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: send_latest_advertisement_after_late_cancellation
+                  type: BOOLEAN
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false

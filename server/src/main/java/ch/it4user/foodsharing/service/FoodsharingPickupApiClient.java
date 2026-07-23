@@ -161,6 +161,31 @@ public class FoodsharingPickupApiClient {
         });
     }
 
+    @SuppressWarnings("unchecked")
+    public void sendUserMessage(FoodsharingAdminConnection connection, String userId, String body) {
+        long numericUserId;
+        try {
+            numericUserId = Long.parseLong(userId);
+        } catch (NumberFormatException exception) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED,
+                    List.of("Foodsharing user ID is invalid: " + userId));
+        }
+        runWithSessionRetry(connection, false, () -> {
+            Map<?, ?> conversation = restClient.post().uri("/api/conversations/lookup")
+                    .contentType(MediaType.APPLICATION_JSON).headers(headers -> apply(headers, connection))
+                    .body(Map.of("ids", List.of(numericUserId))).retrieve().body(Map.class);
+            long conversationId = conversation == null ? 0 : longValue(first(conversation, "id"));
+            if (conversationId <= 0) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.UNEXPECTED_ERROR,
+                        List.of("Foodsharing did not return a conversation for user " + userId + "."));
+            }
+            restClient.post().uri("/api/conversations/{conversationId}/messages", conversationId)
+                    .contentType(MediaType.APPLICATION_JSON).headers(headers -> apply(headers, connection))
+                    .body(Map.of("body", body)).retrieve().toBodilessEntity();
+            return null;
+        });
+    }
+
     public void decline(FoodsharingAdminConnection connection, long storeId, Instant pickupDate, String userId, String message) {
         runWithSessionRetry(connection, false, () -> {
             log.info("Foodsharing request: DELETE /api/stores/{}/pickups/{}/users/{} user={} cookie={} csrf={}",

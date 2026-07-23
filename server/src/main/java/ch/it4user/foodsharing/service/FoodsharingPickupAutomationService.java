@@ -283,6 +283,14 @@ public class FoodsharingPickupAutomationService {
         validateTemplateVariables(request.storeMessages(), request.telegramMessages());
         a.setStoreMessagesJson(serializeMessages(request.storeMessages()));
         a.setTelegramMessagesJson(serializeMessages(request.telegramMessages()));
+        String lateCancellationMessage = normalize(request.lateCancellationMessage());
+        if (lateCancellationMessage.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("A late-cancellation reminder message is required."));
+        }
+        validateTemplateVariables(List.of(lateCancellationMessage));
+        a.setLateCancellationMessage(lateCancellationMessage);
+        a.setSendLateCancellationMessage(request.sendLateCancellationMessage());
+        a.setSendLatestAdvertisementAfterLateCancellation(request.sendLatestAdvertisementAfterLateCancellation());
         a = advertisementAutomationRepository.save(a);
         return advertisementView(a, true);
     }
@@ -408,8 +416,12 @@ public class FoodsharingPickupAutomationService {
         int evaluated = 0;
         int acted = 0;
         int skipped = 0;
+        int advertisementsSent = 0;
+        Set<String> lateCancellationMessageSent = new java.util.HashSet<>();
+        Set<String> lateCancellationAdvertisementSent = new java.util.HashSet<>();
         int maxAdvertisements = Math.max(0, appProperties.getFoodsharing().getAutomation().getMaxAdvertisementsPerRun());
-        for (FoodsharingOpenSlotAdvertisementAutomation a : advertisementAutomationRepository.findAllByEnabledTrue()) {
+        List<FoodsharingOpenSlotAdvertisementAutomation> enabledAutomations = advertisementAutomationRepository.findAllByEnabledTrue();
+        for (FoodsharingOpenSlotAdvertisementAutomation a : enabledAutomations) {
             boolean dryRun = globalDryRun || a.isDryRunEnabled();
             List<String> storeMessages = deserializeMessages(a.getStoreMessagesJson());
             List<String> telegramMessages = deserializeMessages(a.getTelegramMessagesJson());
@@ -432,23 +444,81 @@ public class FoodsharingPickupAutomationService {
             for (FoodsharingPickupModels.Pickup p : storePickups(a.getAdminConnection(), a.getStoreId())) {
                 evaluated++;
                 checkedSlots++;
+                Instant triggerAt = p.date().minus(Duration.ofHours(a.getTriggerHoursBefore()));
+                if (triggerAt.isAfter(now) || now.isAfter(p.date())) {
+                    skipped++;
+                    continue;
+                }
+                var existingAudit = advertisementAuditRepository.findAllByAutomationAndPickupDateAndTriggerHoursBefore(a, p.date(), a.getTriggerHoursBefore()).stream().findFirst();
                 if (!p.users().isEmpty()) {
+                    if (!dryRun && existingAudit.isEmpty()) {
+                        FoodsharingPickupModels.PickupUser pickupUser = p.users().getFirst();
+                        saveAdvertisementAudit(a, p.date(), false, "OCCUPIED_AT_TRIGGER", "Pickup was occupied when this notification became due.", null, null, null, pickupUser.id(), pickupUser.name());
+                    }
                     if (!dryRun) {
                         deleteTelegramAdvertisementsForFilledSlot(a, p.date());
                     }
                     skipped++;
                     continue;
                 }
-                Instant triggerAt = p.date().minus(Duration.ofHours(a.getTriggerHoursBefore()));
-                if (triggerAt.isAfter(now) || now.isAfter(p.date())) {
+                if (existingAudit.isPresent()) {
+                    FoodsharingOpenSlotAdvertisementAudit audit = existingAudit.get();
+                    if ("OCCUPIED_AT_TRIGGER".equals(audit.getStatus())) {
+                        String reminderKey = a.getAdminConnection().getId() + ":" + p.date();
+                        boolean sendMessage = a.isSendLateCancellationMessage()
+                                && audit.getFoodsharingUserId() != null && !audit.getFoodsharingUserId().isBlank()
+                                && !lateCancellationMessageSent.contains(reminderKey)
+                                && !advertisementAuditRepository.existsByAutomationAdminConnectionAndPickupDateAndStatusIn(a.getAdminConnection(), p.date(), List.of("LATE_CANCELLATION_REMINDER_SENT", "LATE_CANCELLATION_REMINDER_AND_ADVERTISEMENT_SENT"));
+                        boolean sendAdvertisement = a.isSendLatestAdvertisementAfterLateCancellation()
+                                && isLatestDueLateCancellationAdvertisement(a, enabledAutomations, p.date(), now)
+                                && advertisementsSent < maxAdvertisements
+                                && !lateCancellationAdvertisementSent.contains(reminderKey)
+                                && !advertisementAuditRepository.existsByAutomationAdminConnectionAndPickupDateAndStatusIn(a.getAdminConnection(), p.date(), List.of("LATE_CANCELLATION_ADVERTISEMENT_SENT", "LATE_CANCELLATION_REMINDER_AND_ADVERTISEMENT_SENT"));
+                        if (!sendMessage && !sendAdvertisement) {
+                            if (!dryRun) {
+                                audit.setStatus("LATE_CANCELLATION_NO_ACTION");
+                                audit.setReason("No late-cancellation action is enabled or applicable for this pickup.");
+                                advertisementAuditRepository.save(audit);
+                            }
+                            skipped++;
+                            continue;
+                        }
+                        String reminder = sendMessage ? renderAdvertisement(a.getLateCancellationMessage(), p.date(), a.getAdminConnection().getFoodsharingUserId()) : null;
+                        String storeMessage = sendAdvertisement && a.isSendToStoreChat()
+                                ? renderAdvertisement(storeMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(storeMessages.size())), p.date(), a.getAdminConnection().getFoodsharingUserId()) : null;
+                        String telegramMessage = sendAdvertisement && a.isSendToTelegram()
+                                ? renderAdvertisement(telegramMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(telegramMessages.size())), p.date(), a.getAdminConnection().getFoodsharingUserId()) : null;
+                        if (!dryRun) {
+                            try {
+                                if (sendMessage) client.sendUserMessage(a.getAdminConnection(), audit.getFoodsharingUserId(), reminder);
+                                if (storeMessage != null) client.sendStoreChatMessage(a.getAdminConnection(), a.getStoreId(), storeMessage);
+                                Integer telegramMessageId = telegramMessage != null && a.getTelegramChatId() != null ? sendTelegram(a, telegramMessage) : null;
+                                audit.setStatus(sendMessage && sendAdvertisement ? "LATE_CANCELLATION_REMINDER_AND_ADVERTISEMENT_SENT" : sendMessage ? "LATE_CANCELLATION_REMINDER_SENT" : "LATE_CANCELLATION_ADVERTISEMENT_SENT");
+                                audit.setReason("Pickup was released after this notification time.");
+                                audit.setMessage(sendMessage ? reminder : combineAdvertisementMessages(storeMessage, telegramMessage));
+                                audit.setTelegramMessageId(telegramMessageId);
+                                audit.setError(null);
+                                advertisementAuditRepository.save(audit);
+                            } catch (RuntimeException exception) {
+                                audit.setStatus("LATE_CANCELLATION_ACTION_FAILED");
+                                audit.setError(exception.getMessage());
+                                advertisementAuditRepository.save(audit);
+                                throw exception;
+                            }
+                        }
+                        if (sendMessage) lateCancellationMessageSent.add(reminderKey);
+                        if (sendAdvertisement) {
+                            lateCancellationAdvertisementSent.add(reminderKey);
+                            advertisementsSent++;
+                        }
+                        acted += (sendMessage ? 1 : 0) + (sendAdvertisement ? 1 : 0);
+                        automationActed += (sendMessage ? 1 : 0) + (sendAdvertisement ? 1 : 0);
+                        continue;
+                    }
                     skipped++;
                     continue;
                 }
-                if (advertisementAuditRepository.existsByAutomationAndPickupDateAndTriggerHoursBefore(a, p.date(), a.getTriggerHoursBefore())) {
-                    skipped++;
-                    continue;
-                }
-                if (acted >= maxAdvertisements) {
+                if (advertisementsSent >= maxAdvertisements) {
                     skipped++;
                     break;
                 }
@@ -464,9 +534,10 @@ public class FoodsharingPickupAutomationService {
                 if (dryRun) {
                     automationActed++;
                 } else {
-                    saveAdvertisementAudit(a, p.date(), false, "SENT", "Advertisement sent.", combineAdvertisementMessages(storeMessage, telegramMessage), null, telegramMessageId);
+                    saveAdvertisementAudit(a, p.date(), false, "SENT", "Advertisement sent.", combineAdvertisementMessages(storeMessage, telegramMessage), null, telegramMessageId, null, null);
                 }
                 acted++;
+                advertisementsSent++;
             }
             if (dryRun) {
                 saveAdvertisementRunSummaryAudit(a, now, true, checkedSlots, automationActed, Math.max(0, checkedSlots - automationActed), "Checked " + checkedSlots + " slot" + (checkedSlots == 1 ? "" : "s") + ".");
@@ -509,13 +580,31 @@ public class FoodsharingPickupAutomationService {
         requestAutomationAuditRepository.save(audit);
     }
 
-    private void saveAdvertisementAudit(FoodsharingOpenSlotAdvertisementAutomation automation, Instant pickupDate, boolean dryRun, String status, String reason, String message, String error, Integer telegramMessageId) {
+    private boolean isLatestDueLateCancellationAdvertisement(
+            FoodsharingOpenSlotAdvertisementAutomation automation,
+            List<FoodsharingOpenSlotAdvertisementAutomation> enabledAutomations,
+            Instant pickupDate,
+            Instant now) {
+        return enabledAutomations.stream()
+                .filter(candidate -> candidate.isSendLatestAdvertisementAfterLateCancellation()
+                        && candidate.getAdminConnection().getId().equals(automation.getAdminConnection().getId())
+                        && candidate.getStoreId() == automation.getStoreId()
+                        && !pickupDate.minus(Duration.ofHours(candidate.getTriggerHoursBefore())).isAfter(now))
+                .max(Comparator.comparing((FoodsharingOpenSlotAdvertisementAutomation candidate) -> pickupDate.minus(Duration.ofHours(candidate.getTriggerHoursBefore())))
+                        .thenComparingInt(FoodsharingOpenSlotAdvertisementAutomation::getAdvertNumber))
+                .map(candidate -> candidate.getId().equals(automation.getId()))
+                .orElse(false);
+    }
+
+    private void saveAdvertisementAudit(FoodsharingOpenSlotAdvertisementAutomation automation, Instant pickupDate, boolean dryRun, String status, String reason, String message, String error, Integer telegramMessageId, String foodsharingUserId, String foodsharingUserName) {
         FoodsharingOpenSlotAdvertisementAudit audit = new FoodsharingOpenSlotAdvertisementAudit();
         audit.setAutomation(automation);
         audit.setStoreId(automation.getStoreId());
         audit.setStoreName(automation.getStoreName());
         audit.setPickupDate(pickupDate);
         audit.setTriggerHoursBefore(automation.getTriggerHoursBefore());
+        audit.setFoodsharingUserId(foodsharingUserId);
+        audit.setFoodsharingUserName(foodsharingUserName);
         audit.setTelegramMessageId(telegramMessageId);
         audit.setStatus(status);
         audit.setDryRun(dryRun);
@@ -1129,7 +1218,7 @@ public class FoodsharingPickupAutomationService {
 
     private CleaningRuleExemptionView view(FoodsharingCleaningRuleExemption exemption) { return new CleaningRuleExemptionView(exemption.getId(), exemption.getFoodsharingId(), exemption.getReason()); }
     private AdvertisementAutomationView advertisementView(FoodsharingOpenSlotAdvertisementAutomation a, boolean editable) {
-        return new AdvertisementAutomationView(a.getStoreId(), a.getStoreName(), a.getAdvertNumber(), a.isEnabled(), a.isDryRunEnabled(), a.getTriggerHoursBefore(), a.isSendToStoreChat(), a.isSendToTelegram(), a.getTelegramChatId(), deserializeMessages(a.getStoreMessagesJson()), deserializeMessages(a.getTelegramMessagesJson()), editable);
+        return new AdvertisementAutomationView(a.getStoreId(), a.getStoreName(), a.getAdvertNumber(), a.isEnabled(), a.isDryRunEnabled(), a.getTriggerHoursBefore(), a.isSendToStoreChat(), a.isSendToTelegram(), a.getTelegramChatId(), deserializeMessages(a.getStoreMessagesJson()), deserializeMessages(a.getTelegramMessagesJson()), a.getLateCancellationMessage(), a.isSendLateCancellationMessage(), a.isSendLatestAdvertisementAfterLateCancellation(), editable);
     }
 
     private String serializeMessages(List<String> messages) {
@@ -1276,7 +1365,7 @@ public class FoodsharingPickupAutomationService {
                 ? currentConnection().map(advertisementAuditRepository::findTop100ByAutomationAdminConnectionOrderByCreatedAtDesc).orElseGet(List::of)
                 : advertisementAuditRepository.findTop100ByOrderByCreatedAtDesc();
         List<ExtraAutomationAuditView> result = new ArrayList<>(audits.stream()
-                .map(a -> new ExtraAutomationAuditView("ADVERTISEMENT", a.getStoreId(), a.getStoreName(), a.getPickupDate(), a.getPickupDate().minus(Duration.ofHours(a.getTriggerHoursBefore())), null, null, a.isDryRun(), a.getStatus(), a.getReason(), a.getMessage(), a.getError(), a.getCreatedAt()))
+                .map(a -> new ExtraAutomationAuditView("ADVERTISEMENT", a.getStoreId(), a.getStoreName(), a.getPickupDate(), a.getPickupDate().minus(Duration.ofHours(a.getTriggerHoursBefore())), a.getFoodsharingUserId(), a.getFoodsharingUserName(), a.isDryRun(), a.getStatus(), a.getReason(), a.getMessage(), a.getError(), a.getCreatedAt()))
                 .toList());
         result.addAll(plannedAdvertisementNotifications(onlyMine));
         return result.stream()
@@ -1318,8 +1407,8 @@ public class FoodsharingPickupAutomationService {
 
     public record RequestAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled, boolean distanceRuleEnabled, Double maximumDistanceKm) {}
     public record RequestAutomationView(long storeId, String storeName, boolean enabled, boolean dryRunEnabled, boolean distanceRuleEnabled, double maximumDistanceKm, boolean editable) {}
-    public record AdvertisementAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> storeMessages, List<String> telegramMessages) {}
-    public record AdvertisementAutomationView(long storeId, String storeName, int advertNumber, boolean enabled, boolean dryRunEnabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> storeMessages, List<String> telegramMessages, boolean editable) {}
+    public record AdvertisementAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> storeMessages, List<String> telegramMessages, String lateCancellationMessage, boolean sendLateCancellationMessage, boolean sendLatestAdvertisementAfterLateCancellation) {}
+    public record AdvertisementAutomationView(long storeId, String storeName, int advertNumber, boolean enabled, boolean dryRunEnabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> storeMessages, List<String> telegramMessages, String lateCancellationMessage, boolean sendLateCancellationMessage, boolean sendLatestAdvertisementAfterLateCancellation, boolean editable) {}
     public record TelegramChatView(String id, String title, String type) {}
     public record AutomationRunSummary(int evaluated, int acted, int skipped, boolean dryRun, List<String> messages) {}
     public record ExtraAutomationOverviewView(List<RequestAutomationView> requestAutomations, List<AdvertisementAutomationView> advertisementAutomations) {}

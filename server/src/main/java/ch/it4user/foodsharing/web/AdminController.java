@@ -397,7 +397,10 @@ public class AdminController implements AdminApi {
                         Boolean.TRUE.equals(request.getSendToTelegram()),
                         request.getTelegramChatId(),
                         request.getStoreMessages() == null ? List.of() : request.getStoreMessages(),
-                        request.getTelegramMessages() == null ? List.of() : request.getTelegramMessages());
+                        request.getTelegramMessages() == null ? List.of() : request.getTelegramMessages(),
+                        request.getLateCancellationMessage(),
+                        Boolean.TRUE.equals(request.getSendLateCancellationMessage()),
+                        Boolean.TRUE.equals(request.getSendLatestAdvertisementAfterLateCancellation()));
         return ResponseEntity.ok(toFoodsharingOpenSlotAdvertisementAutomation(
                 foodsharingPickupAutomationService.saveAdvertisementAutomation(storeId, advertNumber, serviceRequest)));
     }
