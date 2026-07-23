@@ -1015,7 +1015,8 @@ public class FoodsharingPickupAutomationService {
                             .filter(p -> p.users().isEmpty())
                             .count();
                     String openCleaningSlots = formatOpenCleaningSlots(cleaningPickups, now);
-                    String cleaningOverrideMessage = userMessage("message.automation.cleaning-override", formatSwissDateTime(pickupDate), freeCleaningSlots, openCleaningSlots);
+                    String cleaningStoreUrl = appProperties.getFoodsharing().getBaseUrl().replaceFirst("/+$", "") + "/store/" + cleaningStoreId;
+                    String cleaningOverrideMessage = userMessage("message.automation.cleaning-override", formatSwissDateTime(pickupDate), freeCleaningSlots, openCleaningSlots, cleaningStoreUrl);
                     if (freeCleaningSlots < appProperties.getFoodsharing().getAutomation().getMinimumFreeCleaningSlots()) {
                         reasons.add(cleaningOverrideMessage);
                     } else {
@@ -1026,7 +1027,7 @@ public class FoodsharingPickupAutomationService {
                             long lastCleaningMonths = monthsAgo(lastCleaning, now);
                             historyText = userMessage("message.automation.last-cleaning", monthSuffix(lastCleaningMonths));
                         }
-                        reasons.add(userMessage("message.automation.cleaning-required", monthSuffix(backCheckMonths), historyText, openCleaningSlots));
+                        reasons.add(userMessage("message.automation.cleaning-required", monthSuffix(backCheckMonths), historyText, openCleaningSlots, cleaningStoreUrl));
                     }
                 }
             }
