@@ -49,23 +49,30 @@
           <span class="confirm-field__label">{{ i18n.t('common.phoneNumber') }}</span>
           <div class="confirm-field__value">{{ booking()?.teacherPhoneNumber }}</div>
         </div>
-        <div class="confirm-field">
-          <span class="confirm-field__label">{{ i18n.t('common.location') }}</span>
-          <div class="confirm-field__value">{{ booking()?.location ?? '-' }}</div>
-        </div>
-        <div class="confirm-field">
-          <span class="confirm-field__label">{{ i18n.t('common.publicLocation') }}</span>
-          <div class="confirm-field__value">{{ booking()?.publicLocation ?? '-' }}</div>
-        </div>
-        <div class="confirm-field">
-          <span class="confirm-field__label">{{ i18n.t('common.visitFairteiler') }}</span>
-          <div class="confirm-field__value">{{ booking()?.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no') }}</div>
-        </div>
+        @if (booking()?.category === 'ONLINE') {
+          <div class="confirm-field">
+            <span class="confirm-field__label">{{ i18n.t('common.onlineCallLink') }}</span>
+            <a class="confirm-field__value" [href]="booking()?.onlineCallLink" target="_blank" rel="noopener noreferrer">{{ booking()?.onlineCallLink }}</a>
+          </div>
+        } @else {
+          <div class="confirm-field">
+            <span class="confirm-field__label">{{ i18n.t('common.location') }}</span>
+            <div class="confirm-field__value">{{ booking()?.location ?? '-' }}</div>
+          </div>
+          <div class="confirm-field">
+            <span class="confirm-field__label">{{ i18n.t('common.publicLocation') }}</span>
+            <div class="confirm-field__value">{{ booking()?.publicLocation ?? '-' }}</div>
+          </div>
+          <div class="confirm-field">
+            <span class="confirm-field__label">{{ i18n.t('common.visitFairteiler') }}</span>
+            <div class="confirm-field__value">{{ booking()?.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no') }}</div>
+          </div>
+        }
       </div>
 
-      @if (booking()?.whatToBring || booking()?.hint) {
+      @if (booking()?.hint || (booking()?.category !== 'ONLINE' && booking()?.whatToBring)) {
         <div class="confirm-notes">
-          @if (booking()?.whatToBring) {
+          @if (booking()?.category !== 'ONLINE' && booking()?.whatToBring) {
             <section class="confirm-note">
               <h2>{{ i18n.t('common.whatToBring') }}</h2>
               <p>{{ booking()?.whatToBring }}</p>

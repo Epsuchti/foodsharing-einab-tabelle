@@ -91,6 +91,12 @@ public class PublicService {
         slot.setBookedAt(java.time.Instant.now());
         slot.setPendingConfirmationTokenHash(tokenService.hash(rawToken));
         slot.setPendingConfirmationExpiresAt(java.time.Instant.now().plus(appProperties.getAuth().getBookingConfirmationValidityMinutes(), java.time.temporal.ChronoUnit.MINUTES));
+        if (slot.getEinAb().getCategory() == EinAbCategory.ONLINE) {
+            Slot nextOnlineSlot = new Slot();
+            nextOnlineSlot.setEinAb(slot.getEinAb());
+            nextOnlineSlot.setStatus(SlotStatus.AVAILABLE);
+            slotRepository.save(nextOnlineSlot);
+        }
         sendBookingConfirmationMessage(slot, rawToken, appProperties.getAuth().getBookingConfirmationValidityMinutes());
         return slot;
     }

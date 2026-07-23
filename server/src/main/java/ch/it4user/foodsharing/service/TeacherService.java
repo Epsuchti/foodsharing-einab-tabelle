@@ -161,6 +161,7 @@ public class TeacherService {
                              Instant startDateTime,
                              String location,
                              String publicLocation,
+                             String onlineCallLink,
                              String whatToBring,
                              String hint,
                              boolean visitFairteiler,
@@ -169,21 +170,22 @@ public class TeacherService {
         Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
         ensureTeacherBezirk(teacher, bezirk);
         ensureTeacherActive(teacher);
-        validateEinAb(slotCount, publicLocation, minimumPickupCount);
+        validateEinAb(category, slotCount, publicLocation, onlineCallLink, minimumPickupCount);
         EinAb einAb = new EinAb();
         einAb.setBezirk(bezirk);
         einAb.setTeacher(teacher);
         einAb.setCategory(category);
         einAb.setStartDateTime(startDateTime);
-        einAb.setLocation(normalizeLocation(location));
-        einAb.setPublicLocation(normalizeRequiredLocation(publicLocation));
-        einAb.setWhatToBring(normalizeWhatToBring(whatToBring));
+        einAb.setLocation(isOnline(category) ? null : normalizeLocation(location));
+        einAb.setPublicLocation(isOnline(category) ? null : normalizeRequiredLocation(publicLocation));
+        einAb.setOnlineCallLink(isOnline(category) ? normalizeRequiredOnlineCallLink(onlineCallLink) : null);
+        einAb.setWhatToBring(isOnline(category) ? null : normalizeWhatToBring(whatToBring));
         einAb.setHint(normalizeWhatToBring(hint));
-        einAb.setVisitFairteiler(visitFairteiler);
-        einAb.setSlotCount(slotCount);
-        einAb.setMinimumPickupCount(normalizeMinimumPickupCount(minimumPickupCount));
+        einAb.setVisitFairteiler(isOnline(category) ? false : visitFairteiler);
+        einAb.setSlotCount(isOnline(category) ? 1 : slotCount);
+        einAb.setMinimumPickupCount(isOnline(category) ? null : normalizeMinimumPickupCount(minimumPickupCount));
         EinAb savedEinAb = einAbRepository.save(einAb);
-        createSlots(savedEinAb, slotCount);
+        createSlots(savedEinAb, isOnline(category) ? 1 : slotCount);
         EinAb reloadedEinAb = reloadEinAbWithTeacher(savedEinAb.getId(), bezirk);
         eventPublisher.publishEvent(new EinAbCreatedEvent(reloadedEinAb.getId()));
         return reloadedEinAb;
@@ -197,6 +199,7 @@ public class TeacherService {
                              Instant startDateTime,
                              String location,
                              String publicLocation,
+                             String onlineCallLink,
                              String whatToBring,
                              String hint,
                              boolean visitFairteiler,
@@ -204,27 +207,28 @@ public class TeacherService {
                              Integer minimumPickupCount,
                              boolean admin) {
         Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
-        validateEinAb(slotCount, publicLocation, minimumPickupCount);
+        validateEinAb(category, slotCount, publicLocation, onlineCallLink, minimumPickupCount);
         EinAb einAb = requireTeacherEinAb(teacher, einAbId, admin, bezirk);
         if (!admin) {
             ensureTeacherBezirk(teacher, bezirk);
             ensureTeacherActive(teacher);
         }
         int existingSlots = slotRepository.findAllByEinAbOrderByCreatedAtAsc(einAb).size();
-        if (slotCount < existingSlots) {
+        if (!isOnline(category) && slotCount < existingSlots) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.SLOT_COUNT_REDUCTION_NOT_SUPPORTED);
         }
 
         einAb.setCategory(category);
         einAb.setStartDateTime(startDateTime);
-        einAb.setLocation(normalizeLocation(location));
-        einAb.setPublicLocation(normalizeRequiredLocation(publicLocation));
-        einAb.setWhatToBring(normalizeWhatToBring(whatToBring));
+        einAb.setLocation(isOnline(category) ? null : normalizeLocation(location));
+        einAb.setPublicLocation(isOnline(category) ? null : normalizeRequiredLocation(publicLocation));
+        einAb.setOnlineCallLink(isOnline(category) ? normalizeRequiredOnlineCallLink(onlineCallLink) : null);
+        einAb.setWhatToBring(isOnline(category) ? null : normalizeWhatToBring(whatToBring));
         einAb.setHint(normalizeWhatToBring(hint));
-        einAb.setVisitFairteiler(visitFairteiler);
-        einAb.setSlotCount(slotCount);
-        einAb.setMinimumPickupCount(normalizeMinimumPickupCount(minimumPickupCount));
-        if (slotCount > existingSlots) {
+        einAb.setVisitFairteiler(isOnline(category) ? false : visitFairteiler);
+        einAb.setSlotCount(isOnline(category) ? 1 : slotCount);
+        einAb.setMinimumPickupCount(isOnline(category) ? null : normalizeMinimumPickupCount(minimumPickupCount));
+        if (!isOnline(category) && slotCount > existingSlots) {
             createSlots(einAb, slotCount - existingSlots);
         }
         return reloadEinAbWithTeacher(einAb.getId(), bezirk);
@@ -330,10 +334,18 @@ public class TeacherService {
         }
     }
 
-    private void validateEinAb(int slotCount, String publicLocation, Integer minimumPickupCount) {
-        validateSlotCount(slotCount);
-        normalizeRequiredLocation(publicLocation);
-        normalizeMinimumPickupCount(minimumPickupCount);
+    private void validateEinAb(EinAbCategory category, int slotCount, String publicLocation, String onlineCallLink, Integer minimumPickupCount) {
+        if (isOnline(category)) {
+            normalizeRequiredOnlineCallLink(onlineCallLink);
+        } else {
+            validateSlotCount(slotCount);
+            normalizeRequiredLocation(publicLocation);
+            normalizeMinimumPickupCount(minimumPickupCount);
+        }
+    }
+
+    private boolean isOnline(EinAbCategory category) {
+        return category == EinAbCategory.ONLINE;
     }
 
     private String normalizeLocation(String location) {
@@ -344,6 +356,15 @@ public class TeacherService {
         String normalized = normalizeLocation(location);
         if (normalized == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.PUBLIC_LOCATION_REQUIRED);
+        }
+        return normalized;
+    }
+
+    private String normalizeRequiredOnlineCallLink(String onlineCallLink) {
+        String normalized = normalizeLocation(onlineCallLink);
+        if (normalized == null || normalized.length() > 2000
+                || !(normalized.startsWith("https://") || normalized.startsWith("http://"))) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("onlineCallLink"));
         }
         return normalized;
     }

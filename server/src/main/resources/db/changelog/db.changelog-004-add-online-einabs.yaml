@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-add-online-einabs
+      author: codex
+      changes:
+        - dropNotNullConstraint:
+            tableName: einabs
+            columnName: public_location
+            columnDataType: VARCHAR(500)
+        - addColumn:
+            tableName: einabs
+            columns:
+              - column:
+                  name: online_call_link
+                  type: VARCHAR(2000)

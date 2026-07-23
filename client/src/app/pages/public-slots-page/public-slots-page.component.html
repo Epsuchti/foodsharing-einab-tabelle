@@ -151,12 +151,19 @@
       {{ i18n.categoryLabel(bookingDetails()!.category) }} - {{ bookingDetails()!.startDateTime | zurichDateTime }}
     </div>
 
-    <div class="stack-form">
-      <div>
-        <span class="slot-card__label">{{ i18n.t('common.location') }}</span>
-        <div>{{ displayBookingLocation(bookingDetails()) }}</div>
-      </div>
-      @if (bookingDetails()?.whatToBring) {
+      <div class="stack-form">
+      @if (isOnline(bookingDetails()?.category)) {
+        <div>
+          <span class="slot-card__label">{{ i18n.t('common.onlineCallLink') }}</span>
+          <a [href]="bookingDetails()?.onlineCallLink" target="_blank" rel="noopener noreferrer">{{ bookingDetails()?.onlineCallLink }}</a>
+        </div>
+      } @else {
+        <div>
+          <span class="slot-card__label">{{ i18n.t('common.location') }}</span>
+          <div>{{ displayBookingLocation(bookingDetails()) }}</div>
+        </div>
+      }
+      @if (!isOnline(bookingDetails()?.category) && bookingDetails()?.whatToBring) {
         <div>
           <span class="slot-card__label">{{ i18n.t('common.whatToBring') }}</span>
           <div style="white-space: pre-wrap;">{{ bookingDetails()?.whatToBring }}</div>

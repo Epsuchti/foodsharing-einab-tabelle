@@ -220,11 +220,21 @@ export class PublicSlotsPageComponent implements OnInit {
   }
 
   protected displayPublicLocation(slot: AvailableSlotResponse | null | undefined): string {
+    if (slot?.category === EinAbCategory.Online) {
+      return this.i18n.t('category.online');
+    }
     return slot?.publicLocation ?? slot?.location ?? '-';
   }
 
   protected displayBookingLocation(booking: BookingDetailResponse | null | undefined): string {
+    if (booking?.category === EinAbCategory.Online) {
+      return this.i18n.t('category.online');
+    }
     return booking?.location ?? '-';
+  }
+
+  protected isOnline(category: EinAbCategory | undefined): boolean {
+    return category === EinAbCategory.Online;
   }
 
   protected closeBookingSuccess(): void {

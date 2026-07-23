@@ -43,7 +43,8 @@ export class I18nService {
       [EinAbCategory.Market]: this.t('category.market'),
       [EinAbCategory.Bakery]: this.t('category.bakery'),
       [EinAbCategory.Restaurant]: this.t('category.restaurant'),
-      [EinAbCategory.FairteilerCleaning]: this.t('category.fairteilerCleaning')
+      [EinAbCategory.FairteilerCleaning]: this.t('category.fairteilerCleaning'),
+      [EinAbCategory.Online]: this.t('category.online')
     };
     return labels[key] ?? key;
   }

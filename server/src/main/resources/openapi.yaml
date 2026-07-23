@@ -1524,7 +1524,7 @@ components:
       enum: [de, en, gws]
     EinAbCategory:
       type: string
-      enum: [SUPERMARKET, TAKEOUT, MARKET, BAKERY, RESTAURANT, FAIRTEILER_CLEANING]
+      enum: [SUPERMARKET, TAKEOUT, MARKET, BAKERY, RESTAURANT, FAIRTEILER_CLEANING, ONLINE]
     SlotStatus:
       type: string
       enum: [AVAILABLE, PENDING_CONFIRMATION, BOOKED, DONE, CANCELLED]
@@ -2225,7 +2225,7 @@ components:
           type: boolean
     EinAbResponse:
       type: object
-      required: [id, bezirk, category, startDateTime, publicLocation, teacher, visitFairteiler, slotCount, createdAt, updatedAt]
+      required: [id, bezirk, category, startDateTime, teacher, visitFairteiler, slotCount, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -2241,6 +2241,9 @@ components:
           type: string
         publicLocation:
           type: string
+        onlineCallLink:
+          type: string
+          format: uri
         whatToBring:
           type: string
         hint:
@@ -2356,6 +2359,9 @@ components:
           type: string
         publicLocation:
           type: string
+        onlineCallLink:
+          type: string
+          format: uri
         whatToBring:
           type: string
         hint:
@@ -2445,7 +2451,7 @@ components:
           type: boolean
     UpsertEinAbRequest:
       type: object
-      required: [category, startDateTime, publicLocation, visitFairteiler, slotCount]
+      required: [category, startDateTime, visitFairteiler, slotCount]
       properties:
         category:
           $ref: '#/components/schemas/EinAbCategory'
@@ -2457,8 +2463,11 @@ components:
           maxLength: 500
         publicLocation:
           type: string
-          minLength: 1
           maxLength: 500
+        onlineCallLink:
+          type: string
+          format: uri
+          maxLength: 2000
         whatToBring:
           type: string
           maxLength: 4000
@@ -2470,7 +2479,6 @@ components:
         slotCount:
           type: integer
           minimum: 1
-          maximum: 3
         minimumPickupCount:
           type: integer
           minimum: 0

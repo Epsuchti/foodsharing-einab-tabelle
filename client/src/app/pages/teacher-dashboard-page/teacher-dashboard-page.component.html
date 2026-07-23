@@ -110,9 +110,9 @@
       <tr>
         <td>{{ i18n.categoryLabel(einab.category) }}</td>
         <td>{{ einab.startDateTime | zurichDateTime }}</td>
-        <td>{{ einab.location ?? '-' }}</td>
-        <td>{{ einab.publicLocation ?? '-' }}</td>
-        <td>{{ einab.slotCount }}</td>
+        <td>{{ isOnline(einab.category) ? '-' : einab.location ?? '-' }}</td>
+        <td>{{ isOnline(einab.category) ? '-' : einab.publicLocation ?? '-' }}</td>
+        <td>{{ isOnline(einab.category) ? i18n.t('common.unlimited') : einab.slotCount }}</td>
         <td class="actions-cell">
           <button pButton size="small" icon="pi pi-eye" (click)="selectEinAb(einab)"></button>
           <button pButton size="small" severity="secondary" icon="pi pi-pencil" (click)="openEdit(einab)"></button>
@@ -134,7 +134,12 @@
 @if (selectedEinAb()) {
   <p-card>
     <ng-template pTemplate="title">{{ i18n.t('teacher.slotManagement') }}</ng-template>
-    @if (selectedEinAb()?.whatToBring) {
+    @if (isOnline(selectedEinAb()?.category)) {
+      <div style="margin: 0 0 0.75rem;">
+        <span class="slot-card__label">{{ i18n.t('common.onlineCallLink') }}</span>
+        <a [href]="selectedEinAb()?.onlineCallLink" target="_blank" rel="noopener noreferrer">{{ selectedEinAb()?.onlineCallLink }}</a>
+      </div>
+    } @else if (selectedEinAb()?.whatToBring) {
       <div style="margin: 0 0 0.75rem;">
         <span class="slot-card__label">{{ i18n.t('common.whatToBring') }}</span>
         <p style="white-space: pre-wrap; margin: 0;">{{ selectedEinAb()?.whatToBring }}</p>
@@ -186,40 +191,55 @@
       <p-datepicker formControlName="startDateTime" [showIcon]="true" [showTime]="true" hourFormat="24"></p-datepicker>
     </label>
 
-    <label>
-      <span>{{ i18n.t('common.location') }}</span>
-      <input pInputText type="text" formControlName="location" />
-    </label>
+    @if (isOnline(einabForm.controls.category.value)) {
+      <label>
+        <span>{{ i18n.t('common.onlineCallLink') }} *</span>
+        <input pInputText type="url" formControlName="onlineCallLink" />
+      </label>
+    } @else {
+      <label>
+        <span>{{ i18n.t('common.location') }}</span>
+        <input pInputText type="text" formControlName="location" />
+      </label>
 
-    <label>
-      <span>{{ i18n.t('common.publicLocation') }} *</span>
-      <input pInputText type="text" formControlName="publicLocation" />
-    </label>
+      <label>
+        <span>{{ i18n.t('common.publicLocation') }} *</span>
+        <input pInputText type="text" formControlName="publicLocation" />
+      </label>
+    }
 
     <label>
       <span>{{ i18n.t('common.hint') }}</span>
       <textarea pInputTextarea rows="3" formControlName="hint"></textarea>
     </label>
 
-    <label>
-      <span>{{ i18n.t('common.whatToBring') }}</span>
-      <textarea pInputTextarea rows="5" formControlName="whatToBring"></textarea>
-    </label>
+    @if (!isOnline(einabForm.controls.category.value)) {
+      <label>
+        <span>{{ i18n.t('common.whatToBring') }}</span>
+        <textarea pInputTextarea rows="5" formControlName="whatToBring"></textarea>
+      </label>
+    }
 
-    <label>
-      <span>{{ i18n.t('common.minimumPickupCount') }}</span>
-      <input pInputText type="number" formControlName="minimumPickupCount" />
-    </label>
+    @if (!isOnline(einabForm.controls.category.value)) {
+      <label>
+        <span>{{ i18n.t('common.minimumPickupCount') }}</span>
+        <input pInputText type="number" formControlName="minimumPickupCount" />
+      </label>
+    }
 
-    <label>
-      <span>{{ i18n.t('common.slotCount') }} *</span>
-      <p-select [options]="slotCountOptions" formControlName="slotCount" optionLabel="label" optionValue="value"></p-select>
-    </label>
+    @if (!isOnline(einabForm.controls.category.value)) {
+      <label>
+        <span>{{ i18n.t('common.slotCount') }} *</span>
+        <p-select [options]="slotCountOptions" formControlName="slotCount" optionLabel="label" optionValue="value"></p-select>
+      </label>
+    }
 
-    <label class="checkbox-row">
-      <p-checkbox formControlName="visitFairteiler" [binary]="true"></p-checkbox>
-      <span>{{ i18n.t('common.visitFairteiler') }}</span>
-    </label>
+    @if (!isOnline(einabForm.controls.category.value)) {
+      <label class="checkbox-row">
+        <p-checkbox formControlName="visitFairteiler" [binary]="true"></p-checkbox>
+        <span>{{ i18n.t('common.visitFairteiler') }}</span>
+      </label>
+    }
 
     <div class="dialog-actions">
       <button pButton type="button" severity="secondary" [label]="i18n.t('common.cancel')" (click)="einabDialogVisible = false"></button>

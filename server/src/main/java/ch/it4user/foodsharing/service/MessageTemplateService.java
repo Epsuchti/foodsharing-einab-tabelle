@@ -75,9 +75,13 @@ public class MessageTemplateService {
         details.put(message(language, "message.details.teacher-phone"), valueOrDash(teacherPhone));
         details.put(message(language, "message.details.category"), categoryLabel(language, einAb.getCategory()));
         details.put(message(language, "message.details.start"), swissDateTime(einAb.getStartDateTime()));
-        details.put(message(language, "message.details.location"), valueOrDash(einAb.getLocation()));
-        details.put(message(language, "message.details.public-location"), valueOrDash(einAb.getPublicLocation()));
-        details.put(message(language, "message.details.what-to-bring"), valueOrDash(einAb.getWhatToBring()));
+        if (einAb.getCategory() == EinAbCategory.ONLINE) {
+            details.put(message(language, "message.details.online-call-link"), valueOrDash(einAb.getOnlineCallLink()));
+        } else {
+            details.put(message(language, "message.details.location"), valueOrDash(einAb.getLocation()));
+            details.put(message(language, "message.details.public-location"), valueOrDash(einAb.getPublicLocation()));
+            details.put(message(language, "message.details.what-to-bring"), valueOrDash(einAb.getWhatToBring()));
+        }
         details.put(message(language, "message.details.hint"), valueOrDash(einAb.getHint()));
         details.put(message(language, "message.details.fairteiler"), message(language, einAb.isVisitFairteiler() ? "message.yes" : "message.no"));
         return details;

@@ -29,6 +29,7 @@ import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSelfResponse;
 import ch.it4user.foodsharing.openapi.model.NotificationSubscriptionResponse;
 import ch.it4user.foodsharing.service.AdminService;
+import java.net.URI;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -191,6 +192,7 @@ public class ApiModelMapper {
         response.setStartDateTime(toOffsetDateTime(slot.getEinAb().getStartDateTime()));
         response.setLocation(slot.getEinAb().getLocation());
         response.setPublicLocation(slot.getEinAb().getPublicLocation());
+        response.setOnlineCallLink(toUri(slot.getEinAb().getOnlineCallLink()));
         response.setWhatToBring(slot.getEinAb().getWhatToBring());
         response.setHint(slot.getEinAb().getHint());
         response.setTeacherName(slot.getEinAb().getTeacher().getName());
@@ -233,6 +235,7 @@ public class ApiModelMapper {
         response.setStartDateTime(toOffsetDateTime(einAb.getStartDateTime()));
         response.setLocation(einAb.getLocation());
         response.setPublicLocation(einAb.getPublicLocation());
+        response.setOnlineCallLink(toUri(einAb.getOnlineCallLink()));
         response.setWhatToBring(einAb.getWhatToBring());
         response.setHint(einAb.getHint());
         response.setTeacher(toTeacherResponse(einAb.getTeacher()));
@@ -291,6 +294,10 @@ public class ApiModelMapper {
 
     private OffsetDateTime toOffsetDateTime(Instant value) {
         return value == null ? null : OffsetDateTime.ofInstant(value, ZoneOffset.UTC);
+    }
+
+    private URI toUri(String value) {
+        return value == null ? null : URI.create(value);
     }
 
     private void fillPage(ch.it4user.foodsharing.openapi.model.TeacherListResponse response, Page<?> page) {
@@ -386,6 +393,7 @@ public class ApiModelMapper {
         target.setStartDateTime(source.getStartDateTime());
         target.setLocation(source.getLocation());
         target.setPublicLocation(source.getPublicLocation());
+        target.setOnlineCallLink(source.getOnlineCallLink());
         target.setWhatToBring(source.getWhatToBring());
         target.setHint(source.getHint());
         target.setTeacher(source.getTeacher());

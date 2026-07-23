@@ -86,6 +86,7 @@ export class TeacherDashboardPageComponent implements OnInit {
     startDateTime: [new Date(), Validators.required],
     location: [''],
     publicLocation: ['', Validators.required],
+    onlineCallLink: [''],
     whatToBring: [''],
     hint: [''],
     visitFairteiler: [false],
@@ -103,6 +104,7 @@ export class TeacherDashboardPageComponent implements OnInit {
   private readonly confirmationService = inject(ConfirmationService);
 
   ngOnInit(): void {
+    this.einabForm.controls.category.valueChanges.subscribe((category) => this.configureOnlineFields(category));
     this.reload();
   }
 
@@ -216,6 +218,7 @@ export class TeacherDashboardPageComponent implements OnInit {
       startDateTime: new Date(),
       location: '',
       publicLocation: '',
+      onlineCallLink: '',
       whatToBring: '',
       hint: '',
       visitFairteiler: false,
@@ -235,6 +238,7 @@ export class TeacherDashboardPageComponent implements OnInit {
       startDateTime: new Date(candidate.startDateTime),
       location: candidate.location ?? '',
       publicLocation: '',
+      onlineCallLink: '',
       whatToBring: '',
       hint: '',
       visitFairteiler: false,
@@ -254,12 +258,14 @@ export class TeacherDashboardPageComponent implements OnInit {
       startDateTime: new Date(einab.startDateTime),
       location: einab.location ?? '',
       publicLocation: einab.publicLocation ?? '',
+      onlineCallLink: einab.onlineCallLink ?? '',
       whatToBring: einab.whatToBring ?? '',
       hint: einab.hint ?? '',
       visitFairteiler: einab.visitFairteiler,
       slotCount: einab.slotCount,
       minimumPickupCount: einab.minimumPickupCount ?? null
     });
+    this.configureOnlineFields(einab.category);
     this.einabDialogVisible = true;
   }
 
@@ -276,12 +282,13 @@ export class TeacherDashboardPageComponent implements OnInit {
       category: formValue.category,
       startDateTime: formValue.startDateTime.toISOString(),
       location: formValue.location?.trim() || undefined,
-      publicLocation: formValue.publicLocation.trim(),
-      whatToBring: formValue.whatToBring?.trim() || undefined,
+      publicLocation: this.isOnline(formValue.category) ? undefined : formValue.publicLocation.trim(),
+      onlineCallLink: this.isOnline(formValue.category) ? formValue.onlineCallLink.trim() : undefined,
+      whatToBring: this.isOnline(formValue.category) ? undefined : formValue.whatToBring?.trim() || undefined,
       hint: formValue.hint?.trim() || undefined,
-      visitFairteiler: formValue.visitFairteiler,
+      visitFairteiler: this.isOnline(formValue.category) ? false : formValue.visitFairteiler,
       slotCount: formValue.slotCount,
-      minimumPickupCount: formValue.minimumPickupCount ?? undefined
+      minimumPickupCount: this.isOnline(formValue.category) ? undefined : formValue.minimumPickupCount ?? undefined
     };
 
     const bezirkSlug = this.teacher()?.bezirk?.slug;
@@ -329,6 +336,25 @@ export class TeacherDashboardPageComponent implements OnInit {
 
   private toastError(detail: string): void {
     this.messageService.add({ severity: 'error', summary: this.i18n.t('common.error'), detail });
+  }
+
+  protected isOnline(category: EinAbCategory | undefined): boolean {
+    return category === EinAbCategory.Online;
+  }
+
+  private configureOnlineFields(category: EinAbCategory): void {
+    const isOnline = this.isOnline(category);
+    const publicLocation = this.einabForm.controls.publicLocation;
+    const onlineCallLink = this.einabForm.controls.onlineCallLink;
+    publicLocation.setValidators(isOnline ? [] : [Validators.required]);
+    onlineCallLink.setValidators(isOnline ? [Validators.required] : []);
+    if (isOnline) {
+      this.einabForm.patchValue({ location: '', publicLocation: '', whatToBring: '', visitFairteiler: false, slotCount: 1, minimumPickupCount: null }, { emitEvent: false });
+    } else {
+      this.einabForm.patchValue({ onlineCallLink: '' }, { emitEvent: false });
+    }
+    publicLocation.updateValueAndValidity({ emitEvent: false });
+    onlineCallLink.updateValueAndValidity({ emitEvent: false });
   }
 
   private requireActiveTeacher(): boolean {

@@ -6,5 +6,6 @@ public enum EinAbCategory {
     MARKET,
     BAKERY,
     RESTAURANT,
-    FAIRTEILER_CLEANING
+    FAIRTEILER_CLEANING,
+    ONLINE
 }
