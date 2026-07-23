@@ -75,7 +75,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly advertisementRunResult = signal<FoodsharingRunResult | null>(null);
   protected readonly onlyMyAutomations = signal(true);
   protected readonly onlyMyDecisions = signal(true);
-  protected readonly activeAutomationTab = signal('applications');
+  protected readonly activeAutomationTab = signal('slots');
   protected readonly selectedStoreId = signal<number | null>(null);
   protected readonly selectedRequestStoreId = signal<number | null>(null);
   protected readonly selectedAdvertisementStoreId = signal<number | null>(null);
@@ -108,10 +108,10 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   private readonly messageService = inject(MessageService);
 
   ngOnInit(): void {
-    this.activeAutomationTab.set(this.sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval)
-      ? 'applications'
-      : this.sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)
-        ? 'slots'
+    this.activeAutomationTab.set(this.sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)
+      ? 'slots'
+      : this.sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval)
+        ? 'applications'
         : this.sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising) ? 'advertisements' : 'statistics');
     this.loadBezirkSettings();
     this.loadFoodsharingStatus();

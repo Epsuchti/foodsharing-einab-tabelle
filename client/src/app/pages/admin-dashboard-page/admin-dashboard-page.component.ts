@@ -81,8 +81,11 @@ export class AdminDashboardPageComponent implements OnInit {
   loadUsersPage(page: number): void {
     this.usersLoading.set(true);
     const selectedBezirkFilter = this.selectedBezirkFilter();
+    const bezirkSlug = selectedBezirkFilter && selectedBezirkFilter !== AdminDashboardPageComponent.ALL_BEZIRKE && selectedBezirkFilter !== AdminDashboardPageComponent.UNASSIGNED_BEZIRK
+      ? selectedBezirkFilter
+      : this.bezirkContext.currentSlug();
     this.adminApi.getAdminUsers({
-      bezirkSlug: this.bezirkContext.currentSlug(),
+      bezirkSlug,
       page,
       size: this.pageSize,
       threePickupsOnly: this.onlyThreePickups(),

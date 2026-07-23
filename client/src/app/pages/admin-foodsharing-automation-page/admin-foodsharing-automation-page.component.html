@@ -16,8 +16,8 @@
 
       <p-tabs [value]="activeAutomationTab()" (valueChange)="onAutomationTabChange($event)" class="automation-tabs">
         <p-tablist>
-          @if (sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval)) { <p-tab value="applications">{{ i18n.t('automation.storeApplications') }}</p-tab> }
           @if (sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)) { <p-tab value="slots">{{ i18n.t('automation.slotApproval') }}</p-tab> }
+          @if (sessionService.hasPermission(UserPermission.CanUseAutomationRequestApproval)) { <p-tab value="applications">{{ i18n.t('automation.storeApplications') }}</p-tab> }
           @if (sessionService.hasPermission(UserPermission.CanUseAutomationOpenSlotAdvertising)) { <p-tab value="advertisements">{{ i18n.t('automation.slotAdvertisement') }}</p-tab> }
           @if (sessionService.hasPermission(UserPermission.CanSeeUserPickupCountGrouping)) { <p-tab value="statistics">{{ i18n.t('adminAutomation.tabUserStatistics') }}</p-tab> }
         </p-tablist>
