@@ -5,3 +5,6 @@ databaseChangeLog:
   - include:
       file: db.changelog-002-split-open-slot-advertisement-messages.yaml
       relativeToChangelogFile: true
+  - include:
+      file: db.changelog-003-add-open-slot-advertisement-dry-run.yaml
+      relativeToChangelogFile: true

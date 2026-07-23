@@ -4,6 +4,8 @@ import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
@@ -12,21 +14,18 @@ public class NewsletterTemplateService {
 
     private static final ZoneId SWISS_ZONE = ZoneId.of("Europe/Zurich");
     private static final DateTimeFormatter SWISS_DATE_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
+    private final MessageSource messageSource;
+
+    public NewsletterTemplateService(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
 
     public String newEinAbSubject(LanguageCode language) {
-        return switch (language == null ? LanguageCode.DE : language) {
-            case EN -> "New EinAb available";
-            case GWS -> "Neui EinAb verfügbar";
-            case DE -> "Neue EinAb verfügbar";
-        };
+        return message(language, "message.newsletter.new-einab.subject");
     }
 
     public String subscriptionConfirmationSubject(LanguageCode language) {
-        return switch (language == null ? LanguageCode.DE : language) {
-            case EN -> "Your New Slots Newsletter subscription";
-            case GWS -> "Dini Newsletter-Abonnemänt für neui Slots";
-            case DE -> "Dein Newsletter für neue Slots";
-        };
+        return message(language, "message.newsletter.subscription.subject");
     }
 
     public String subscriptionConfirmationBodyText(LanguageCode language, String unsubscribeUrl) {
@@ -160,126 +159,29 @@ public class NewsletterTemplateService {
                 """.formatted(HtmlUtils.htmlEscape(field(language, key)), HtmlUtils.htmlEscape(value));
     }
 
-    private String intro(LanguageCode language) {
-        return switch (language) {
-            case EN -> "A new EinAb has been published:";
-            case GWS -> "Es git es neus EinAb:";
-            case DE -> "Es gibt einen neuen EinAb:";
-        };
-    }
+    private String intro(LanguageCode language) { return message(language, "message.newsletter.new-einab.intro"); }
 
-    private String subscriptionIntro(LanguageCode language) {
-        return switch (language) {
-            case EN -> "Thanks for subscribing to the New Slots Newsletter.";
-            case GWS -> "Danke fürs Abonnierä vom Newsletter für neui Slots.";
-            case DE -> "Danke für dein Abonnement des Newsletters für neue Slots.";
-        };
-    }
+    private String subscriptionIntro(LanguageCode language) { return message(language, "message.newsletter.subscription.intro"); }
 
-    private String subscriptionOutro(LanguageCode language) {
-        return switch (language) {
-            case EN -> "You will now receive a message when new slots are published.";
-            case GWS -> "Du bechunsch jetzt e Nachricht, wenn neui Slots veröffentlicht wärde.";
-            case DE -> "Du erhältst jetzt eine Nachricht, wenn neue Slots veröffentlicht werden.";
-        };
-    }
+    private String subscriptionOutro(LanguageCode language) { return message(language, "message.newsletter.subscription.outro"); }
 
-    private String outro(LanguageCode language) {
-        return switch (language) {
-            case EN -> "Use the link below to unsubscribe from future slot notifications.";
-            case GWS -> "Mit em Link chasch d Benachrichtigige für neui Slots abbestelle.";
-            case DE -> "Mit dem Link kannst du dich von künftigen Slot-Benachrichtigungen abmelden.";
-        };
-    }
+    private String outro(LanguageCode language) { return message(language, "message.newsletter.new-einab.outro"); }
 
-    private String header(LanguageCode language) {
-        return switch (language) {
-            case EN -> "New slots newsletter";
-            case GWS -> "Newsletter für neui Slots";
-            case DE -> "Newsletter für neue Slots";
-        };
-    }
+    private String header(LanguageCode language) { return message(language, "message.newsletter.header"); }
 
-    private String greeting(LanguageCode language) {
-        return switch (language) {
-            case EN -> "Hello,";
-            case GWS -> "Hoi,";
-            case DE -> "Hallo,";
-        };
-    }
+    private String greeting(LanguageCode language) { return message(language, "message.greeting"); }
 
-    private String unsubscribeLabel(LanguageCode language) {
-        return switch (language) {
-            case EN -> "Unsubscribe";
-            case GWS -> "Abmälde";
-            case DE -> "Abmelden";
-        };
-    }
+    private String unsubscribeLabel(LanguageCode language) { return message(language, "message.newsletter.unsubscribe"); }
 
-    private String field(LanguageCode language, String key) {
-        return switch (key) {
-            case "category" -> switch (language) {
-                case EN -> "Category";
-                case GWS -> "Kategorie";
-                case DE -> "Kategorie";
-            };
-            case "start" -> switch (language) {
-                case EN -> "Start";
-                case GWS -> "Start";
-                case DE -> "Start";
-            };
-            case "location" -> switch (language) {
-                case EN -> "Location";
-                case GWS -> "Ort";
-                case DE -> "Ort";
-            };
-            case "fairteiler" -> switch (language) {
-                case EN -> "Fairteiler visit";
-                case GWS -> "Fairteiler-Bsuech";
-                case DE -> "Fairteiler-Besuch";
-            };
-            case "unsubscribe" -> switch (language) {
-                case EN -> "Unsubscribe";
-                case GWS -> "Abmälde";
-                case DE -> "Abmelden";
-            };
-            default -> key;
-        };
-    }
+    private String field(LanguageCode language, String key) { return message(language, "unsubscribe".equals(key) ? "message.newsletter.unsubscribe" : "message.details." + key); }
 
-    private String yesNo(LanguageCode language, boolean value) {
-        return switch (language) {
-            case EN -> value ? "Yes" : "No";
-            case GWS -> value ? "Jo" : "Nei";
-            case DE -> value ? "Ja" : "Nein";
-        };
-    }
+    private String yesNo(LanguageCode language, boolean value) { return message(language, value ? "message.yes" : "message.no"); }
 
-    private String categoryLabel(LanguageCode language, EinAb einAb) {
-        return switch (einAb.getCategory()) {
-            case SUPERMARKET -> switch (language) {
-                case EN -> "Supermarket";
-                case GWS -> "Supermärt";
-                case DE -> "Supermarkt";
-            };
-            case TAKEOUT -> "Takeout";
-            case MARKET -> switch (language) {
-                case EN -> "Market";
-                case GWS -> "Määrt";
-                case DE -> "Markt";
-            };
-            case BAKERY -> switch (language) {
-                case EN -> "Bakery";
-                case GWS -> "Bäckerei";
-                case DE -> "Bäckerei";
-            };
-            case RESTAURANT -> "Restaurant";
-            case FAIRTEILER_CLEANING -> switch (language) {
-                case EN -> "Fairteiler cleaning";
-                case GWS -> "Fairteiler-Putz";
-                case DE -> "Fairteiler-Reinigung";
-            };
-        };
+    private String categoryLabel(LanguageCode language, EinAb einAb) { return message(language, "message.category." + einAb.getCategory().name().toLowerCase(Locale.ROOT)); }
+
+    private String message(LanguageCode language, String key, Object... arguments) {
+        LanguageCode resolved = language == null ? LanguageCode.DE : language;
+        return messageSource.getMessage(key, arguments, Locale.forLanguageTag(resolved.getCode()));
     }
 
     private String valueOrDash(String value) {

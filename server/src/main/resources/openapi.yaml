@@ -1678,11 +1678,13 @@ components:
           format: double
     FoodsharingOpenSlotAdvertisementAutomationRequest:
       type: object
-      required: [storeName, enabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages]
+      required: [storeName, enabled, dryRunEnabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages]
       properties:
         storeName:
           type: string
         enabled:
+          type: boolean
+        dryRunEnabled:
           type: boolean
         triggerHoursBefore:
           type: integer
@@ -1723,7 +1725,7 @@ components:
           type: boolean
     FoodsharingOpenSlotAdvertisementAutomation:
       type: object
-      required: [storeId, storeName, advertNumber, enabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages, editable]
+      required: [storeId, storeName, advertNumber, enabled, dryRunEnabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages, editable]
       properties:
         storeId:
           type: integer
@@ -1734,6 +1736,8 @@ components:
           type: integer
           format: int32
         enabled:
+          type: boolean
+        dryRunEnabled:
           type: boolean
         triggerHoursBefore:
           type: integer

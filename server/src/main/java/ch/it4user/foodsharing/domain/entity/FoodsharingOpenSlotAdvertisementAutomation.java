@@ -37,6 +37,9 @@ public class FoodsharingOpenSlotAdvertisementAutomation extends BaseEntity {
     @Column(nullable = false)
     private boolean enabled = false;
 
+    @Column(name = "dry_run_enabled", nullable = false)
+    private boolean dryRunEnabled = true;
+
     @Column(nullable = false)
     private int triggerHoursBefore = 24;
 

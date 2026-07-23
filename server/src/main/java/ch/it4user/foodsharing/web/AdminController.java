@@ -391,6 +391,7 @@ public class AdminController implements AdminApi {
                 new FoodsharingPickupAutomationService.AdvertisementAutomationRequest(
                         request.getStoreName(),
                         Boolean.TRUE.equals(request.getEnabled()),
+                        request.getDryRunEnabled() == null || Boolean.TRUE.equals(request.getDryRunEnabled()),
                         request.getTriggerHoursBefore() == null ? 0 : request.getTriggerHoursBefore(),
                         Boolean.TRUE.equals(request.getSendToStoreChat()),
                         Boolean.TRUE.equals(request.getSendToTelegram()),
@@ -548,6 +549,7 @@ public class AdminController implements AdminApi {
         response.setStoreName(advertisement.storeName());
         response.setAdvertNumber(advertisement.advertNumber());
         response.setEnabled(advertisement.enabled());
+        response.setDryRunEnabled(advertisement.dryRunEnabled());
         response.setTriggerHoursBefore(advertisement.triggerHoursBefore());
         response.setSendToStoreChat(advertisement.sendToStoreChat());
         response.setSendToTelegram(advertisement.sendToTelegram());

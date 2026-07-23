@@ -23,6 +23,7 @@ import { BezirkContextService } from '../../core/bezirk-context.service';
 import { I18nService } from '../../core/i18n.service';
 import { SessionService } from '../../core/session.service';
 import { ButtonModule } from 'primeng/button';
+import { AccordionModule } from 'primeng/accordion';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -40,6 +41,7 @@ import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
   imports: [
     CommonModule,
     FormsModule,
+    AccordionModule,
     ButtonModule,
     CardModule,
     CheckboxModule,
@@ -80,6 +82,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly selectedRequestStoreId = signal<number | null>(null);
   protected readonly selectedAdvertisementStoreId = signal<number | null>(null);
   protected readonly telegramChatOptions = signal<{ label: string; value: string }[]>([]);
+  protected readonly advertisementMessageTabs = signal<Record<string, 'store' | 'telegram'>>({});
   protected telegramBotToken = "";
   protected readonly visibleFoodsharingStores = computed(() => this.onlyMyAutomations()
     ? this.foodsharingStores().filter((store) => store.editable)
@@ -273,6 +276,19 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     return messages.length > 0 ? messages : [''];
   }
 
+  advertisementMessageTab(store: FoodsharingStoreAutomation, advertNumber: number): 'store' | 'telegram' {
+    const tabKey = this.advertisementMessageTabKey(store, advertNumber);
+    return this.advertisementMessageTabs()[tabKey] ?? 'store';
+  }
+
+  setAdvertisementMessageTab(store: FoodsharingStoreAutomation, advertNumber: number, tab: string | number | undefined): void {
+    if (tab !== 'store' && tab !== 'telegram') {
+      return;
+    }
+    const tabKey = this.advertisementMessageTabKey(store, advertNumber);
+    this.advertisementMessageTabs.update((tabs) => ({ ...tabs, [tabKey]: tab }));
+  }
+
   updateAdvertisementMessage(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram', index: number, value: string): void {
     const messages = this.advertisementMessages(store, advertNumber, channel);
     messages[index] = value;
@@ -323,6 +339,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       foodsharingOpenSlotAdvertisementAutomationRequest: {
         storeName: store.storeName,
         enabled: Boolean(data[`advertEnabled${advertNumber}`]),
+        dryRunEnabled: Boolean(data[`advertDryRunEnabled${advertNumber}`]),
         triggerHoursBefore: Number(data[`advertHoursBefore${advertNumber}`] || (advertNumber === 1 ? 24 : advertNumber === 2 ? 12 : 3)),
         sendToStoreChat,
         sendToTelegram,
@@ -348,6 +365,10 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     const propertyName = channel === 'store' ? `advertStoreMessages${advertNumber}` : `advertTelegramMessages${advertNumber}`;
     data[propertyName] = messages.join('\n---\n');
     this.foodsharingStores.update((stores) => [...stores]);
+  }
+
+  private advertisementMessageTabKey(store: FoodsharingStoreAutomation, advertNumber: number): string {
+    return `${store.storeId}-${advertNumber}`;
   }
 
   runRequestAutomationDryRun(): void {
@@ -428,6 +449,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     }
     data[`advertConfigured${advertNumber}`] = true;
     data[`advertEnabled${advertNumber}`] = false;
+    data[`advertDryRunEnabled${advertNumber}`] = true;
     data[`advertHoursBefore${advertNumber}`] = advertNumber === 1 ? 24 : advertNumber === 2 ? 12 : 3;
     data[`advertSendToStoreChat${advertNumber}`] = false;
     data[`advertSendToTelegram${advertNumber}`] = false;
@@ -681,6 +703,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
             const number = advert.advertNumber;
             store[`advertConfigured${number}`] = true;
             store[`advertEnabled${number}`] = advert.enabled;
+            store[`advertDryRunEnabled${number}`] = advert.dryRunEnabled;
             store[`advertHoursBefore${number}`] = advert.triggerHoursBefore;
             store[`advertSendToStoreChat${number}`] = advert.sendToStoreChat;
             store[`advertSendToTelegram${number}`] = advert.sendToTelegram;

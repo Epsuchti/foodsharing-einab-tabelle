@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-add-open-slot-advertisement-dry-run
+      author: codex
+      changes:
+        - addColumn:
+            tableName: foodsharing_open_slot_advertisement_automations
+            columns:
+              - column:
+                  name: dry_run_enabled
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
