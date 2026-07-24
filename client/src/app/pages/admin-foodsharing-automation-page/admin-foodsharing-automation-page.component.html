@@ -264,6 +264,26 @@
               @if (advertisementRunResult(); as result) { <div class="automation-run-result"><strong>{{ i18n.t('adminAutomation.dryRunSummary') }}</strong>: {{ result.evaluated }} {{ i18n.t('automation.evaluated') }}, {{ result.confirmed }} {{ i18n.t('automation.wouldAct') }}, {{ result.declined }} {{ i18n.t('automation.skipped') }}.</div> }
               @for (store of advertisementAutomationStores(); track store.storeId) { <p-card><ng-template pTemplate="title">{{ store.storeName }}</ng-template>
                 @if (advertisementNumbers(store).length === 0) { <p class="empty-state">{{ i18n.t('automation.noAdvertisements') }}</p> }
+                @if (lateCancellationSettingsNumber(store); as settingsNumber) {
+                  <section class="automation-group">
+                    <div class="automation-group__label">{{ i18n.t('automation.lateCancellationMessage') }}</div>
+                    <p class="advert-config__block-note">{{ i18n.t('automation.lateCancellationStoreNote') }}</p>
+                    <textarea pInputText rows="4" [(ngModel)]="$any(store)['advertLateCancellationMessage' + settingsNumber]" [placeholder]="i18n.t('automation.messageTemplatePlaceholder')"></textarea>
+                    <label class="advert-config__tick advert-config__tick--plain">
+                      <p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendLateCancellationMessage' + settingsNumber]"></p-checkbox>
+                      <span>{{ i18n.t('automation.sendLateCancellationMessage') }}</span>
+                    </label>
+                    <label class="advert-config__cutoff">
+                      <span>{{ i18n.t('automation.lateCancellationMessageMaximumHoursBeforePickup') }}</span>
+                      <p-inputNumber [(ngModel)]="$any(store)['advertLateCancellationMessageMaximumHoursBeforePickup' + settingsNumber]" [min]="0" [disabled]="!$any(store)['advertSendLateCancellationMessage' + settingsNumber]"></p-inputNumber>
+                    </label>
+                    <label class="advert-config__tick advert-config__tick--plain">
+                      <p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendLatestAdvertisementAfterLateCancellation' + settingsNumber]"></p-checkbox>
+                      <span>{{ i18n.t('automation.sendLatestAdvertisementAfterLateCancellation') }}</span>
+                    </label>
+                    <button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveOpenSlotAdvertisement(store, settingsNumber)"></button>
+                  </section>
+                }
                 @for (advertNumber of advertisementNumbers(store); track advertNumber) {
                   <article class="advert-config">
                     <header class="advert-config__header">
@@ -310,23 +330,6 @@
                         }
                       </div>
 
-                      <div class="advert-config__block advert-config__block--stacked">
-                        <span class="advert-config__field-label">{{ i18n.t('automation.lateCancellationMessage') }}</span>
-                        <p class="advert-config__block-note">{{ i18n.t('automation.lateCancellationMessageNote') }}</p>
-                        <textarea pInputText rows="4" [(ngModel)]="$any(store)['advertLateCancellationMessage' + advertNumber]" [placeholder]="i18n.t('automation.messageTemplatePlaceholder')"></textarea>
-                        <label class="advert-config__tick advert-config__tick--plain">
-                          <p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendLateCancellationMessage' + advertNumber]"></p-checkbox>
-                          <span>{{ i18n.t('automation.sendLateCancellationMessage') }}</span>
-                        </label>
-                      </div>
-
-                      <div class="advert-config__block">
-                        <span class="advert-config__field-label">{{ i18n.t('automation.sendLatestAdvertisementAfterLateCancellation') }}</span>
-                        <label class="advert-config__tick advert-config__tick--plain">
-                          <p-checkbox [binary]="true" [(ngModel)]="$any(store)['advertSendLatestAdvertisementAfterLateCancellation' + advertNumber]"></p-checkbox>
-                          <span>{{ i18n.t('automation.sendLatestAdvertisementAfterLateCancellation') }}</span>
-                        </label>
-                      </div>
                     </div>
 
                     <p-tabs class="advert-message-tabs" [value]="advertisementMessageTab(store, advertNumber)" (valueChange)="setAdvertisementMessageTab(store, advertNumber, $event)">

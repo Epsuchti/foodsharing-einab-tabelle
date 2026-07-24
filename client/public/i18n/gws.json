@@ -260,6 +260,7 @@
   "error.AUTHENTICATION_REQUIRED": "Aameldig nötig.",
   "error.ACCESS_DENIED": "Kei Zugriff.",
   "error.VALIDATION_FAILED": "Bitte d Igabä prüefe.",
+  "error.INVALID_FOODSHARING_CREDENTIALS": "D Foodsharing-E-Mail-Adräss oder s Passwort isch falsch.",
   "error.RESOURCE_NOT_FOUND": "Nöd gfunde.",
   "error.NETWORK_ERROR": "D Verbindig zum Server isch gscheitert.",
   "error.UNEXPECTED_ERROR": "Unerwartete Fähler.",
@@ -404,9 +405,11 @@
   "automation.addTelegramMessage": "Telegram-Nachricht hinzuefüege",
   "automation.messagesRandomizedNote": "Pro Alert wird jedes Mal e Nachricht per Zuefall gwählt.",
   "automation.messageTemplatePlaceholder": "Schriib e Nachrichten-Variante",
+  "automation.lateCancellationStoreNote": "S Verhalten bi spöter Absag wird pro Store im Reiter «Advertisements» konfiguriert und gilt für alli Alerts vo däm Store.",
   "automation.lateCancellationMessage": "Nachricht bi spöter Absag",
   "automation.lateCancellationMessageNote": "Wird dä Person gschickt, wo dä Slot bim Uslöse vo dere Erinnerig belegt het, falls sie ihn spöter freigit. Verfüegbari Variable: {{datetimeDe}}.",
   "automation.lateCancellationMessageRequired": "E Nachricht bi spöter Absag isch erforderlich."
   ,"automation.sendLateCancellationMessage": "Dä Person schriibe, wo dä Slot freigeh het"
+  ,"automation.lateCancellationMessageMaximumHoursBeforePickup": "Dä Person, wo dä Slot freigeh het, nume schriibe, wenn d Abholung innerhalb vo so vil Stunde stattfindet"
   ,"automation.sendLatestAdvertisementAfterLateCancellation": "Di letschti passendi Aazeig schicke, nachdem dä Slot freigeh worde isch"
 }

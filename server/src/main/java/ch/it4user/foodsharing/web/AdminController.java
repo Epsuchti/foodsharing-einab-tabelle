@@ -400,6 +400,7 @@ public class AdminController implements AdminApi {
                         request.getTelegramMessages() == null ? List.of() : request.getTelegramMessages(),
                         request.getLateCancellationMessage(),
                         Boolean.TRUE.equals(request.getSendLateCancellationMessage()),
+                        request.getLateCancellationMessageMaximumHoursBeforePickup() == null ? 72 : request.getLateCancellationMessageMaximumHoursBeforePickup(),
                         Boolean.TRUE.equals(request.getSendLatestAdvertisementAfterLateCancellation()));
         return ResponseEntity.ok(toFoodsharingOpenSlotAdvertisementAutomation(
                 foodsharingPickupAutomationService.saveAdvertisementAutomation(storeId, advertNumber, serviceRequest)));
@@ -561,6 +562,7 @@ public class AdminController implements AdminApi {
         response.setTelegramMessages(advertisement.telegramMessages());
         response.setLateCancellationMessage(advertisement.lateCancellationMessage());
         response.setSendLateCancellationMessage(advertisement.sendLateCancellationMessage());
+        response.setLateCancellationMessageMaximumHoursBeforePickup(advertisement.lateCancellationMessageMaximumHoursBeforePickup());
         response.setSendLatestAdvertisementAfterLateCancellation(advertisement.sendLatestAdvertisementAfterLateCancellation());
         response.setEditable(advertisement.editable());
         return response;

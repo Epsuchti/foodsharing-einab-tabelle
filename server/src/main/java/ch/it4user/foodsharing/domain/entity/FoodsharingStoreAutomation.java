@@ -51,4 +51,5 @@ public class FoodsharingStoreAutomation extends BaseEntity {
 
     @Column(nullable = false)
     private boolean experienceRuleEnabled = false;
+
 }

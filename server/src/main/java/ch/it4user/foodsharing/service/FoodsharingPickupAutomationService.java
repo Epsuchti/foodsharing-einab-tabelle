@@ -181,7 +181,13 @@ public class FoodsharingPickupAutomationService {
                     return existing;
                 })
                 .orElseGet(() -> { var n = new FoodsharingStoreAutomation(); n.setBezirk(bezirk); n.setAdminConnection(c); n.setStoreId(storeId); return n; });
-        a.setStoreName(request.storeName() == null ? a.getStoreName() : request.storeName()); a.setEnabled(request.enabled()); a.setDryRunEnabled(request.dryRunEnabled()); a.setGapRuleEnabled(request.gapRuleEnabled()); a.setMinimumGapDays(Math.max(0, request.minimumGapDays())); a.setCleaningRuleEnabled(request.cleaningRuleEnabled() && bezirk.getCleaningStoreId() != null); a.setExperienceRuleEnabled(request.experienceRuleEnabled());
+        a.setStoreName(request.storeName() == null ? a.getStoreName() : request.storeName());
+        a.setEnabled(request.enabled());
+        a.setDryRunEnabled(request.dryRunEnabled());
+        a.setGapRuleEnabled(request.gapRuleEnabled());
+        a.setMinimumGapDays(Math.max(0, request.minimumGapDays()));
+        a.setCleaningRuleEnabled(request.cleaningRuleEnabled() && bezirk.getCleaningStoreId() != null);
+        a.setExperienceRuleEnabled(request.experienceRuleEnabled());
         FoodsharingStoreAutomation saved = automationRepository.save(a);
         futurePickupUsersCacheRepository.deleteByAdminConnectionAndBezirk(c, bezirk);
         return view(storeId, saved.getStoreName(), saved, c);
@@ -283,15 +289,23 @@ public class FoodsharingPickupAutomationService {
         validateTemplateVariables(request.storeMessages(), request.telegramMessages());
         a.setStoreMessagesJson(serializeMessages(request.storeMessages()));
         a.setTelegramMessagesJson(serializeMessages(request.telegramMessages()));
-        String lateCancellationMessage = normalize(request.lateCancellationMessage());
-        if (lateCancellationMessage.isBlank()) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("A late-cancellation reminder message is required."));
-        }
+        String lateCancellationMessage = normalizeRequired(request.lateCancellationMessage());
         validateTemplateVariables(List.of(lateCancellationMessage));
         a.setLateCancellationMessage(lateCancellationMessage);
         a.setSendLateCancellationMessage(request.sendLateCancellationMessage());
+        a.setLateCancellationMessageMaximumHoursBeforePickup(validateLateCancellationMessageMaximumHoursBeforePickup(request.lateCancellationMessageMaximumHoursBeforePickup()));
         a.setSendLatestAdvertisementAfterLateCancellation(request.sendLatestAdvertisementAfterLateCancellation());
         a = advertisementAutomationRepository.save(a);
+        List<FoodsharingOpenSlotAdvertisementAutomation> storeAutomations = advertisementAutomationRepository.findAllByStoreIdOrderByAdvertNumberAsc(storeId);
+        for (FoodsharingOpenSlotAdvertisementAutomation storeAutomation : storeAutomations) {
+            if (!storeAutomation.getId().equals(a.getId())) {
+                storeAutomation.setLateCancellationMessage(a.getLateCancellationMessage());
+                storeAutomation.setSendLateCancellationMessage(a.isSendLateCancellationMessage());
+                storeAutomation.setLateCancellationMessageMaximumHoursBeforePickup(a.getLateCancellationMessageMaximumHoursBeforePickup());
+                storeAutomation.setSendLatestAdvertisementAfterLateCancellation(a.isSendLatestAdvertisementAfterLateCancellation());
+            }
+        }
+        advertisementAutomationRepository.saveAll(storeAutomations);
         return advertisementView(a, true);
     }
 
@@ -421,6 +435,14 @@ public class FoodsharingPickupAutomationService {
         Set<String> lateCancellationAdvertisementSent = new java.util.HashSet<>();
         int maxAdvertisements = Math.max(0, appProperties.getFoodsharing().getAutomation().getMaxAdvertisementsPerRun());
         List<FoodsharingOpenSlotAdvertisementAutomation> enabledAutomations = advertisementAutomationRepository.findAllByEnabledTrue();
+        Map<String, FoodsharingOpenSlotAdvertisementAutomation> lateCancellationSettings = new HashMap<>();
+        for (FoodsharingOpenSlotAdvertisementAutomation automation : advertisementAutomationRepository.findAll()) {
+            String settingsKey = lateCancellationSettingsKey(automation);
+            FoodsharingOpenSlotAdvertisementAutomation current = lateCancellationSettings.get(settingsKey);
+            if (current == null || automation.getAdvertNumber() < current.getAdvertNumber()) {
+                lateCancellationSettings.put(settingsKey, automation);
+            }
+        }
         for (FoodsharingOpenSlotAdvertisementAutomation a : enabledAutomations) {
             boolean dryRun = globalDryRun || a.isDryRunEnabled();
             List<String> storeMessages = deserializeMessages(a.getStoreMessagesJson());
@@ -465,11 +487,15 @@ public class FoodsharingPickupAutomationService {
                     FoodsharingOpenSlotAdvertisementAudit audit = existingAudit.get();
                     if ("OCCUPIED_AT_TRIGGER".equals(audit.getStatus())) {
                         String reminderKey = a.getAdminConnection().getId() + ":" + p.date();
-                        boolean sendMessage = a.isSendLateCancellationMessage()
+                        FoodsharingOpenSlotAdvertisementAutomation lateCancellationAutomation = lateCancellationSettings.get(lateCancellationSettingsKey(a));
+                        boolean sendMessage = lateCancellationAutomation != null
+                                && lateCancellationAutomation.isSendLateCancellationMessage()
+                                && !p.date().isAfter(now.plus(Duration.ofHours(lateCancellationAutomation.getLateCancellationMessageMaximumHoursBeforePickup())))
                                 && audit.getFoodsharingUserId() != null && !audit.getFoodsharingUserId().isBlank()
                                 && !lateCancellationMessageSent.contains(reminderKey)
                                 && !advertisementAuditRepository.existsByAutomationAdminConnectionAndPickupDateAndStatusIn(a.getAdminConnection(), p.date(), List.of("LATE_CANCELLATION_REMINDER_SENT", "LATE_CANCELLATION_REMINDER_AND_ADVERTISEMENT_SENT"));
-                        boolean sendAdvertisement = a.isSendLatestAdvertisementAfterLateCancellation()
+                        boolean sendAdvertisement = lateCancellationAutomation != null
+                                && lateCancellationAutomation.isSendLatestAdvertisementAfterLateCancellation()
                                 && isLatestDueLateCancellationAdvertisement(a, enabledAutomations, p.date(), now)
                                 && advertisementsSent < maxAdvertisements
                                 && !lateCancellationAdvertisementSent.contains(reminderKey)
@@ -483,7 +509,7 @@ public class FoodsharingPickupAutomationService {
                             skipped++;
                             continue;
                         }
-                        String reminder = sendMessage ? renderAdvertisement(a.getLateCancellationMessage(), p.date(), a.getAdminConnection().getFoodsharingUserId()) : null;
+                        String reminder = sendMessage ? renderAdvertisement(lateCancellationAutomation.getLateCancellationMessage(), p.date(), a.getAdminConnection().getFoodsharingUserId()) : null;
                         String storeMessage = sendAdvertisement && a.isSendToStoreChat()
                                 ? renderAdvertisement(storeMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(storeMessages.size())), p.date(), a.getAdminConnection().getFoodsharingUserId()) : null;
                         String telegramMessage = sendAdvertisement && a.isSendToTelegram()
@@ -586,14 +612,17 @@ public class FoodsharingPickupAutomationService {
             Instant pickupDate,
             Instant now) {
         return enabledAutomations.stream()
-                .filter(candidate -> candidate.isSendLatestAdvertisementAfterLateCancellation()
-                        && candidate.getAdminConnection().getId().equals(automation.getAdminConnection().getId())
+                .filter(candidate -> candidate.getAdminConnection().getId().equals(automation.getAdminConnection().getId())
                         && candidate.getStoreId() == automation.getStoreId()
                         && !pickupDate.minus(Duration.ofHours(candidate.getTriggerHoursBefore())).isAfter(now))
                 .max(Comparator.comparing((FoodsharingOpenSlotAdvertisementAutomation candidate) -> pickupDate.minus(Duration.ofHours(candidate.getTriggerHoursBefore())))
                         .thenComparingInt(FoodsharingOpenSlotAdvertisementAutomation::getAdvertNumber))
                 .map(candidate -> candidate.getId().equals(automation.getId()))
                 .orElse(false);
+    }
+
+    private String lateCancellationSettingsKey(FoodsharingOpenSlotAdvertisementAutomation automation) {
+        return automation.getAdminConnection().getId() + ":" + automation.getStoreId();
     }
 
     private void saveAdvertisementAudit(FoodsharingOpenSlotAdvertisementAutomation automation, Instant pickupDate, boolean dryRun, String status, String reason, String message, String error, Integer telegramMessageId, String foodsharingUserId, String foodsharingUserName) {
@@ -639,6 +668,14 @@ public class FoodsharingPickupAutomationService {
 
     private double normalizeDistance(Double value) {
         return value == null ? 0.0 : value;
+    }
+
+    private int validateLateCancellationMessageMaximumHoursBeforePickup(int maximumHoursBeforePickup) {
+        if (maximumHoursBeforePickup < 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED,
+                    List.of("Late-cancellation message maximum hours before pickup must not be negative."));
+        }
+        return maximumHoursBeforePickup;
     }
 
     private String formatDistance(double value) {
@@ -1218,7 +1255,7 @@ public class FoodsharingPickupAutomationService {
 
     private CleaningRuleExemptionView view(FoodsharingCleaningRuleExemption exemption) { return new CleaningRuleExemptionView(exemption.getId(), exemption.getFoodsharingId(), exemption.getReason()); }
     private AdvertisementAutomationView advertisementView(FoodsharingOpenSlotAdvertisementAutomation a, boolean editable) {
-        return new AdvertisementAutomationView(a.getStoreId(), a.getStoreName(), a.getAdvertNumber(), a.isEnabled(), a.isDryRunEnabled(), a.getTriggerHoursBefore(), a.isSendToStoreChat(), a.isSendToTelegram(), a.getTelegramChatId(), deserializeMessages(a.getStoreMessagesJson()), deserializeMessages(a.getTelegramMessagesJson()), a.getLateCancellationMessage(), a.isSendLateCancellationMessage(), a.isSendLatestAdvertisementAfterLateCancellation(), editable);
+        return new AdvertisementAutomationView(a.getStoreId(), a.getStoreName(), a.getAdvertNumber(), a.isEnabled(), a.isDryRunEnabled(), a.getTriggerHoursBefore(), a.isSendToStoreChat(), a.isSendToTelegram(), a.getTelegramChatId(), deserializeMessages(a.getStoreMessagesJson()), deserializeMessages(a.getTelegramMessagesJson()), a.getLateCancellationMessage(), a.isSendLateCancellationMessage(), a.getLateCancellationMessageMaximumHoursBeforePickup(), a.isSendLatestAdvertisementAfterLateCancellation(), editable);
     }
 
     private String serializeMessages(List<String> messages) {
@@ -1407,8 +1444,8 @@ public class FoodsharingPickupAutomationService {
 
     public record RequestAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled, boolean distanceRuleEnabled, Double maximumDistanceKm) {}
     public record RequestAutomationView(long storeId, String storeName, boolean enabled, boolean dryRunEnabled, boolean distanceRuleEnabled, double maximumDistanceKm, boolean editable) {}
-    public record AdvertisementAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> storeMessages, List<String> telegramMessages, String lateCancellationMessage, boolean sendLateCancellationMessage, boolean sendLatestAdvertisementAfterLateCancellation) {}
-    public record AdvertisementAutomationView(long storeId, String storeName, int advertNumber, boolean enabled, boolean dryRunEnabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> storeMessages, List<String> telegramMessages, String lateCancellationMessage, boolean sendLateCancellationMessage, boolean sendLatestAdvertisementAfterLateCancellation, boolean editable) {}
+    public record AdvertisementAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> storeMessages, List<String> telegramMessages, String lateCancellationMessage, boolean sendLateCancellationMessage, int lateCancellationMessageMaximumHoursBeforePickup, boolean sendLatestAdvertisementAfterLateCancellation) {}
+    public record AdvertisementAutomationView(long storeId, String storeName, int advertNumber, boolean enabled, boolean dryRunEnabled, int triggerHoursBefore, boolean sendToStoreChat, boolean sendToTelegram, String telegramChatId, List<String> storeMessages, List<String> telegramMessages, String lateCancellationMessage, boolean sendLateCancellationMessage, int lateCancellationMessageMaximumHoursBeforePickup, boolean sendLatestAdvertisementAfterLateCancellation, boolean editable) {}
     public record TelegramChatView(String id, String title, String type) {}
     public record AutomationRunSummary(int evaluated, int acted, int skipped, boolean dryRun, List<String> messages) {}
     public record ExtraAutomationOverviewView(List<RequestAutomationView> requestAutomations, List<AdvertisementAutomationView> advertisementAutomations) {}

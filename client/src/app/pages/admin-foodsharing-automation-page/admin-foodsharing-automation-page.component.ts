@@ -327,9 +327,11 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     const sendToStoreChat = Boolean(data[`advertSendToStoreChat${advertNumber}`]);
     const sendToTelegram = Boolean(data[`advertSendToTelegram${advertNumber}`]);
     const telegramChatId = String(data[`advertTelegramChatId${advertNumber}`] || '').trim();
-    const lateCancellationMessage = String(data[`advertLateCancellationMessage${advertNumber}`] || '').trim();
-    const sendLateCancellationMessage = Boolean(data[`advertSendLateCancellationMessage${advertNumber}`]);
-    const sendLatestAdvertisementAfterLateCancellation = Boolean(data[`advertSendLatestAdvertisementAfterLateCancellation${advertNumber}`]);
+    const settingsNumber = this.lateCancellationSettingsNumber(store) ?? advertNumber;
+    const lateCancellationMessage = String(data[`advertLateCancellationMessage${settingsNumber}`] || '').trim();
+    const sendLateCancellationMessage = Boolean(data[`advertSendLateCancellationMessage${settingsNumber}`]);
+    const lateCancellationMessageMaximumHoursBeforePickup = Number(data[`advertLateCancellationMessageMaximumHoursBeforePickup${settingsNumber}`] ?? 72);
+    const sendLatestAdvertisementAfterLateCancellation = Boolean(data[`advertSendLatestAdvertisementAfterLateCancellation${settingsNumber}`]);
     if (!sendToStoreChat && !sendToTelegram) {
       this.toastError(this.i18n.t('automation.selectDestination'));
       return;
@@ -365,6 +367,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
         telegramMessages,
         lateCancellationMessage,
         sendLateCancellationMessage,
+        lateCancellationMessageMaximumHoursBeforePickup,
         sendLatestAdvertisementAfterLateCancellation
       }
     }).subscribe({ next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') }), error: (error) => this.toastError(resolveApiError(error, this.i18n)) });
@@ -442,8 +445,13 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     return [1, 2, 3].filter((number) => data[`advertConfigured${number}`] || data[`advertStoreMessages${number}`] !== undefined || data[`advertTelegramMessages${number}`] !== undefined);
   }
 
+  lateCancellationSettingsNumber(store: FoodsharingStoreAutomation): number | null {
+    return this.advertisementNumbers(store)[0] ?? null;
+  }
+
   addAdvertisement(store: FoodsharingStoreAutomation): void {
     const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
+    const previousSettingsNumber = this.lateCancellationSettingsNumber(store);
     const advertNumber = [1, 2, 3].find((number) => !data[`advertConfigured${number}`] && data[`advertStoreMessages${number}`] === undefined && data[`advertTelegramMessages${number}`] === undefined);
     if (!advertNumber) {
       return;
@@ -456,9 +464,20 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     data[`advertSendToTelegram${advertNumber}`] = false;
     data[`advertStoreMessages${advertNumber}`] = '';
     data[`advertTelegramMessages${advertNumber}`] = '';
-    data[`advertLateCancellationMessage${advertNumber}`] = 'Du hast gerade den Slot {{datetimeDe}} freigegeben. Du bist trotzdem verantwortlich für diesen Slot! Bitte sorge für Ersatz und notifiziere sowohl das Team als auch den Notfallchat.';
-    data[`advertSendLateCancellationMessage${advertNumber}`] = true;
-    data[`advertSendLatestAdvertisementAfterLateCancellation${advertNumber}`] = false;
+    if (this.lateCancellationSettingsNumber(store) === advertNumber) {
+      data[`advertLateCancellationMessage${advertNumber}`] = previousSettingsNumber === null
+        ? 'Du hast gerade den Slot {{datetimeDe}} freigegeben. Du bist trotzdem verantwortlich für diesen Slot! Bitte sorge für Ersatz und notifiziere sowohl das Team als auch den Notfallchat.'
+        : data[`advertLateCancellationMessage${previousSettingsNumber}`];
+      data[`advertSendLateCancellationMessage${advertNumber}`] = previousSettingsNumber === null
+        ? false
+        : data[`advertSendLateCancellationMessage${previousSettingsNumber}`];
+      data[`advertLateCancellationMessageMaximumHoursBeforePickup${advertNumber}`] = previousSettingsNumber === null
+        ? 72
+        : data[`advertLateCancellationMessageMaximumHoursBeforePickup${previousSettingsNumber}`];
+      data[`advertSendLatestAdvertisementAfterLateCancellation${advertNumber}`] = previousSettingsNumber === null
+        ? true
+        : data[`advertSendLatestAdvertisementAfterLateCancellation${previousSettingsNumber}`];
+    }
     this.foodsharingStores.update((stores) => [...stores]);
   }
 
@@ -710,9 +729,13 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
             store[`advertTelegramChatId${number}`] = advert.telegramChatId;
             store[`advertStoreMessages${number}`] = (advert.storeMessages || []).join('\n---\n');
             store[`advertTelegramMessages${number}`] = (advert.telegramMessages || []).join('\n---\n');
-            store[`advertLateCancellationMessage${number}`] = advert.lateCancellationMessage;
-            store[`advertSendLateCancellationMessage${number}`] = advert.sendLateCancellationMessage;
-            store[`advertSendLatestAdvertisementAfterLateCancellation${number}`] = advert.sendLatestAdvertisementAfterLateCancellation;
+            const settingsNumber = this.lateCancellationSettingsNumber(store);
+            if (settingsNumber === null || number < settingsNumber) {
+              store[`advertLateCancellationMessage${number}`] = advert.lateCancellationMessage;
+              store[`advertSendLateCancellationMessage${number}`] = advert.sendLateCancellationMessage;
+              store[`advertLateCancellationMessageMaximumHoursBeforePickup${number}`] = advert.lateCancellationMessageMaximumHoursBeforePickup;
+              store[`advertSendLatestAdvertisementAfterLateCancellation${number}`] = advert.sendLatestAdvertisementAfterLateCancellation;
+            }
           }
         }
         this.foodsharingStores.set(stores as FoodsharingStoreAutomation[]);

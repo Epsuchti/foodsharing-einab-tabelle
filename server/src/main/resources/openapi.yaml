@@ -1678,7 +1678,7 @@ components:
           format: double
     FoodsharingOpenSlotAdvertisementAutomationRequest:
       type: object
-      required: [storeName, enabled, dryRunEnabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages, lateCancellationMessage, sendLateCancellationMessage, sendLatestAdvertisementAfterLateCancellation]
+      required: [storeName, enabled, dryRunEnabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages, lateCancellationMessage, sendLateCancellationMessage, lateCancellationMessageMaximumHoursBeforePickup, sendLatestAdvertisementAfterLateCancellation]
       properties:
         storeName:
           type: string
@@ -1707,6 +1707,9 @@ components:
           type: string
         sendLateCancellationMessage:
           type: boolean
+        lateCancellationMessageMaximumHoursBeforePickup:
+          type: integer
+          format: int32
         sendLatestAdvertisementAfterLateCancellation:
           type: boolean
     FoodsharingRequestAutomation:
@@ -1731,7 +1734,7 @@ components:
           type: boolean
     FoodsharingOpenSlotAdvertisementAutomation:
       type: object
-      required: [storeId, storeName, advertNumber, enabled, dryRunEnabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages, lateCancellationMessage, sendLateCancellationMessage, sendLatestAdvertisementAfterLateCancellation, editable]
+      required: [storeId, storeName, advertNumber, enabled, dryRunEnabled, triggerHoursBefore, sendToStoreChat, sendToTelegram, storeMessages, telegramMessages, lateCancellationMessage, sendLateCancellationMessage, lateCancellationMessageMaximumHoursBeforePickup, sendLatestAdvertisementAfterLateCancellation, editable]
       properties:
         storeId:
           type: integer
@@ -1766,6 +1769,9 @@ components:
           type: string
         sendLateCancellationMessage:
           type: boolean
+        lateCancellationMessageMaximumHoursBeforePickup:
+          type: integer
+          format: int32
         sendLatestAdvertisementAfterLateCancellation:
           type: boolean
         editable:

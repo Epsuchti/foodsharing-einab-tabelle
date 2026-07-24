@@ -17,3 +17,6 @@ databaseChangeLog:
   - include:
       file: db.changelog-006-add-late-cancellation-actions.yaml
       relativeToChangelogFile: true
+  - include:
+      file: db.changelog-007-move-late-cancellation-settings-to-store.yaml
+      relativeToChangelogFile: true

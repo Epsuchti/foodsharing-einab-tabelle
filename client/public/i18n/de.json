@@ -260,6 +260,7 @@
   "error.AUTHENTICATION_REQUIRED": "Anmeldung erforderlich.",
   "error.ACCESS_DENIED": "Zugriff verweigert.",
   "error.VALIDATION_FAILED": "Bitte prüfe die Eingaben.",
+  "error.INVALID_FOODSHARING_CREDENTIALS": "E-Mail-Adresse oder Passwort für Foodsharing ist falsch.",
   "error.RESOURCE_NOT_FOUND": "Ressource nicht gefunden.",
   "error.NETWORK_ERROR": "Die Verbindung zum Server ist fehlgeschlagen.",
   "error.UNEXPECTED_ERROR": "Unerwarteter Fehler.",
@@ -404,9 +405,11 @@
   "automation.addTelegramMessage": "Telegram-Nachricht hinzufügen",
   "automation.messagesRandomizedNote": "Bei jedem Alert wird zufällig eine Nachricht ausgewählt.",
   "automation.messageTemplatePlaceholder": "Eine Nachrichtenvariante schreiben",
+  "automation.lateCancellationStoreNote": "Das Verhalten bei später Absage wird pro Store im Reiter «Advertisements» konfiguriert und gilt für alle Alerts dieses Stores.",
   "automation.lateCancellationMessage": "Nachricht bei später Absage",
   "automation.lateCancellationMessageNote": "Wird der Person gesendet, die den Slot beim Auslösen dieser Erinnerung belegt hatte, falls sie ihn später freigibt. Verfügbare Variable: {{datetimeDe}}.",
   "automation.lateCancellationMessageRequired": "Eine Nachricht bei später Absage ist erforderlich."
   ,"automation.sendLateCancellationMessage": "Der Person schreiben, die den Slot freigegeben hat"
+  ,"automation.lateCancellationMessageMaximumHoursBeforePickup": "Der Person, die den Slot freigegeben hat, nur schreiben, wenn die Abholung innerhalb von Stunden stattfindet"
   ,"automation.sendLatestAdvertisementAfterLateCancellation": "Die letzte passende Anzeige senden, nachdem der Slot freigegeben wurde"
 }

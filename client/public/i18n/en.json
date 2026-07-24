@@ -260,6 +260,7 @@
   "error.AUTHENTICATION_REQUIRED": "Authentication required.",
   "error.ACCESS_DENIED": "Access denied.",
   "error.VALIDATION_FAILED": "Please check the entered data.",
+  "error.INVALID_FOODSHARING_CREDENTIALS": "The Foodsharing email address or password is incorrect.",
   "error.RESOURCE_NOT_FOUND": "Resource not found.",
   "error.NETWORK_ERROR": "The connection to the server failed.",
   "error.UNEXPECTED_ERROR": "Unexpected error.",
@@ -404,9 +405,11 @@
   "automation.addTelegramMessage": "Add Telegram message",
   "automation.messagesRandomizedNote": "One message is chosen at random every time an alert is sent.",
   "automation.messageTemplatePlaceholder": "Write one message variant",
+  "automation.lateCancellationStoreNote": "Late-cancellation behavior is configured once per store in the Advertisements tab and applies to all alerts for that store.",
   "automation.lateCancellationMessage": "Late cancellation message",
   "automation.lateCancellationMessageNote": "Sent to the person occupying the slot when this reminder became due if they later release it. Available variable: {{datetimeDe}}.",
   "automation.lateCancellationMessageRequired": "A late cancellation message is required."
   ,"automation.sendLateCancellationMessage": "Message the person who released the slot"
+  ,"automation.lateCancellationMessageMaximumHoursBeforePickup": "Message the person who released the slot only if the pickup is within this many hours"
   ,"automation.sendLatestAdvertisementAfterLateCancellation": "Send the latest applicable advert after the slot is released"
 }

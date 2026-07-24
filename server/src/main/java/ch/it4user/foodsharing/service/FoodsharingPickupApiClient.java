@@ -38,9 +38,14 @@ public class FoodsharingPickupApiClient {
             throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Foodsharing email and password are required."));
         }
         log.info("Foodsharing request: POST /api/login user={}", email);
-        var response = restClient.post().uri("/api/login").contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of("email", email, "password", password, "rememberMe", true))
-                .retrieve().toEntity(Map.class);
+        org.springframework.http.ResponseEntity<Map> response;
+        try {
+            response = restClient.post().uri("/api/login").contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("email", email, "password", password, "rememberMe", true))
+                    .retrieve().toEntity(Map.class);
+        } catch (HttpClientErrorException.Unauthorized exception) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.INVALID_FOODSHARING_CREDENTIALS);
+        }
         String cookie = extractCookieHeader(response.getHeaders().getOrEmpty(HttpHeaders.SET_COOKIE));
         Map<?, ?> body = response.getBody();
         String csrf = extractCsrfToken(response.getHeaders().getOrEmpty(HttpHeaders.SET_COOKIE), response.getHeaders().getFirst("X-CSRF-Token"), body);
