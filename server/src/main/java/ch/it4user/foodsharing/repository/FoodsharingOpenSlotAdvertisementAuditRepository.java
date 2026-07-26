@@ -31,6 +31,7 @@ public interface FoodsharingOpenSlotAdvertisementAuditRepository extends JpaRepo
     boolean existsByAutomationAdminConnectionAndPickupDateAndStatusIn(
             FoodsharingAdminConnection adminConnection, Instant pickupDate, java.util.Collection<String> statuses);
     java.util.List<FoodsharingOpenSlotAdvertisementAudit> findAllByAutomationAndPickupDateAndTelegramMessageIdIsNotNullAndTelegramDeletedAtIsNull(FoodsharingOpenSlotAdvertisementAutomation automation, Instant pickupDate);
+    java.util.List<FoodsharingOpenSlotAdvertisementAudit> findAllByAutomationAndPickupDateBeforeAndTelegramMessageIdIsNotNullAndTelegramDeletedAtIsNull(FoodsharingOpenSlotAdvertisementAutomation automation, Instant pickupDate);
     void deleteAllByAutomation(FoodsharingOpenSlotAdvertisementAutomation automation);
     void deleteAllByCreatedAtBefore(Instant createdAt);
 }

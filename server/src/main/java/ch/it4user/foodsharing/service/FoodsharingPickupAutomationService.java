@@ -440,8 +440,12 @@ public class FoodsharingPickupAutomationService {
         Set<String> lateCancellationAdvertisementSent = new java.util.HashSet<>();
         int maxAdvertisements = Math.max(0, appProperties.getFoodsharing().getAutomation().getMaxAdvertisementsPerRun());
         List<FoodsharingOpenSlotAdvertisementAutomation> enabledAutomations = advertisementAutomationRepository.findAllByEnabledTrue();
+        List<FoodsharingOpenSlotAdvertisementAutomation> allAutomations = advertisementAutomationRepository.findAll();
         Map<String, FoodsharingOpenSlotAdvertisementAutomation> lateCancellationSettings = new HashMap<>();
-        for (FoodsharingOpenSlotAdvertisementAutomation automation : advertisementAutomationRepository.findAll()) {
+        for (FoodsharingOpenSlotAdvertisementAutomation automation : allAutomations) {
+            if (!globalDryRun && !automation.isDryRunEnabled()) {
+                deleteTelegramAdvertisementsForPassedSlots(automation, now);
+            }
             String settingsKey = lateCancellationSettingsKey(automation);
             FoodsharingOpenSlotAdvertisementAutomation current = lateCancellationSettings.get(settingsKey);
             if (current == null || automation.getAdvertNumber() < current.getAdvertNumber()) {
@@ -732,10 +736,18 @@ public class FoodsharingPickupAutomationService {
     }
 
     private void deleteTelegramAdvertisementsForFilledSlot(FoodsharingOpenSlotAdvertisementAutomation automation, Instant pickupDate) {
-        if (!automation.isSendToTelegram() || automation.getTelegramChatId() == null) return;
+        deleteTelegramAdvertisements(automation, advertisementAuditRepository.findAllByAutomationAndPickupDateAndTelegramMessageIdIsNotNullAndTelegramDeletedAtIsNull(automation, pickupDate));
+    }
+
+    private void deleteTelegramAdvertisementsForPassedSlots(FoodsharingOpenSlotAdvertisementAutomation automation, Instant now) {
+        deleteTelegramAdvertisements(automation, advertisementAuditRepository.findAllByAutomationAndPickupDateBeforeAndTelegramMessageIdIsNotNullAndTelegramDeletedAtIsNull(automation, now));
+    }
+
+    private void deleteTelegramAdvertisements(FoodsharingOpenSlotAdvertisementAutomation automation, List<FoodsharingOpenSlotAdvertisementAudit> audits) {
+        if (automation.getTelegramChatId() == null || audits.isEmpty()) return;
         String token = telegramToken(automation.getAdminConnection());
         if (token == null || token.isBlank()) return;
-        for (FoodsharingOpenSlotAdvertisementAudit audit : advertisementAuditRepository.findAllByAutomationAndPickupDateAndTelegramMessageIdIsNotNullAndTelegramDeletedAtIsNull(automation, pickupDate)) {
+        for (FoodsharingOpenSlotAdvertisementAudit audit : audits) {
             telegramClient.post().uri("/bot{token}/deleteMessage", token).contentType(MediaType.APPLICATION_JSON)
                     .body(Map.of("chat_id", automation.getTelegramChatId(), "message_id", audit.getTelegramMessageId()))
                     .retrieve().toBodilessEntity();
