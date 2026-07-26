@@ -289,8 +289,13 @@ public class FoodsharingPickupAutomationService {
         validateTemplateVariables(request.storeMessages(), request.telegramMessages());
         a.setStoreMessagesJson(serializeMessages(request.storeMessages()));
         a.setTelegramMessagesJson(serializeMessages(request.telegramMessages()));
-        String lateCancellationMessage = normalizeRequired(request.lateCancellationMessage());
-        validateTemplateVariables(List.of(lateCancellationMessage));
+        String lateCancellationMessage = normalize(request.lateCancellationMessage());
+        if (request.sendLateCancellationMessage() && lateCancellationMessage.isBlank()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Late cancellation message is required when messaging the person who released the slot is enabled."));
+        }
+        if (!lateCancellationMessage.isBlank()) {
+            validateTemplateVariables(List.of(lateCancellationMessage));
+        }
         a.setLateCancellationMessage(lateCancellationMessage);
         a.setSendLateCancellationMessage(request.sendLateCancellationMessage());
         a.setLateCancellationMessageMaximumHoursBeforePickup(validateLateCancellationMessageMaximumHoursBeforePickup(request.lateCancellationMessageMaximumHoursBeforePickup()));

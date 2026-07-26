@@ -275,6 +275,28 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     ).join('\n\n---\n\n');
   }
 
+  sendTelegramTestMessage(store: FoodsharingStoreAutomation, advertNumber: number): void {
+    const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
+    const chatId = String(data[`advertTelegramChatId${advertNumber}`] || '').trim();
+    if (!chatId) {
+      this.toastError(this.i18n.t('automation.selectTelegramChat'));
+      return;
+    }
+    if (this.advertisementMessages(store, advertNumber, 'telegram').every((message) => !message.trim())) {
+      this.toastError(this.i18n.t('automation.addTelegramMessage'));
+      return;
+    }
+    this.adminApi.sendFoodsharingTelegramTestMessage({
+      telegramTestMessageRequest: {
+        chatId,
+        message: this.previewOpenSlotAdvertisement(store, advertNumber, 'telegram')
+      }
+    }).subscribe({
+      next: () => this.messageService.add({ severity: 'success', summary: this.i18n.t('automation.telegramTestSent') }),
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
   advertisementMessages(store: FoodsharingStoreAutomation, advertNumber: number, channel: 'store' | 'telegram'): string[] {
     const data = store as FoodsharingStoreAutomation & Record<string, unknown>;
     const propertyName = channel === 'store' ? `advertStoreMessages${advertNumber}` : `advertTelegramMessages${advertNumber}`;
@@ -348,7 +370,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       this.toastError(this.i18n.t('automation.addTelegramMessage'));
       return;
     }
-    if (!lateCancellationMessage) {
+    if (sendLateCancellationMessage && !lateCancellationMessage) {
       this.toastError(this.i18n.t('automation.lateCancellationMessageRequired'));
       return;
     }
@@ -730,7 +752,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
             store[`advertStoreMessages${number}`] = (advert.storeMessages || []).join('\n---\n');
             store[`advertTelegramMessages${number}`] = (advert.telegramMessages || []).join('\n---\n');
             const settingsNumber = this.lateCancellationSettingsNumber(store);
-            if (settingsNumber === null || number < settingsNumber) {
+            if (settingsNumber === number) {
               store[`advertLateCancellationMessage${number}`] = advert.lateCancellationMessage;
               store[`advertSendLateCancellationMessage${number}`] = advert.sendLateCancellationMessage;
               store[`advertLateCancellationMessageMaximumHoursBeforePickup${number}`] = advert.lateCancellationMessageMaximumHoursBeforePickup;

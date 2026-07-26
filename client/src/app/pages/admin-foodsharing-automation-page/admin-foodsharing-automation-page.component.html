@@ -260,7 +260,18 @@
                   </p-accordion-content>
                 </p-accordion-panel>
               </p-accordion>
-              <div class="automation-toolbar"><button pButton type="button" [label]="i18n.t('adminAutomation.runDryRun')" (click)="runAdvertisementAutomationDryRun()"></button>@if (telegramBotTokenConfigured()) {<button pButton type="button" severity="secondary" [label]="i18n.t('automation.refreshTelegramChats')" (click)="refreshTelegramChats()"></button>}<div class="automation-toolbar__add"><p-select [options]="availableAdvertisementStoreOptions()" optionLabel="label" optionValue="value" [ngModel]="selectedAdvertisementStoreId()" (ngModelChange)="selectedAdvertisementStoreId.set(normalizeStoreId($event))" [placeholder]="i18n.t('adminAutomation.addStorePlaceholder')" appendTo="body"></p-select><button pButton type="button" icon="pi pi-plus" [label]="i18n.t('adminAutomation.addStore')" [disabled]="selectedAdvertisementStoreId() == null" (click)="addAdvertisementAutomation()"></button></div></div>
+              <div class="automation-toolbar">
+                <div class="automation-toolbar__actions">
+                  <button pButton type="button" [label]="i18n.t('adminAutomation.runDryRun')" (click)="runAdvertisementAutomationDryRun()"></button>
+                  @if (telegramBotTokenConfigured()) {
+                    <button pButton type="button" severity="secondary" [label]="i18n.t('automation.refreshTelegramChats')" (click)="refreshTelegramChats()"></button>
+                  }
+                </div>
+                <div class="automation-toolbar__add">
+                  <p-select [options]="availableAdvertisementStoreOptions()" optionLabel="label" optionValue="value" [ngModel]="selectedAdvertisementStoreId()" (ngModelChange)="selectedAdvertisementStoreId.set(normalizeStoreId($event))" [placeholder]="i18n.t('adminAutomation.addStorePlaceholder')" appendTo="body"></p-select>
+                  <button pButton type="button" icon="pi pi-plus" [label]="i18n.t('adminAutomation.addStore')" [disabled]="selectedAdvertisementStoreId() == null" (click)="addAdvertisementAutomation()"></button>
+                </div>
+              </div>
               @if (advertisementRunResult(); as result) { <div class="automation-run-result"><strong>{{ i18n.t('adminAutomation.dryRunSummary') }}</strong>: {{ result.evaluated }} {{ i18n.t('automation.evaluated') }}, {{ result.confirmed }} {{ i18n.t('automation.wouldAct') }}, {{ result.declined }} {{ i18n.t('automation.skipped') }}.</div> }
               @for (store of advertisementAutomationStores(); track store.storeId) { <p-card><ng-template pTemplate="title">{{ store.storeName }}</ng-template>
                 @if (advertisementNumbers(store).length === 0) { <p class="empty-state">{{ i18n.t('automation.noAdvertisements') }}</p> }
@@ -398,6 +409,7 @@
                                   <div class="advert-preview">
                                     {{ previewOpenSlotAdvertisement(store, advertNumber, 'telegram') }}
                                   </div>
+                                  <button pButton type="button" size="small" [label]="i18n.t('automation.sendTelegramTest')" [disabled]="!$any(store)['advertTelegramChatId' + advertNumber]" (click)="sendTelegramTestMessage(store, advertNumber)"></button>
                                 </p-accordion-content>
                               </p-accordion-panel>
                             }

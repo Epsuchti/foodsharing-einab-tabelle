@@ -146,16 +146,28 @@
   gap: 0.5rem;
 }
 
+.automation-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .automation-toolbar__add {
   display: flex;
   flex: 1 1 24rem;
+  min-width: 0;
   justify-content: flex-end;
   gap: 0.75rem;
 }
 
-.automation-toolbar__add p-select,
+.automation-toolbar__add p-select {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
 .automation-toolbar__add ::ng-deep .p-select {
-  min-width: min(24rem, 100%);
+  min-width: 0;
+  width: 100%;
 }
 
 .automation-help {
