@@ -509,11 +509,11 @@ public class FoodsharingPickupAutomationService {
                             skipped++;
                             continue;
                         }
-                        String reminder = sendMessage ? renderAdvertisement(lateCancellationAutomation.getLateCancellationMessage(), p.date(), a.getAdminConnection().getFoodsharingUserId()) : null;
+                        String reminder = sendMessage ? renderAdvertisement(lateCancellationAutomation.getLateCancellationMessage(), p.date(), adminFoodsharingId(a.getAdminConnection())) : null;
                         String storeMessage = sendAdvertisement && a.isSendToStoreChat()
-                                ? renderAdvertisement(storeMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(storeMessages.size())), p.date(), a.getAdminConnection().getFoodsharingUserId()) : null;
+                                ? renderAdvertisement(storeMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(storeMessages.size())), p.date(), adminFoodsharingId(a.getAdminConnection())) : null;
                         String telegramMessage = sendAdvertisement && a.isSendToTelegram()
-                                ? renderAdvertisement(telegramMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(telegramMessages.size())), p.date(), a.getAdminConnection().getFoodsharingUserId()) : null;
+                                ? renderAdvertisement(telegramMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(telegramMessages.size())), p.date(), adminFoodsharingId(a.getAdminConnection())) : null;
                         if (!dryRun) {
                             try {
                                 if (sendMessage) client.sendUserMessage(a.getAdminConnection(), audit.getFoodsharingUserId(), reminder);
@@ -549,10 +549,10 @@ public class FoodsharingPickupAutomationService {
                     break;
                 }
                 String storeMessage = a.isSendToStoreChat()
-                        ? renderAdvertisement(storeMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(storeMessages.size())), p.date(), a.getAdminConnection().getFoodsharingUserId())
+                        ? renderAdvertisement(storeMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(storeMessages.size())), p.date(), adminFoodsharingId(a.getAdminConnection()))
                         : null;
                 String telegramMessage = a.isSendToTelegram()
-                        ? renderAdvertisement(telegramMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(telegramMessages.size())), p.date(), a.getAdminConnection().getFoodsharingUserId())
+                        ? renderAdvertisement(telegramMessages.get(java.util.concurrent.ThreadLocalRandom.current().nextInt(telegramMessages.size())), p.date(), adminFoodsharingId(a.getAdminConnection()))
                         : null;
                 if (!dryRun && storeMessage != null) client.sendStoreChatMessage(a.getAdminConnection(), a.getStoreId(), storeMessage);
                 Integer telegramMessageId = null;
@@ -1266,6 +1266,11 @@ public class FoodsharingPickupAutomationService {
     private List<String> deserializeMessages(String json) {
         try { return objectMapper.readValue(json == null || json.isBlank() ? "[]" : json, new TypeReference<List<String>>() {}); }
         catch (Exception ex) { return List.of(); }
+    }
+
+    private String adminFoodsharingId(FoodsharingAdminConnection connection) {
+        String connectionFoodsharingId = normalize(connection.getFoodsharingUserId());
+        return connectionFoodsharingId.isBlank() ? normalize(connection.getAdminUser().getFoodsharingId()) : connectionFoodsharingId;
     }
 
     private String renderAdvertisement(String template, Instant pickupDate, String adminFoodsharingId) {
