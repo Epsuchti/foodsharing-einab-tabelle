@@ -1082,6 +1082,9 @@ public class FoodsharingPickupAutomationService {
             evaluated++;
             try {
                 var decision = evaluate(a, p.date(), u.id(), livePickupsCache, initialPickupsCache); String reason = String.join("\n", decision.reasons());
+                if (!decision.allowed()) {
+                    reason += "\n\n" + userMessage("message.automation.decline-footer");
+                }
                 String userMessage = decision.userMessage() != null ? decision.userMessage() : (decision.allowed() ? null : reason);
                 if (decision.allowed()) {
                     log.info("Foodsharing automation decision=confirm dryRun={} admin={} foodsharingUserId={} email={} storeId={} pickupDate={} userId={} userName={}", effectiveDryRun, a.getAdminConnection().getAdminUser().getId(), a.getAdminConnection().getFoodsharingUserId(), a.getAdminConnection().getFoodsharingEmail(), a.getStoreId(), p.date(), u.id(), u.name());
