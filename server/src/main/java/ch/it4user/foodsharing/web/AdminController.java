@@ -646,6 +646,7 @@ public class AdminController implements AdminApi {
         response.setStoreName(pickup.storeName());
         response.setPickupDate(toOffsetDateTime(pickup.pickupDate()));
         response.setConfirmed(pickup.confirmed());
+        response.setValidationErrors(pickup.validationErrors());
         return response;
     }
 

@@ -224,6 +224,8 @@
   "adminAutomation.experienceRule": "Erfahrungsregel",
   "adminAutomation.futurePickupUsers": "Nutzer:innen mit zukünftigen Abholungen in deinen Betrieben",
   "adminAutomation.futurePickupCount": "Zukünftige Abholungen",
+  "adminAutomation.slotVerificationErrors": "Fehler bei der Slot-Prüfung",
+  "adminAutomation.onlyUsersWithSlotVerificationErrors": "Nur Nutzer:innen mit Fehlern bei der Slot-Prüfung anzeigen",
   "adminAutomation.pickupDates": "Abholungs-Daten",
   "adminAutomation.confirmed": "bestätigt",
   "adminAutomation.pending": "offen",

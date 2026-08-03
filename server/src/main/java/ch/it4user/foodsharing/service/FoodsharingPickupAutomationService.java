@@ -836,7 +836,10 @@ public class FoodsharingPickupAutomationService {
             FoodsharingFuturePickupUsersCache cache = existingCache.get();
             if (cache.getRefreshedAt() != null && cache.getRefreshedAt().plus(ttl).isAfter(now)) {
                 try {
-                    return deserializeFuturePickupUsers(cache.getPayloadJson());
+                    List<StorePickupUserView> users = deserializeFuturePickupUsers(cache.getPayloadJson());
+                    if (users.stream().flatMap(user -> user.futurePickups().stream()).allMatch(pickup -> pickup.validationErrors() != null)) {
+                        return users;
+                    }
                 } catch (RuntimeException ignored) {
                     // Fall through and refresh from Foodsharing if the cached payload is unreadable.
                 }
@@ -854,9 +857,19 @@ public class FoodsharingPickupAutomationService {
 
     private List<StorePickupUserView> loadFuturePickupUsers(FoodsharingAdminConnection connection, Bezirk bezirk) {
         Map<String, StorePickupUserBuilder> users = new LinkedHashMap<>();
+        Map<Long, FoodsharingStoreAutomation> automationsByStoreId = automationRepository.findAllByBezirkAndEnabledTrue(bezirk).stream()
+                .filter(automation -> automation.getAdminConnection().getId().equals(connection.getId()))
+                .collect(java.util.stream.Collectors.toMap(FoodsharingStoreAutomation::getStoreId, automation -> automation));
+        Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache = new HashMap<>();
+        Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache = new HashMap<>();
         Instant now = Instant.now();
         for (FoodsharingPickupModels.Store store : managedStores(connection)) {
-            for (FoodsharingPickupModels.Pickup pickup : storePickups(connection, store.id())) {
+            List<FoodsharingPickupModels.Pickup> storePickups = storePickups(connection, store.id());
+            String cacheKey = cacheKey(connection, store.id());
+            initialPickupsCache.put(cacheKey, copyPickups(storePickups));
+            livePickupsCache.put(cacheKey, copyPickups(storePickups));
+            FoodsharingStoreAutomation automation = automationsByStoreId.get(store.id());
+            for (FoodsharingPickupModels.Pickup pickup : storePickups) {
                 if (pickup.date().isBefore(now)) {
                     continue;
                 }
@@ -865,7 +878,7 @@ public class FoodsharingPickupAutomationService {
                         continue;
                     }
                     StorePickupUserBuilder builder = users.computeIfAbsent(pickupUser.id(), id -> new StorePickupUserBuilder(id, pickupUser.name()));
-                    builder.addPickup(new StorePickupView(store.id(), store.name(), pickup.date(), pickupUser.confirmed()));
+                    builder.addPickup(new StorePickupView(store.id(), store.name(), pickup.date(), pickupUser.confirmed(), validationErrors(automation, pickup.date(), pickupUser.id(), livePickupsCache, initialPickupsCache)));
                 }
             }
         }
@@ -875,6 +888,14 @@ public class FoodsharingPickupAutomationService {
                         .thenComparing(StorePickupUserView::name, Comparator.nullsLast(String::compareToIgnoreCase))
                         .thenComparing(StorePickupUserView::foodsharingUserId))
                 .toList();
+    }
+
+    private List<String> validationErrors(FoodsharingStoreAutomation automation, Instant pickupDate, String userId, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache) {
+        if (automation == null) {
+            return List.of();
+        }
+        FoodsharingPickupModels.Decision decision = evaluate(automation, pickupDate, userId, livePickupsCache, initialPickupsCache);
+        return decision.allowed() ? List.of() : decision.reasons();
     }
 
     private List<FoodsharingPickupModels.Store> managedStores(FoodsharingAdminConnection connection) {
@@ -1379,7 +1400,7 @@ public class FoodsharingPickupAutomationService {
     public record StoreAutomationView(long storeId, String storeName, boolean enabled, boolean dryRunEnabled, boolean gapRuleEnabled, int minimumGapDays, boolean cleaningRuleEnabled, boolean experienceRuleEnabled, boolean editable, String ownerName, String ownerEmail) {}
     public record AuditView(long storeId, String storeName, String foodsharingUserId, String foodsharingUserName, Instant pickupDate, boolean dryRun, String decision, String reasons, String userMessage, String error, Instant createdAt) {}
     public record StorePickupUserView(String foodsharingUserId, String name, int futurePickupCount, List<StorePickupView> futurePickups) {}
-    public record StorePickupView(long storeId, String storeName, Instant pickupDate, boolean confirmed) {}
+    public record StorePickupView(long storeId, String storeName, Instant pickupDate, boolean confirmed, List<String> validationErrors) {}
 
     private static final class StorePickupUserBuilder {
         private final String foodsharingUserId;

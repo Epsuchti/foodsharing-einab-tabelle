@@ -67,6 +67,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly requestAutomationAudit = signal<FoodsharingExtraAutomationAudit[]>([]);
   protected readonly advertisementAutomationAudit = signal<FoodsharingExtraAutomationAudit[]>([]);
   protected readonly foodsharingFuturePickupUsers = signal<FoodsharingFuturePickupUser[]>([]);
+  protected readonly onlyUsersWithSlotVerificationErrors = signal(false);
   protected readonly cleaningRuleExemptions = signal<FoodsharingCleaningRuleExemption[]>([]);
   protected readonly cleaningStoreConfigured = signal<boolean | null>(null);
   protected readonly foodsharingEmail = signal('');
@@ -99,6 +100,9 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     .filter((entry) => entry.status === 'PLANNED'));
   protected readonly sentAdvertisementAudit = computed(() => this.advertisementAutomationAudit()
     .filter((entry) => entry.status !== 'PLANNED'));
+  protected readonly visibleFoodsharingFuturePickupUsers = computed(() => this.onlyUsersWithSlotVerificationErrors()
+    ? this.foodsharingFuturePickupUsers().filter((user) => this.hasSlotVerificationErrors(user))
+    : this.foodsharingFuturePickupUsers());
   protected readonly availableStoreOptions = computed(() => this.availableStores().map((store) => ({
     label: `${store.storeName} (${store.storeId})`,
     value: store.storeId
@@ -138,6 +142,10 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   setOnlyMyDecisions(onlyMyDecisions: boolean): void {
     this.onlyMyDecisions.set(onlyMyDecisions);
     this.loadActiveAutomationTab();
+  }
+
+  hasSlotVerificationErrors(user: FoodsharingFuturePickupUser): boolean {
+    return user.futurePickups.some((pickup) => pickup.validationErrors.length > 0);
   }
 
   connectFoodsharing(): void {

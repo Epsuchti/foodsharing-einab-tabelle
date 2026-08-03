@@ -2029,7 +2029,7 @@ components:
           format: date-time
     FoodsharingFuturePickup:
       type: object
-      required: [storeId, storeName, pickupDate, confirmed]
+      required: [storeId, storeName, pickupDate, confirmed, validationErrors]
       properties:
         storeId:
           type: integer
@@ -2041,6 +2041,10 @@ components:
           format: date-time
         confirmed:
           type: boolean
+        validationErrors:
+          type: array
+          items:
+            type: string
     FoodsharingFuturePickupUser:
       type: object
       required: [foodsharingUserId, name, futurePickupCount, futurePickups]

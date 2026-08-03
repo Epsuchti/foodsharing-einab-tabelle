@@ -224,6 +224,8 @@
   "adminAutomation.experienceRule": "Experience rule",
   "adminAutomation.futurePickupUsers": "Users with future pickups in your stores",
   "adminAutomation.futurePickupCount": "Future pickups",
+  "adminAutomation.slotVerificationErrors": "Slot verification errors",
+  "adminAutomation.onlyUsersWithSlotVerificationErrors": "Only show users with slot verification errors",
   "adminAutomation.pickupDates": "Pickup dates",
   "adminAutomation.confirmed": "confirmed",
   "adminAutomation.pending": "pending",
