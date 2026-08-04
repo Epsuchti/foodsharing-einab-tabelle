@@ -57,6 +57,7 @@
   "common.yes": "Jo",
   "common.no": "Nei",
   "common.loading": "Lädt...",
+  "common.forceRefresh": "Daten aktualisieren",
   "common.error": "Fehler",
   "common.saved": "Gspeicheret",
   "automation.selectDestination": "Wähl de Store-Chat, Telegram oder beides us.",

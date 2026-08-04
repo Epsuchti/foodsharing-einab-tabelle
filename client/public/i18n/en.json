@@ -57,6 +57,7 @@
   "common.yes": "Yes",
   "common.no": "No",
   "common.loading": "Loading...",
+  "common.forceRefresh": "Refresh data",
   "common.error": "Error",
   "common.saved": "Saved",
   "automation.selectDestination": "Select store chat, Telegram, or both.",

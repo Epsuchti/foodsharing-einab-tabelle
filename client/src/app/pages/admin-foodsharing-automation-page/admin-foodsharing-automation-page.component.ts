@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 
 import {
   AdminService,
@@ -67,6 +68,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly requestAutomationAudit = signal<FoodsharingExtraAutomationAudit[]>([]);
   protected readonly advertisementAutomationAudit = signal<FoodsharingExtraAutomationAudit[]>([]);
   protected readonly foodsharingFuturePickupUsers = signal<FoodsharingFuturePickupUser[]>([]);
+  protected readonly refreshingFoodsharingFuturePickupUsers = signal(false);
   protected readonly onlyUsersWithSlotVerificationErrors = signal(false);
   protected readonly cleaningRuleExemptions = signal<FoodsharingCleaningRuleExemption[]>([]);
   protected readonly cleaningStoreConfigured = signal<boolean | null>(null);
@@ -714,8 +716,16 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     });
   }
 
-  private loadFoodsharingFuturePickupUsers(): void {
-    this.adminApi.getFoodsharingFuturePickupUsers({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
+  refreshFoodsharingFuturePickupUsers(): void {
+    this.loadFoodsharingFuturePickupUsers(true);
+  }
+
+  private loadFoodsharingFuturePickupUsers(forceRefresh = false): void {
+    this.refreshingFoodsharingFuturePickupUsers.set(true);
+    this.adminApi.getFoodsharingFuturePickupUsers({
+      bezirkSlug: this.bezirkContext.currentSlug(),
+      forceRefresh
+    }).pipe(finalize(() => this.refreshingFoodsharingFuturePickupUsers.set(false))).subscribe({
       next: (users) => this.foodsharingFuturePickupUsers.set(users),
       error: () => undefined
     });

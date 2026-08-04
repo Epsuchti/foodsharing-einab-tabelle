@@ -436,6 +436,7 @@
               <div class="automation-tabpanel">
               <section class="automation-group">
                 <div class="automation-group__label">{{ i18n.t('automation.group.statistics') }}</div>
+              <button pButton type="button" icon="pi pi-refresh" [label]="i18n.t('common.forceRefresh')" [loading]="refreshingFoodsharingFuturePickupUsers()" [disabled]="refreshingFoodsharingFuturePickupUsers()" (click)="refreshFoodsharingFuturePickupUsers()"></button>
               <label><p-checkbox [binary]="true" [ngModel]="onlyUsersWithSlotVerificationErrors()" (ngModelChange)="onlyUsersWithSlotVerificationErrors.set($event)"></p-checkbox>{{ i18n.t('adminAutomation.onlyUsersWithSlotVerificationErrors') }}</label>
               <p-table [value]="visibleFoodsharingFuturePickupUsers()" [paginator]="true" [rows]="10" sortField="futurePickupCount" [sortOrder]="-1">
                 <ng-template pTemplate="header"><tr><th>{{ i18n.t('common.name') }}</th><th>{{ i18n.t('common.foodsharingId') }}</th><th pSortableColumn="futurePickupCount">{{ i18n.t('adminAutomation.futurePickupCount') }} <p-sortIcon field="futurePickupCount"></p-sortIcon></th><th>{{ i18n.t('adminAutomation.pickupDates') }}</th><th>{{ i18n.t('adminAutomation.slotVerificationErrors') }}</th></tr></ng-template>

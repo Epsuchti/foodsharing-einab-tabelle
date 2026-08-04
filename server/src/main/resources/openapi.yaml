@@ -1370,6 +1370,12 @@ paths:
     get:
       tags: [admin]
       operationId: getFoodsharingFuturePickupUsers
+      parameters:
+        - name: forceRefresh
+          in: query
+          description: Bypass the cached result and reload data from Foodsharing.
+          schema:
+            type: boolean
       responses:
         '200':
           description: Foodsharing users with future pickups

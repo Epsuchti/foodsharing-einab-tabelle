@@ -824,15 +824,24 @@ public class FoodsharingPickupAutomationService {
 
     @Transactional
     public List<StorePickupUserView> futurePickupUsers(String bezirkSlug) {
+        return futurePickupUsers(bezirkSlug, false);
+    }
+
+    @Transactional
+    public List<StorePickupUserView> futurePickupUsers(String bezirkSlug, boolean forceRefresh) {
         FoodsharingAdminConnection connection = requireConnection();
-        return futurePickupUsers(connection, requireBezirk(bezirkSlug, connection.getAdminUser()));
+        return futurePickupUsers(connection, requireBezirk(bezirkSlug, connection.getAdminUser()), forceRefresh);
     }
 
     private List<StorePickupUserView> futurePickupUsers(FoodsharingAdminConnection connection, Bezirk bezirk) {
+        return futurePickupUsers(connection, bezirk, false);
+    }
+
+    private List<StorePickupUserView> futurePickupUsers(FoodsharingAdminConnection connection, Bezirk bezirk, boolean forceRefresh) {
         Duration ttl = Duration.parse(appProperties.getFoodsharing().getAutomation().getFuturePickupCacheTtl());
         Instant now = Instant.now();
         var existingCache = futurePickupUsersCacheRepository.findByAdminConnectionAndBezirk(connection, bezirk);
-        if (existingCache.isPresent()) {
+        if (!forceRefresh && existingCache.isPresent()) {
             FoodsharingFuturePickupUsersCache cache = existingCache.get();
             if (cache.getRefreshedAt() != null && cache.getRefreshedAt().plus(ttl).isAfter(now)) {
                 try {

@@ -449,9 +449,9 @@ public class AdminController implements AdminApi {
     }
 
     @Override
-    public ResponseEntity<List<FoodsharingFuturePickupUser>> getFoodsharingFuturePickupUsers(String bezirkSlug) {
+    public ResponseEntity<List<FoodsharingFuturePickupUser>> getFoodsharingFuturePickupUsers(String bezirkSlug, Boolean forceRefresh) {
         currentActorService.requirePermission(UserPermission.CAN_SEE_USER_PICKUP_COUNT_GROUPING);
-        return ResponseEntity.ok(foodsharingPickupAutomationService.futurePickupUsers(bezirkSlug).stream()
+        return ResponseEntity.ok(foodsharingPickupAutomationService.futurePickupUsers(bezirkSlug, Boolean.TRUE.equals(forceRefresh)).stream()
                 .map(this::toFoodsharingFuturePickupUser)
                 .toList());
     }
