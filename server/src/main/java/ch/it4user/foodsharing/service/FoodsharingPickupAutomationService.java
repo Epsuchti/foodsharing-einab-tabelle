@@ -1111,7 +1111,7 @@ public class FoodsharingPickupAutomationService {
             for (var p : storePickups) for (var u : p.users()) if (!u.confirmed()) {
             evaluated++;
             try {
-                var decision = evaluate(a, p.date(), u.id(), livePickupsCache, initialPickupsCache); String reason = String.join("\n", decision.reasons());
+                var decision = evaluate(a, p.date(), u.id(), u.name(), livePickupsCache, initialPickupsCache); String reason = String.join("\n", decision.reasons());
                 if (!decision.allowed()) {
                     reason += "\n\n" + userMessage("message.automation.decline-footer");
                 }
@@ -1143,7 +1143,12 @@ public class FoodsharingPickupAutomationService {
     }
 
     private FoodsharingPickupModels.Decision evaluate(FoodsharingStoreAutomation a, Instant pickupDate, String userId, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache) {
+        return evaluate(a, pickupDate, userId, null, livePickupsCache, initialPickupsCache);
+    }
+
+    private FoodsharingPickupModels.Decision evaluate(FoodsharingStoreAutomation a, Instant pickupDate, String userId, String userName, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache) {
         List<String> reasons = new ArrayList<>();
+        String cleaningOverrideMessage = null;
         Instant rulesSkippedFrom = pickupDate.atZone(SWISS_ZONE).toLocalDate().minusDays(2).atStartOfDay(SWISS_ZONE).toInstant();
         if (!Instant.now().isBefore(rulesSkippedFrom)) {
             reasons.add(userMessage("message.automation.rules-skipped-from-two-days-before"));
@@ -1192,7 +1197,10 @@ public class FoodsharingPickupAutomationService {
                             .count();
                     String openCleaningSlots = formatOpenCleaningSlots(cleaningPickups, now);
                     String cleaningStoreUrl = appProperties.getFoodsharing().getBaseUrl().replaceFirst("/+$", "") + "/store/" + cleaningStoreId;
-                    String cleaningOverrideMessage = userMessage("message.automation.cleaning-override", formatSwissDateTime(pickupDate), freeCleaningSlots, openCleaningSlots, cleaningStoreUrl);
+                    String cleaningHistory = lastCleaning == null
+                            ? userMessage("message.automation.no-cleaning-yet")
+                            : userMessage("message.automation.cleaning-override-last-cleaning", formatSwissDateTime(lastCleaning));
+                    cleaningOverrideMessage = userMessage("message.automation.cleaning-override", firstName(userName), formatSwissDateTime(pickupDate), a.getStoreName(), cleaningHistory, freeCleaningSlots, openCleaningSlots, cleaningStoreUrl);
                     if (freeCleaningSlots < appProperties.getFoodsharing().getAutomation().getMinimumFreeCleaningSlots()) {
                         reasons.add(cleaningOverrideMessage);
                     } else {
@@ -1209,12 +1217,12 @@ public class FoodsharingPickupAutomationService {
             }
         }
         if (reasons.isEmpty()) reasons.add(userMessage("message.automation.all-rules-passed"));
-        String cleaningOverrideMessage = reasons.stream()
-                .filter(reason -> reason.startsWith(userMessage("message.automation.cleaning-override-prefix")))
-                .findFirst()
-                .orElse(null);
-        boolean onlyAllowedReasons = reasons.stream().allMatch(reason -> reason.equals(userMessage("message.automation.all-rules-passed")) || reason.equals(cleaningOverrideMessage));
-        return new FoodsharingPickupModels.Decision(onlyAllowedReasons, reasons, reasons.contains(cleaningOverrideMessage) ? cleaningOverrideMessage : null);
+        String selectedCleaningOverrideMessage = cleaningOverrideMessage;
+        boolean onlyAllowedReasons = reasons.stream().allMatch(reason -> reason.equals(userMessage("message.automation.all-rules-passed")) || reason.equals(selectedCleaningOverrideMessage));
+        String cleaningOverrideUserMessage = reasons.contains(selectedCleaningOverrideMessage)
+                ? selectedCleaningOverrideMessage + "\n\n" + userMessage("message.automation.decline-footer")
+                : null;
+        return new FoodsharingPickupModels.Decision(onlyAllowedReasons, reasons, cleaningOverrideUserMessage);
     }
 
     private List<FoodsharingPickupModels.Pickup> storePickups(FoodsharingAdminConnection connection, long storeId) {
@@ -1345,6 +1353,12 @@ public class FoodsharingPickupAutomationService {
         return zdt.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm", Locale.GERMAN));
     }
 
+    private String firstName(String userName) {
+        String normalizedName = normalize(userName);
+        int separatorIndex = normalizedName.indexOf(' ');
+        return separatorIndex < 0 ? normalizedName : normalizedName.substring(0, separatorIndex);
+    }
+
     private String formatOpenCleaningSlots(List<FoodsharingPickupModels.Pickup> cleaningPickups, Instant now) {
         List<String> openSlots = cleaningPickups.stream()
                 .filter(pickup -> !pickup.date().isBefore(now))
@@ -1353,7 +1367,7 @@ public class FoodsharingPickupAutomationService {
                 .limit(3)
                 .map(pickup -> formatSwissDateTime(pickup.date()))
                 .toList();
-        return openSlots.isEmpty() ? userMessage("message.automation.no-open-cleaning-slots") : String.join(", ", openSlots);
+        return openSlots.isEmpty() ? userMessage("message.automation.no-open-cleaning-slots") : String.join("\n", openSlots);
     }
 
     private String normalize(String value) { return value == null ? "" : value.trim(); }
