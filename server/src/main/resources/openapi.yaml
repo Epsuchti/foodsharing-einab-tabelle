@@ -2495,7 +2495,6 @@ components:
         onlineCallLink:
           type: string
           format: uri
-          maxLength: 2000
         whatToBring:
           type: string
           maxLength: 4000
