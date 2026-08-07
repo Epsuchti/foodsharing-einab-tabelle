@@ -1,4 +1,6 @@
 package ch.it4user.foodsharing.service;
 
-public record FoodsharingUserInfo(String foodsharingId, String name, String phoneNumber, boolean sleeping) {
+import java.time.Instant;
+
+public record FoodsharingUserInfo(String foodsharingId, String name, String phoneNumber, boolean sleeping, Instant verificationDate) {
 }

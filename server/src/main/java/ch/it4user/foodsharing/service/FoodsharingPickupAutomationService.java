@@ -59,12 +59,14 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class FoodsharingPickupAutomationService {
     private static final ZoneId SWISS_ZONE = ZoneId.of("Europe/Zurich");
+    private static final int MINIMUM_VERIFICATION_MONTHS = 6;
     private static final Logger log = LoggerFactory.getLogger(FoodsharingPickupAutomationService.class);
     private final AppProperties appProperties;
     private final BezirkService bezirkService;
     private final CurrentActorService currentActorService;
     private final CryptoService cryptoService;
     private final FoodsharingPickupApiClient client;
+    private final FoodsharingClient foodsharingClient;
     private final FoodsharingAdminConnectionRepository connectionRepository;
     private final FoodsharingStoreAutomationRepository automationRepository;
     private final FoodsharingRequestAutomationRepository requestAutomationRepository;
@@ -83,8 +85,8 @@ public class FoodsharingPickupAutomationService {
     private final RestClient telegramClient = RestClient.create("https://api.telegram.org");
     private final AtomicBoolean scheduledRunInProgress = new AtomicBoolean(false);
 
-    public FoodsharingPickupAutomationService(AppProperties appProperties, BezirkService bezirkService, CurrentActorService currentActorService, CryptoService cryptoService, FoodsharingPickupApiClient client, FoodsharingAdminConnectionRepository connectionRepository, FoodsharingStoreAutomationRepository automationRepository, FoodsharingRequestAutomationRepository requestAutomationRepository, FoodsharingRequestAutomationAuditRepository requestAutomationAuditRepository, FoodsharingOpenSlotAdvertisementAutomationRepository advertisementAutomationRepository, FoodsharingOpenSlotAdvertisementAuditRepository advertisementAuditRepository, FoodsharingPickupAutomationAuditRepository auditRepository, FoodsharingFuturePickupUsersCacheRepository futurePickupUsersCacheRepository, FoodsharingStoreMembersCacheRepository storeMembersCacheRepository, FoodsharingStorePickupsCacheRepository storePickupsCacheRepository, FoodsharingCleaningRuleExemptionRepository cleaningRuleExemptionRepository, FoodsharingMessageService messageService, MessageSource messageSource, ObjectMapper objectMapper, PlatformTransactionManager transactionManager) {
-        this.appProperties = appProperties; this.bezirkService = bezirkService; this.currentActorService = currentActorService; this.cryptoService = cryptoService; this.client = client; this.connectionRepository = connectionRepository; this.automationRepository = automationRepository; this.requestAutomationRepository = requestAutomationRepository; this.requestAutomationAuditRepository = requestAutomationAuditRepository; this.advertisementAutomationRepository = advertisementAutomationRepository; this.advertisementAuditRepository = advertisementAuditRepository; this.auditRepository = auditRepository; this.futurePickupUsersCacheRepository = futurePickupUsersCacheRepository; this.storeMembersCacheRepository = storeMembersCacheRepository; this.storePickupsCacheRepository = storePickupsCacheRepository; this.cleaningRuleExemptionRepository = cleaningRuleExemptionRepository; this.messageService = messageService; this.messageSource = messageSource; this.objectMapper = objectMapper; this.scheduledPhaseTransaction = new TransactionTemplate(transactionManager);
+    public FoodsharingPickupAutomationService(AppProperties appProperties, BezirkService bezirkService, CurrentActorService currentActorService, CryptoService cryptoService, FoodsharingPickupApiClient client, FoodsharingClient foodsharingClient, FoodsharingAdminConnectionRepository connectionRepository, FoodsharingStoreAutomationRepository automationRepository, FoodsharingRequestAutomationRepository requestAutomationRepository, FoodsharingRequestAutomationAuditRepository requestAutomationAuditRepository, FoodsharingOpenSlotAdvertisementAutomationRepository advertisementAutomationRepository, FoodsharingOpenSlotAdvertisementAuditRepository advertisementAuditRepository, FoodsharingPickupAutomationAuditRepository auditRepository, FoodsharingFuturePickupUsersCacheRepository futurePickupUsersCacheRepository, FoodsharingStoreMembersCacheRepository storeMembersCacheRepository, FoodsharingStorePickupsCacheRepository storePickupsCacheRepository, FoodsharingCleaningRuleExemptionRepository cleaningRuleExemptionRepository, FoodsharingMessageService messageService, MessageSource messageSource, ObjectMapper objectMapper, PlatformTransactionManager transactionManager) {
+        this.appProperties = appProperties; this.bezirkService = bezirkService; this.currentActorService = currentActorService; this.cryptoService = cryptoService; this.client = client; this.foodsharingClient = foodsharingClient; this.connectionRepository = connectionRepository; this.automationRepository = automationRepository; this.requestAutomationRepository = requestAutomationRepository; this.requestAutomationAuditRepository = requestAutomationAuditRepository; this.advertisementAutomationRepository = advertisementAutomationRepository; this.advertisementAuditRepository = advertisementAuditRepository; this.auditRepository = auditRepository; this.futurePickupUsersCacheRepository = futurePickupUsersCacheRepository; this.storeMembersCacheRepository = storeMembersCacheRepository; this.storePickupsCacheRepository = storePickupsCacheRepository; this.cleaningRuleExemptionRepository = cleaningRuleExemptionRepository; this.messageService = messageService; this.messageSource = messageSource; this.objectMapper = objectMapper; this.scheduledPhaseTransaction = new TransactionTemplate(transactionManager);
     }
 
     @Transactional
@@ -871,6 +873,7 @@ public class FoodsharingPickupAutomationService {
                 .collect(java.util.stream.Collectors.toMap(FoodsharingStoreAutomation::getStoreId, automation -> automation));
         Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache = new HashMap<>();
         Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache = new HashMap<>();
+        Map<String, FoodsharingUserInfo> foodsharingUserInfoCache = new HashMap<>();
         Instant now = Instant.now();
         for (FoodsharingPickupModels.Store store : managedStores(connection)) {
             List<FoodsharingPickupModels.Pickup> storePickups = storePickups(connection, store.id());
@@ -887,7 +890,7 @@ public class FoodsharingPickupAutomationService {
                         continue;
                     }
                     StorePickupUserBuilder builder = users.computeIfAbsent(pickupUser.id(), id -> new StorePickupUserBuilder(id, pickupUser.name()));
-                    builder.addPickup(new StorePickupView(store.id(), store.name(), pickup.date(), pickupUser.confirmed(), validationErrors(automation, pickup.date(), pickupUser.id(), livePickupsCache, initialPickupsCache)));
+                    builder.addPickup(new StorePickupView(store.id(), store.name(), pickup.date(), pickupUser.confirmed(), validationErrors(automation, pickup.date(), pickupUser.id(), livePickupsCache, initialPickupsCache, foodsharingUserInfoCache)));
                 }
             }
         }
@@ -899,11 +902,11 @@ public class FoodsharingPickupAutomationService {
                 .toList();
     }
 
-    private List<String> validationErrors(FoodsharingStoreAutomation automation, Instant pickupDate, String userId, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache) {
+    private List<String> validationErrors(FoodsharingStoreAutomation automation, Instant pickupDate, String userId, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache, Map<String, FoodsharingUserInfo> foodsharingUserInfoCache) {
         if (automation == null) {
             return List.of();
         }
-        FoodsharingPickupModels.Decision decision = evaluate(automation, pickupDate, userId, livePickupsCache, initialPickupsCache);
+        FoodsharingPickupModels.Decision decision = evaluate(automation, pickupDate, userId, livePickupsCache, initialPickupsCache, foodsharingUserInfoCache);
         return decision.allowed() ? List.of() : decision.reasons();
     }
 
@@ -1097,6 +1100,7 @@ public class FoodsharingPickupAutomationService {
         log.info("Foodsharing automation run started (dryRun={}, automations={}, connections={})", forcedDryRun, automations.size(), connectionSummary);
         Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache = new HashMap<>();
         Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache = new HashMap<>();
+        Map<String, FoodsharingUserInfo> foodsharingUserInfoCache = new HashMap<>();
         boolean effectiveDryRunUsed = forcedDryRun;
         for (FoodsharingStoreAutomation a : automations) {
             boolean effectiveDryRun = forcedDryRun || a.isDryRunEnabled();
@@ -1111,7 +1115,7 @@ public class FoodsharingPickupAutomationService {
             for (var p : storePickups) for (var u : p.users()) if (!u.confirmed()) {
             evaluated++;
             try {
-                var decision = evaluate(a, p.date(), u.id(), u.name(), livePickupsCache, initialPickupsCache); String reason = String.join("\n", decision.reasons());
+                var decision = evaluate(a, p.date(), u.id(), u.name(), livePickupsCache, initialPickupsCache, foodsharingUserInfoCache); String reason = String.join("\n", decision.reasons());
                 if (!decision.allowed()) {
                     reason += "\n\n" + userMessage("message.automation.decline-footer");
                 }
@@ -1143,10 +1147,14 @@ public class FoodsharingPickupAutomationService {
     }
 
     private FoodsharingPickupModels.Decision evaluate(FoodsharingStoreAutomation a, Instant pickupDate, String userId, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache) {
-        return evaluate(a, pickupDate, userId, null, livePickupsCache, initialPickupsCache);
+        return evaluate(a, pickupDate, userId, null, livePickupsCache, initialPickupsCache, new HashMap<>());
     }
 
-    private FoodsharingPickupModels.Decision evaluate(FoodsharingStoreAutomation a, Instant pickupDate, String userId, String userName, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache) {
+    private FoodsharingPickupModels.Decision evaluate(FoodsharingStoreAutomation a, Instant pickupDate, String userId, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache, Map<String, FoodsharingUserInfo> foodsharingUserInfoCache) {
+        return evaluate(a, pickupDate, userId, null, livePickupsCache, initialPickupsCache, foodsharingUserInfoCache);
+    }
+
+    private FoodsharingPickupModels.Decision evaluate(FoodsharingStoreAutomation a, Instant pickupDate, String userId, String userName, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache, Map<String, FoodsharingUserInfo> foodsharingUserInfoCache) {
         List<String> reasons = new ArrayList<>();
         String cleaningOverrideMessage = null;
         Instant rulesSkippedFrom = pickupDate.atZone(SWISS_ZONE).toLocalDate().minusDays(2).atStartOfDay(SWISS_ZONE).toInstant();
@@ -1178,6 +1186,11 @@ public class FoodsharingPickupAutomationService {
                 Instant now = Instant.now();
                 long backCheckMonths = Math.max(0, appProperties.getFoodsharing().getAutomation().getCleaningBackCheckMonths());
                 Instant cleaningThreshold = now.atZone(SWISS_ZONE).minusMonths(backCheckMonths).toInstant();
+                FoodsharingUserInfo userInfo = foodsharingUserInfoCache.computeIfAbsent(userId, foodsharingClient::fetchUserInfo);
+                Instant verificationThreshold = now.atZone(SWISS_ZONE).minusMonths(MINIMUM_VERIFICATION_MONTHS).toInstant();
+                boolean verificationExempt = userInfo.verificationDate() != null
+                        && !userInfo.verificationDate().isAfter(now)
+                        && !userInfo.verificationDate().isBefore(verificationThreshold);
                 List<FoodsharingPickupModels.StoreMember> cleaningMembers = storeMembers(a.getAdminConnection(), cleaningStoreId);
                 Instant lastCleaning = cleaningMembers.stream()
                         .filter(member -> String.valueOf(member.id()).equals(userId))
@@ -1197,21 +1210,26 @@ public class FoodsharingPickupAutomationService {
                             .count();
                     String openCleaningSlots = formatOpenCleaningSlots(cleaningPickups, now);
                     String cleaningStoreUrl = appProperties.getFoodsharing().getBaseUrl().replaceFirst("/+$", "") + "/store/" + cleaningStoreId;
-                    String cleaningHistory = lastCleaning == null
-                            ? userMessage("message.automation.no-cleaning-yet")
-                            : userMessage("message.automation.cleaning-override-last-cleaning", formatSwissDateTime(lastCleaning));
-                    cleaningOverrideMessage = userMessage("message.automation.cleaning-override", firstName(userName), formatSwissDateTime(pickupDate), a.getStoreName(), cleaningHistory, freeCleaningSlots, openCleaningSlots, cleaningStoreUrl);
-                    if (freeCleaningSlots < appProperties.getFoodsharing().getAutomation().getMinimumFreeCleaningSlots()) {
-                        reasons.add(cleaningOverrideMessage);
-                    } else {
-                        String historyText;
-                        if (lastCleaning == null) {
-                            historyText = userMessage("message.automation.no-cleaning-yet");
+                    if (!verificationExempt) {
+                        String cleaningHistory = lastCleaning == null
+                                ? userMessage("message.automation.no-cleaning-yet")
+                                : userMessage("message.automation.cleaning-override-last-cleaning", formatSwissDateTime(lastCleaning));
+                        cleaningOverrideMessage = userMessage("message.automation.cleaning-override", firstName(userName), formatSwissDateTime(pickupDate), a.getStoreName(), cleaningHistory, freeCleaningSlots, openCleaningSlots, cleaningStoreUrl);
+                        if (freeCleaningSlots < appProperties.getFoodsharing().getAutomation().getMinimumFreeCleaningSlots()) {
+                            reasons.add(cleaningOverrideMessage);
                         } else {
-                            long lastCleaningMonths = monthsAgo(lastCleaning, now);
-                            historyText = userMessage("message.automation.last-cleaning", monthSuffix(lastCleaningMonths));
+                            String historyText;
+                            if (lastCleaning == null) {
+                                historyText = userMessage("message.automation.no-cleaning-yet");
+                            } else {
+                                long lastCleaningMonths = monthsAgo(lastCleaning, now);
+                                historyText = userMessage("message.automation.last-cleaning", monthSuffix(lastCleaningMonths));
+                            }
+                            reasons.add(userMessage("message.automation.cleaning-required", monthSuffix(backCheckMonths), historyText, openCleaningSlots, cleaningStoreUrl));
                         }
-                        reasons.add(userMessage("message.automation.cleaning-required", monthSuffix(backCheckMonths), historyText, openCleaningSlots, cleaningStoreUrl));
+                    } else {
+                        cleaningOverrideMessage = userMessage("message.automation.cleaning-new-user", firstName(userName), formatSwissDateTime(pickupDate), a.getStoreName(), formatSwissDateTime(userInfo.verificationDate()), formatSwissDateTime(userInfo.verificationDate().atZone(SWISS_ZONE).plusMonths(MINIMUM_VERIFICATION_MONTHS).toInstant()));
+                        reasons.add(cleaningOverrideMessage);
                     }
                 }
             }

@@ -3,6 +3,10 @@ package ch.it4user.foodsharing.service;
 import ch.it4user.foodsharing.domain.entity.FoodsharingApiSession;
 import ch.it4user.foodsharing.repository.FoodsharingApiSessionRepository;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -23,8 +27,10 @@ import org.springframework.web.client.RestClient;
 @Service
 public class FoodsharingClient {
     private static final Logger log = LoggerFactory.getLogger(FoodsharingClient.class);
+    private static final ZoneId SWISS_ZONE = ZoneId.of("Europe/Zurich");
+    private static final DateTimeFormatter USER_INFO_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private final RestClient restClient;
-    private final RestClient phoneNumberRestClient;
+    private final RestClient userInfoRestClient;
     private final AppProperties appProperties;
     private final FoodsharingApiSessionRepository sessionRepository;
     private final CryptoService cryptoService;
@@ -34,7 +40,7 @@ public class FoodsharingClient {
         this.sessionRepository = sessionRepository;
         this.cryptoService = cryptoService;
         this.restClient = RestClient.builder().baseUrl(appProperties.getFoodsharing().getBaseUrl()).build();
-        this.phoneNumberRestClient = RestClient.builder().baseUrl(appProperties.getFoodsharing().getPhoneNumberApiBaseUrl()).build();
+        this.userInfoRestClient = RestClient.builder().baseUrl(appProperties.getFoodsharing().getPhoneNumberApiBaseUrl()).build();
     }
 
     public FoodsharingUserInfo getUser(String foodsharingId) {
@@ -43,48 +49,61 @@ public class FoodsharingClient {
         Object name = body.get("name");
         Object sleeping = body.get("isSleeping");
         String resolvedFoodsharingId = String.valueOf(id == null ? foodsharingId : id);
-        return new FoodsharingUserInfo(resolvedFoodsharingId, String.valueOf(name == null ? foodsharingId : name), fetchPhoneNumber(resolvedFoodsharingId), Boolean.TRUE.equals(sleeping));
+        FoodsharingUserInfo userInfo = fetchUserInfo(resolvedFoodsharingId);
+        return new FoodsharingUserInfo(resolvedFoodsharingId, String.valueOf(name == null ? foodsharingId : name), userInfo.phoneNumber(), Boolean.TRUE.equals(sleeping), userInfo.verificationDate());
     }
 
     public String fetchPhoneNumber(String foodsharingId) {
+        return fetchUserInfo(foodsharingId).phoneNumber();
+    }
+
+    public FoodsharingUserInfo fetchUserInfo(String foodsharingId) {
         String token = appProperties.getFoodsharing().getPhoneNumberApiToken();
         if (token == null || token.isBlank()) {
-            return null;
+            return new FoodsharingUserInfo(foodsharingId, null, null, false, null);
         }
         try {
-            log.info("Foodsharing phone-number request: GET /{}/nbr", foodsharingId);
-            String response = phoneNumberRestClient.get()
-                    .uri("/{foodsharingId}/nbr", foodsharingId)
+            log.info("Foodsharing user-info request: GET /{}/info", foodsharingId);
+            Map<?, ?> response = userInfoRestClient.get()
+                    .uri("/{foodsharingId}/info", foodsharingId)
                     .header("X-API-Token", token)
                     .retrieve()
-                    .body(String.class);
-            return normalizePhoneNumberResponse(response);
+                    .body(Map.class);
+            return new FoodsharingUserInfo(
+                    foodsharingId,
+                    null,
+                    stringValue(response == null ? null : response.get("number")),
+                    false,
+                    parseVerificationDate(response == null ? null : response.get("firstVerification"), foodsharingId));
         } catch (RuntimeException ex) {
-            log.warn("Could not fetch foodsharing phone number for user={}: {}", foodsharingId, ex.getMessage());
-            return null;
+            log.warn("Could not fetch foodsharing user info for user={}: {}", foodsharingId, ex.getMessage());
+            return new FoodsharingUserInfo(foodsharingId, null, null, false, null);
         }
     }
 
-    private String normalizePhoneNumberResponse(String response) {
-        if (response == null || response.isBlank()) {
+    private Instant parseVerificationDate(Object value, String foodsharingId) {
+        String normalized = stringValue(value);
+        if (normalized == null) {
             return null;
         }
-        String normalized = response.trim();
-        if (normalized.startsWith("{") && normalized.endsWith("}")) {
-            for (String key : List.of("phoneNumber", "phone", "number", "nbr")) {
-                java.util.regex.Matcher matcher = java.util.regex.Pattern
-                        .compile("\\\"" + key + "\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"")
-                        .matcher(normalized);
-                if (matcher.find()) {
-                    normalized = matcher.group(1).trim();
-                    break;
-                }
+        try {
+            return LocalDateTime.parse(normalized, USER_INFO_DATE_TIME).atZone(SWISS_ZONE).toInstant();
+        } catch (DateTimeParseException ex) {
+            try {
+                return Instant.parse(normalized);
+            } catch (DateTimeParseException ignored) {
+                log.warn("Could not parse foodsharing verification date for user={}: {}", foodsharingId, normalized);
+                return null;
             }
         }
-        if (normalized.equalsIgnoreCase("null") || normalized.isBlank()) {
+    }
+
+    private String stringValue(Object value) {
+        if (value == null) {
             return null;
         }
-        return normalized;
+        String normalized = String.valueOf(value).trim();
+        return normalized.isBlank() || normalized.equalsIgnoreCase("null") ? null : normalized;
     }
 
     public void sendMessage(String foodsharingId, String body) {
