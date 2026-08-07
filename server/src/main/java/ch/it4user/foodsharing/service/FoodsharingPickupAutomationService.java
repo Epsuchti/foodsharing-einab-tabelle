@@ -1186,11 +1186,6 @@ public class FoodsharingPickupAutomationService {
             } else {
                 long backCheckMonths = Math.max(0, appProperties.getFoodsharing().getAutomation().getCleaningBackCheckMonths());
                 Instant cleaningThreshold = now.atZone(SWISS_ZONE).minusMonths(backCheckMonths).toInstant();
-                FoodsharingUserInfo userInfo = foodsharingUserInfoCache.computeIfAbsent(userId, foodsharingClient::fetchUserInfo);
-                Instant verificationThreshold = now.atZone(SWISS_ZONE).minusMonths(MINIMUM_VERIFICATION_MONTHS).toInstant();
-                boolean verificationExempt = userInfo.verificationDate() != null
-                        && !userInfo.verificationDate().isAfter(now)
-                        && !userInfo.verificationDate().isBefore(verificationThreshold);
                 List<FoodsharingPickupModels.StoreMember> cleaningMembers = storeMembers(a.getAdminConnection(), cleaningStoreId);
                 Instant lastCleaning = cleaningMembers.stream()
                         .filter(member -> String.valueOf(member.id()).equals(userId))
@@ -1204,6 +1199,11 @@ public class FoodsharingPickupAutomationService {
                         .filter(p -> p.users().stream().anyMatch(u -> u.id().equals(userId)))
                         .anyMatch(p -> !p.date().isBefore(now));
                 if (!past && !future) {
+                    FoodsharingUserInfo userInfo = foodsharingUserInfoCache.computeIfAbsent(userId, foodsharingClient::fetchUserInfo);
+                    Instant verificationThreshold = now.atZone(SWISS_ZONE).minusMonths(MINIMUM_VERIFICATION_MONTHS).toInstant();
+                    boolean verificationExempt = userInfo.verificationDate() != null
+                            && !userInfo.verificationDate().isAfter(now)
+                            && !userInfo.verificationDate().isBefore(verificationThreshold);
                     long freeCleaningSlots = cleaningPickups.stream()
                             .filter(p -> !p.date().isBefore(now))
                             .filter(p -> p.users().isEmpty())
