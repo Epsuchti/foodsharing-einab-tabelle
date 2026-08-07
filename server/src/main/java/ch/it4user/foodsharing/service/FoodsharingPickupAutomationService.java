@@ -1157,14 +1157,15 @@ public class FoodsharingPickupAutomationService {
     private FoodsharingPickupModels.Decision evaluate(FoodsharingStoreAutomation a, Instant pickupDate, String userId, String userName, Map<String, List<FoodsharingPickupModels.Pickup>> livePickupsCache, Map<String, List<FoodsharingPickupModels.Pickup>> initialPickupsCache, Map<String, FoodsharingUserInfo> foodsharingUserInfoCache) {
         List<String> reasons = new ArrayList<>();
         String cleaningOverrideMessage = null;
-        Instant rulesSkippedFrom = pickupDate.atZone(SWISS_ZONE).toLocalDate().minusDays(2).atStartOfDay(SWISS_ZONE).toInstant();
-        if (!Instant.now().isBefore(rulesSkippedFrom)) {
+        Instant now = Instant.now();
+        if (rulesAreSkipped(pickupDate, now)) {
             reasons.add(userMessage("message.automation.rules-skipped-from-two-days-before"));
             return new FoodsharingPickupModels.Decision(true, reasons, null);
         }
         if (a.isGapRuleEnabled()) {
                 pickups(livePickupsCache, a.getAdminConnection(), a.getStoreId()).stream()
                     .filter(p -> !p.date().equals(pickupDate))
+                    .filter(p -> !rulesAreSkipped(p.date(), now))
                     .filter(p -> p.users().stream().anyMatch(u -> u.id().equals(userId)))
                     .map(FoodsharingPickupModels.Pickup::date)
                     .map(d -> calendarGapDays(d, pickupDate))
@@ -1183,7 +1184,6 @@ public class FoodsharingPickupAutomationService {
             if (cleaningStoreId == null) {
                 reasons.add(userMessage("message.automation.no-cleaning-store", a.getBezirk().getName()));
             } else {
-                Instant now = Instant.now();
                 long backCheckMonths = Math.max(0, appProperties.getFoodsharing().getAutomation().getCleaningBackCheckMonths());
                 Instant cleaningThreshold = now.atZone(SWISS_ZONE).minusMonths(backCheckMonths).toInstant();
                 FoodsharingUserInfo userInfo = foodsharingUserInfoCache.computeIfAbsent(userId, foodsharingClient::fetchUserInfo);
@@ -1241,6 +1241,11 @@ public class FoodsharingPickupAutomationService {
                 ? selectedCleaningOverrideMessage + "\n\n" + userMessage("message.automation.decline-footer")
                 : null;
         return new FoodsharingPickupModels.Decision(onlyAllowedReasons, reasons, cleaningOverrideUserMessage);
+    }
+
+    private boolean rulesAreSkipped(Instant pickupDate, Instant now) {
+        Instant rulesSkippedFrom = pickupDate.atZone(SWISS_ZONE).toLocalDate().minusDays(2).atStartOfDay(SWISS_ZONE).toInstant();
+        return !now.isBefore(rulesSkippedFrom);
     }
 
     private List<FoodsharingPickupModels.Pickup> storePickups(FoodsharingAdminConnection connection, long storeId) {
