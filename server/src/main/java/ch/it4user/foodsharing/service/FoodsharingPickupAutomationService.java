@@ -59,7 +59,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 @Service
 public class FoodsharingPickupAutomationService {
     private static final ZoneId SWISS_ZONE = ZoneId.of("Europe/Zurich");
-    private static final int MINIMUM_VERIFICATION_MONTHS = 6;
     private static final Logger log = LoggerFactory.getLogger(FoodsharingPickupAutomationService.class);
     private final AppProperties appProperties;
     private final BezirkService bezirkService;
@@ -1200,7 +1199,7 @@ public class FoodsharingPickupAutomationService {
                         .anyMatch(p -> !p.date().isBefore(now));
                 if (!past && !future) {
                     FoodsharingUserInfo userInfo = foodsharingUserInfoCache.computeIfAbsent(userId, foodsharingClient::fetchUserInfo);
-                    Instant verificationThreshold = now.atZone(SWISS_ZONE).minusMonths(MINIMUM_VERIFICATION_MONTHS).toInstant();
+                    Instant verificationThreshold = now.atZone(SWISS_ZONE).minusMonths(backCheckMonths).toInstant();
                     boolean verificationExempt = userInfo.verificationDate() != null
                             && !userInfo.verificationDate().isAfter(now)
                             && !userInfo.verificationDate().isBefore(verificationThreshold);
@@ -1214,7 +1213,7 @@ public class FoodsharingPickupAutomationService {
                         String cleaningHistory = lastCleaning == null
                                 ? userMessage("message.automation.no-cleaning-yet")
                                 : userMessage("message.automation.cleaning-override-last-cleaning", formatSwissDateTime(lastCleaning));
-                        cleaningOverrideMessage = userMessage("message.automation.cleaning-override", firstName(userName), formatSwissDateTime(pickupDate), a.getStoreName(), cleaningHistory, freeCleaningSlots, openCleaningSlots, cleaningStoreUrl);
+                        cleaningOverrideMessage = userMessage("message.automation.cleaning-override", firstName(userName), formatSwissDateTime(pickupDate), a.getStoreName(), monthSuffix(backCheckMonths), cleaningHistory, freeCleaningSlots, openCleaningSlots, cleaningStoreUrl);
                         if (freeCleaningSlots < appProperties.getFoodsharing().getAutomation().getMinimumFreeCleaningSlots()) {
                             reasons.add(cleaningOverrideMessage);
                         } else {
@@ -1225,10 +1224,10 @@ public class FoodsharingPickupAutomationService {
                                 long lastCleaningMonths = monthsAgo(lastCleaning, now);
                                 historyText = userMessage("message.automation.last-cleaning", monthSuffix(lastCleaningMonths));
                             }
-                            reasons.add(userMessage("message.automation.cleaning-required", monthSuffix(backCheckMonths), historyText, openCleaningSlots, cleaningStoreUrl));
+                            reasons.add(userMessage("message.automation.cleaning-required", monthSuffix(backCheckMonths), historyText, openCleaningSlots, monthSuffix(backCheckMonths), cleaningStoreUrl));
                         }
                     } else {
-                        cleaningOverrideMessage = userMessage("message.automation.cleaning-new-user", firstName(userName), formatSwissDateTime(pickupDate), a.getStoreName(), formatSwissDateTime(userInfo.verificationDate()), formatSwissDateTime(userInfo.verificationDate().atZone(SWISS_ZONE).plusMonths(MINIMUM_VERIFICATION_MONTHS).toInstant()));
+                        cleaningOverrideMessage = userMessage("message.automation.cleaning-new-user", firstName(userName), formatSwissDateTime(pickupDate), a.getStoreName(), monthSuffix(backCheckMonths), formatSwissDateTime(userInfo.verificationDate()), formatSwissDateTime(userInfo.verificationDate().atZone(SWISS_ZONE).plusMonths(backCheckMonths).toInstant()));
                         reasons.add(cleaningOverrideMessage);
                     }
                 }
