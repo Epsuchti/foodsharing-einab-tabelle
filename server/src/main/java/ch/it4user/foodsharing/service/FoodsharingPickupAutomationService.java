@@ -51,8 +51,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.web.client.RestClient;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.http.MediaType;
+import org.springframework.web.client.RestClient;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -749,12 +750,24 @@ public class FoodsharingPickupAutomationService {
         String token = telegramToken(automation.getAdminConnection());
         if (token == null || token.isBlank()) return;
         for (FoodsharingOpenSlotAdvertisementAudit audit : audits) {
-            telegramClient.post().uri("/bot{token}/deleteMessage", token).contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of("chat_id", automation.getTelegramChatId(), "message_id", audit.getTelegramMessageId()))
-                    .retrieve().toBodilessEntity();
+            try {
+                telegramClient.post().uri("/bot{token}/deleteMessage", token).contentType(MediaType.APPLICATION_JSON)
+                        .body(Map.of("chat_id", automation.getTelegramChatId(), "message_id", audit.getTelegramMessageId()))
+                        .retrieve().toBodilessEntity();
+            } catch (HttpClientErrorException exception) {
+                if (!isTelegramMessageAlreadyGone(exception)) {
+                    throw exception;
+                }
+                log.info("Telegram advertisement message {} was already deleted; marking cleanup complete.", audit.getTelegramMessageId());
+            }
             audit.setTelegramDeletedAt(Instant.now());
             advertisementAuditRepository.save(audit);
         }
+    }
+
+    private boolean isTelegramMessageAlreadyGone(HttpClientErrorException exception) {
+        return exception.getStatusCode().value() == 400
+                && exception.getResponseBodyAsString().contains("message to delete not found");
     }
 
 
