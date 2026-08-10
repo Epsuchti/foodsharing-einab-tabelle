@@ -1240,7 +1240,7 @@ public class FoodsharingPickupAutomationService {
                             reasons.add(userMessage("message.automation.cleaning-required", monthSuffix(backCheckMonths), historyText, openCleaningSlots, monthSuffix(backCheckMonths), cleaningStoreUrl));
                         }
                     } else {
-                        cleaningOverrideMessage = userMessage("message.automation.cleaning-new-user", firstName(userName), formatSwissDateTime(pickupDate), a.getStoreName(), monthSuffix(backCheckMonths), formatSwissDateTime(userInfo.verificationDate()), formatSwissDateTime(userInfo.verificationDate().atZone(SWISS_ZONE).plusMonths(backCheckMonths).toInstant()));
+                        cleaningOverrideMessage = userMessage("message.automation.cleaning-new-user", firstName(userName), formatSwissDateTime(pickupDate), a.getStoreName(), monthSuffix(backCheckMonths), formatSwissDateTime(userInfo.verificationDate()), formatSwissDateTime(userInfo.verificationDate().atZone(SWISS_ZONE).plusMonths(backCheckMonths).toInstant()), cleaningStoreUrl);
                         reasons.add(cleaningOverrideMessage);
                     }
                 }
