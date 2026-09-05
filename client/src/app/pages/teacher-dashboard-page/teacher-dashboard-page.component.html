@@ -1,54 +1,36 @@
 <section class="teacher-top-stack">
-  <p-card styleClass="teacher-profile-card">
-    <ng-template pTemplate="title">{{ i18n.t('teacher.profile') }}</ng-template>
-    <div class="teacher-profile-summary">
-      <div class="teacher-profile-summary__identity">
-        <div class="teacher-profile-summary__name">{{ teacher()?.name }}</div>
-        <div class="teacher-profile-summary__meta">{{ teacher()?.foodsharingId }}</div>
-      </div>
-      <div class="teacher-profile-summary__status">
-        <p-tag [severity]="teacher()?.active ? 'success' : 'warn'" [value]="teacher()?.active ? i18n.t('common.active') : i18n.t('common.inactive')"></p-tag>
-      </div>
+  <details class="teacher-settings">
+    <summary class="teacher-settings__summary">
+      <span class="teacher-settings__title"><i class="pi pi-cog" aria-hidden="true"></i>{{ i18n.t('teacherSettings.title') }}</span>
+      <i class="pi pi-chevron-down teacher-settings__chevron" aria-hidden="true"></i>
+    </summary>
+    <div class="teacher-settings__content">
+      <form class="teacher-settings-form" [formGroup]="teacherSettingsForm" (ngSubmit)="saveTeacherSettings()">
+        <label class="teacher-settings-form__field">
+          <span>{{ i18n.t('common.icalLink') }}</span>
+          <input pInputText type="url" formControlName="icalLink" />
+        </label>
+        <p class="teacher-settings-form__hint">{{ i18n.t('teacher.icalTutorial') }}</p>
+        <div class="teacher-settings-form__actions">
+          <button pButton type="submit" icon="pi pi-save" [label]="i18n.t('common.save')" [loading]="settingsSaveLoading()"></button>
+        </div>
+      </form>
+      @if (!teacher()?.active) {
+        <p class="teacher-settings-inactive">{{ i18n.t('teacher.inactiveHint') }}</p>
+      }
+      @if (!teacher()?.bezirk) {
+        <div class="teacher-settings-assignment">
+          <p class="empty-state">{{ i18n.t('teacher.unassignedHint') }}</p>
+          <select [disabled]="bezirkSaveLoading()" (change)="assignBezirk($any($event.target).value)">
+            <option value="">{{ i18n.t('teacher.chooseBezirk') }}</option>
+            @for (bezirk of bezirke(); track bezirk.id) {
+              <option [value]="bezirk.slug">{{ bezirk.name }}</option>
+            }
+          </select>
+        </div>
+      }
     </div>
-
-    <div class="teacher-profile-facts">
-      <div class="teacher-profile-fact">
-        <span class="teacher-profile-fact__label">{{ i18n.t('common.phoneNumber') }}</span>
-        <span class="teacher-profile-fact__value">{{ teacher()?.phoneNumber || '-' }}</span>
-      </div>
-    </div>
-
-    <form class="teacher-profile-form" [formGroup]="teacherProfileForm">
-      <label class="teacher-profile-form__field teacher-profile-form__field--wide">
-        <span class="teacher-profile-form__label">{{ i18n.t('common.icalLink') }}</span>
-        <input pInputText type="url" formControlName="icalLink" />
-      </label>
-      <p class="teacher-profile-form__hint">{{ i18n.t('teacher.icalTutorial') }}</p>
-      <div class="teacher-profile-form__actions">
-        <button
-          pButton
-          type="button"
-          icon="pi pi-save"
-          [label]="i18n.t('common.save')"
-          [loading]="profileSaveLoading()"
-          (click)="saveTeacherProfile()"></button>
-      </div>
-    </form>
-    @if (!teacher()?.active) {
-      <p class="teacher-profile-form__inactive">{{ i18n.t('teacher.inactiveHint') }}</p>
-    }
-    @if (!teacher()?.bezirk) {
-      <p class="empty-state">{{ i18n.t('teacher.unassignedHint') }}</p>
-      <div class="dialog-actions">
-        <select [disabled]="bezirkSaveLoading()" (change)="assignBezirk($any($event.target).value)">
-          <option value="">{{ i18n.t('teacher.chooseBezirk') }}</option>
-          @for (bezirk of bezirke(); track bezirk.id) {
-            <option [value]="bezirk.slug">{{ bezirk.name }}</option>
-          }
-        </select>
-      </div>
-    }
-  </p-card>
+  </details>
 
   <p-card>
     <ng-template pTemplate="title">{{ i18n.t('teacher.futurePickups') }}</ng-template>
@@ -223,7 +205,7 @@
 
     <label>
       <span>{{ i18n.t('slots.date') }} *</span>
-      <p-datepicker formControlName="startDateTime" [showIcon]="true" [showTime]="true" hourFormat="24"></p-datepicker>
+      <p-datepicker formControlName="startDateTime" dateFormat="dd.mm.yy" [showIcon]="true" [showTime]="true" hourFormat="24" [minDate]="minimumStartDate"></p-datepicker>
     </label>
 
     @if (isOnline(einabForm.controls.category.value)) {

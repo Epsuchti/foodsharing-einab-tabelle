@@ -115,7 +115,7 @@
   "bookings.title": "Meine Buchungen",
   "bookings.cancel": "Buechig absage",
   "teacher.title": "EinAb-Geber:innen",
-  "teacher.profile": "EinAb-Geber:innen-Profil",
+  "teacherSettings.title": "Einstellungen",
   "teacher.einabs": "Meine EinAbs",
   "teacher.hidePastEinAbs": "Vergangene EinAbs ausblenden",
   "teacher.newEinab": "Neue EinAb",

@@ -115,7 +115,7 @@
   "bookings.title": "My bookings",
   "bookings.cancel": "Cancel booking",
   "teacher.title": "EinAb givers",
-  "teacher.profile": "EinAb givers profile",
+  "teacherSettings.title": "Settings",
   "teacher.einabs": "My EinAbs",
   "teacher.hidePastEinAbs": "Hide past EinAbs",
   "teacher.newEinab": "New EinAb",

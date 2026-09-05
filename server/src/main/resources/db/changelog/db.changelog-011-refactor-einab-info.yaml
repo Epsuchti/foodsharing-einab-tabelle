@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 011-refactor-einab-info
+      author: foodsharing
+      changes:
+        - renameColumn:
+            tableName: einabs
+            oldColumnName: what_to_bring
+            newColumnName: private_info
+            columnDataType: VARCHAR(4000)
+        - renameColumn:
+            tableName: einabs
+            oldColumnName: hint
+            newColumnName: public_info
+            columnDataType: VARCHAR(4000)

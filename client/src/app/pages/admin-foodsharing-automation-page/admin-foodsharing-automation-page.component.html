@@ -180,7 +180,7 @@
                 </div>
                 <div class="automation-exemption-form">
                   <div class="automation-exemption-form__block"><p-select [options]="slotApprovalStores()" optionLabel="storeName" optionValue="storeId" [ngModel]="excludedDateStoreId()" (ngModelChange)="excludedDateStoreId.set(normalizeStoreId($event))" [placeholder]="i18n.t('adminAutomation.addStorePlaceholder')" appendTo="body"></p-select></div>
-                  <div class="automation-exemption-form__block"><input type="date" [ngModel]="excludedDate()" (ngModelChange)="excludedDate.set($event)"></div>
+                  <div class="automation-exemption-form__block"><p-datepicker [ngModel]="excludedDate()" (ngModelChange)="excludedDate.set($event)" dateFormat="dd.mm.yy" [minDate]="minimumExcludedDate" [showIcon]="true"></p-datepicker></div>
                   <div class="automation-exemption-form__actions"><button pButton type="button" [label]="i18n.t('common.save')" [disabled]="excludedDateStoreId() == null || !excludedDate()" (click)="saveExcludedDate()"></button></div>
                 </div>
               </section>

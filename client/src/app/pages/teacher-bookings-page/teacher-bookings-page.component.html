@@ -1,23 +1,34 @@
-<p-card>
-  <ng-template pTemplate="title">{{ i18n.t('teacherBookings.title') }}</ng-template>
+<p-card class="teacher-bookings-card">
+  <ng-template pTemplate="title">
+    <div class="page-heading">
+      <div class="page-heading__icon" aria-hidden="true"><i class="pi pi-calendar-clock"></i></div>
+      <div>
+        <h1>{{ i18n.t('teacherBookings.title') }}</h1>
+        <p>{{ i18n.t('teacherBookings.comments') }}</p>
+      </div>
+    </div>
+  </ng-template>
 
   @if (loading()) {
     <p>{{ i18n.t('common.loading') }}</p>
   } @else if (!bookingGroups().length) {
     <p class="empty-state">{{ i18n.t('teacherBookings.empty') }}</p>
   } @else {
-    <p-accordion [multiple]="true">
+    <p-accordion class="booking-groups" [multiple]="true">
       @for (group of bookingGroups(); track group.bookingUserId) {
-        <p-accordion-panel [value]="group.bookingUserId">
+        <p-accordion-panel class="booking-group" [value]="group.bookingUserId">
           <p-accordion-header>
             <div class="accordion-header">
-              <strong>{{ group.name }}</strong>
-              <span>{{ group.foodsharingId }}</span>
-              <span>{{ group.phoneNumber ?? '-' }}</span>
+              <div class="person-avatar" aria-hidden="true">{{ group.name.charAt(0) }}</div>
+              <div class="person-details">
+                <strong>{{ group.name }}</strong>
+                <span>{{ group.foodsharingId }}</span>
+              </div>
+              <span class="person-phone"><i class="pi pi-phone" aria-hidden="true"></i>{{ group.phoneNumber ?? '-' }}</span>
             </div>
           </p-accordion-header>
           <p-accordion-content>
-          <p-table [value]="group.bookings" [paginator]="true" [rows]="5">
+          <p-table class="bookings-table" [value]="group.bookings" [paginator]="true" [rows]="5">
             <ng-template pTemplate="header">
               <tr>
                 <th>{{ i18n.t('slots.category') }}</th>
@@ -34,7 +45,7 @@
                 <td>{{ booking.startDateTime | zurichDateTime }}</td>
                 <td>{{ booking.location ?? '-' }}</td>
                 <td>{{ booking.teacherName }}</td>
-                <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
+                <td><p-tag severity="success" [value]="i18n.statusLabel(booking.status)"></p-tag></td>
                 <td class="actions-cell">
                   @if (booking.status === SlotStatus.Booked) {
                     <button pButton type="button" size="small" severity="danger" icon="pi pi-times" [label]="i18n.t('teacher.cancelBookedSlot')" (click)="cancelBooking(booking.slotId)"></button>
@@ -46,7 +57,10 @@
 
           <div class="booking-comments">
             <div class="toolbar-row">
-              <h3>{{ i18n.t('teacherBookings.comments') }}</h3>
+              <div class="section-heading">
+                <i class="pi pi-comments" aria-hidden="true"></i>
+                <h3>{{ i18n.t('teacherBookings.comments') }}</h3>
+              </div>
               <button pButton type="button" size="small" icon="pi pi-plus" [label]="i18n.t('teacherBookings.addComment')" (click)="openCommentDialog(group)"></button>
             </div>
             @if (!commentsForUser(group.bookingUserId).length) {

@@ -489,6 +489,10 @@
   width: 100%;
 }
 
+.automation-exemption-form__block ::ng-deep .p-datepicker {
+  width: 100%;
+}
+
 .automation-exemption-form__actions {
   display: flex;
   justify-content: flex-start;

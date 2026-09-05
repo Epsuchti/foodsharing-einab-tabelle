@@ -13,10 +13,10 @@ import {
   TeacherEinAbListResponse,
   TeacherEinAbResponse,
   TeacherResponse,
-  TeacherService,
   TeacherSelfResponse,
-  BezirkResponse,
+  TeacherService,
   UpdateTeacherMeRequest,
+  BezirkResponse,
   UpsertEinAbRequest
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
@@ -78,9 +78,8 @@ export class TeacherDashboardPageComponent implements OnInit {
   protected readonly icalCandidates = signal<IcalCandidate[]>([]);
   protected readonly icalCandidatesPage = signal<IcalCandidateListResponse | null>(null);
   protected readonly bezirke = signal<BezirkResponse[]>([]);
-  protected readonly selectedBezirkSlug = signal<string | null>(null);
   protected readonly bezirkSaveLoading = signal(false);
-  protected readonly profileSaveLoading = signal(false);
+  protected readonly settingsSaveLoading = signal(false);
   protected readonly saveLoading = signal(false);
   protected readonly categoryOptions = computed(() => Object.values(EinAbCategory).map((value) => ({ value, label: this.i18n.categoryLabel(value) })));
   protected readonly slotCountOptions = [1, 2, 3].map((value) => ({ value, label: String(value) }));
@@ -89,6 +88,7 @@ export class TeacherDashboardPageComponent implements OnInit {
     value: teacher.id
   })));
   protected readonly pageSize = 20;
+  protected readonly minimumStartDate = new Date(new Date().setHours(0, 0, 0, 0));
 
   protected einabDialogVisible = false;
   protected readonly editingEinAb = signal<TeacherEinAbResponse | null>(null);
@@ -106,7 +106,7 @@ export class TeacherDashboardPageComponent implements OnInit {
     minimumPickupCount: [null as number | null]
   });
 
-  protected readonly teacherProfileForm = inject(FormBuilder).nonNullable.group({
+  protected readonly teacherSettingsForm = inject(FormBuilder).nonNullable.group({
     icalLink: ['']
   });
 
@@ -124,9 +124,7 @@ export class TeacherDashboardPageComponent implements OnInit {
     this.teacherApi.getTeacherMe().subscribe({
       next: (response) => {
         this.teacher.set(response);
-        this.teacherProfileForm.reset({
-          icalLink: response.icalLink ?? ''
-        });
+        this.teacherSettingsForm.reset({ icalLink: response.icalLink ?? '' });
         if (!response.bezirk) {
           this.bezirkContext.loadBezirke().subscribe((bezirke) => this.bezirke.set(bezirke));
         }
@@ -180,24 +178,6 @@ export class TeacherDashboardPageComponent implements OnInit {
     });
   }
 
-  assignBezirk(bezirkSlug: string): void {
-    if (!bezirkSlug || this.teacher()?.bezirk || this.bezirkSaveLoading()) {
-      return;
-    }
-    this.bezirkSaveLoading.set(true);
-    this.teacherApi.assignTeacherBezirk({ assignTeacherBezirkRequest: { bezirkSlug } }).subscribe({
-      next: (teacher) => {
-        this.teacher.update((current) => current ? { ...current, bezirk: teacher.bezirk } : current);
-        this.bezirkSaveLoading.set(false);
-        this.loadTeacherEinAbs(teacher.bezirk?.slug);
-      },
-      error: (error) => {
-        this.bezirkSaveLoading.set(false);
-        this.toastError(resolveApiError(error, this.i18n));
-      }
-    });
-  }
-
   onEinAbsPageChange(event: { page?: number }): void {
     this.einAbsPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
     this.reload();
@@ -214,26 +194,41 @@ export class TeacherDashboardPageComponent implements OnInit {
     this.reload();
   }
 
-  saveTeacherProfile(): void {
-    if (this.teacherProfileForm.invalid) {
-      return;
-    }
-    this.profileSaveLoading.set(true);
-    const formValue = this.teacherProfileForm.getRawValue();
+  saveTeacherSettings(): void {
+    this.settingsSaveLoading.set(true);
     const updateTeacherMeRequest: UpdateTeacherMeRequest = {
       language: this.i18n.apiLanguage(),
-      icalLink: formValue.icalLink?.trim() || undefined
+      icalLink: this.teacherSettingsForm.getRawValue().icalLink.trim() || undefined
     };
     this.teacherApi.updateTeacherMe({ updateTeacherMeRequest }).subscribe({
       next: (response: TeacherSelfResponse) => {
         this.teacher.set(response);
         this.icalCandidates.set(response.icalCandidates ?? []);
         this.icalCandidatesPage.update((current) => current ? { ...current, candidates: response.icalCandidates ?? [] } : current);
-        this.teacherProfileForm.reset({ icalLink: response.icalLink ?? '' });
-        this.profileSaveLoading.set(false);
+        this.teacherSettingsForm.reset({ icalLink: response.icalLink ?? '' });
+        this.settingsSaveLoading.set(false);
       },
       error: (error) => {
-        this.profileSaveLoading.set(false);
+        this.settingsSaveLoading.set(false);
+        this.toastError(resolveApiError(error, this.i18n));
+      }
+    });
+  }
+
+  assignBezirk(bezirkSlug: string): void {
+    if (!bezirkSlug || this.teacher()?.bezirk || this.bezirkSaveLoading()) {
+      return;
+    }
+    this.bezirkSaveLoading.set(true);
+    this.teacherApi.assignTeacherBezirk({ assignTeacherBezirkRequest: { bezirkSlug } }).subscribe({
+      next: (teacher) => {
+        this.teacher.set(teacher);
+        this.bezirkSaveLoading.set(false);
+        this.loadTeacherEinAbs(teacher.bezirk?.slug);
+        this.loadAssignableTeachers(teacher.bezirk?.slug);
+      },
+      error: (error) => {
+        this.bezirkSaveLoading.set(false);
         this.toastError(resolveApiError(error, this.i18n));
       }
     });

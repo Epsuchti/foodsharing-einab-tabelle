@@ -1,0 +1,210 @@
+:host {
+  display: block;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.teacher-bookings-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+}
+
+.teacher-bookings-card ::ng-deep .p-card-body {
+  padding: 1.5rem;
+}
+
+.teacher-bookings-card ::ng-deep .p-card-title {
+  margin-bottom: 1.5rem;
+}
+
+.page-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.page-heading__icon {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 12px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 1.25rem;
+}
+
+.page-heading h1 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 1.45rem;
+  line-height: 1.2;
+}
+
+.page-heading p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.booking-groups {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.booking-groups ::ng-deep .p-accordionpanel {
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.booking-groups ::ng-deep .p-accordionheader {
+  padding: 1rem 1.125rem;
+  background: #f8fafc;
+  color: #334155;
+}
+
+.booking-groups ::ng-deep .p-accordionheader:hover {
+  background: #f0fdf4;
+}
+
+.accordion-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 0.75rem;
+}
+
+.person-avatar {
+  display: grid;
+  flex: 0 0 2.5rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border-radius: 50%;
+  background: #bbf7d0;
+  color: #166534;
+  font-weight: 700;
+}
+
+.person-details {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.person-details strong {
+  color: #1e293b;
+  font-size: 1rem;
+}
+
+.person-details span,
+.person-phone {
+  color: #64748b;
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.person-phone {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-left: auto;
+  padding-right: 0.75rem;
+}
+
+.booking-groups ::ng-deep .p-accordioncontent-content {
+  padding: 0;
+}
+
+.bookings-table ::ng-deep .p-datatable-thead > tr > th {
+  padding: 0.8rem 1rem;
+  border-color: #e2e8f0;
+  background: #fff;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.bookings-table ::ng-deep .p-datatable-tbody > tr > td {
+  padding: 1rem;
+  border-color: #eef2f7;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.bookings-table ::ng-deep .p-datatable-tbody > tr:hover {
+  background: #f8fafc;
+}
+
+.bookings-table ::ng-deep .p-paginator {
+  border: 0;
+  border-top: 1px solid #eef2f7;
+  padding: 0.75rem 1rem;
+}
+
+.booking-comments {
+  margin: 0 1rem 1rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #eef2f7;
+}
+
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-heading i {
+  color: #16a34a;
+}
+
+.section-heading h3 {
+  margin: 0;
+  color: #334155;
+  font-size: 1rem;
+}
+
+.booking-comments .empty-state {
+  margin: 0;
+  padding: 1.25rem;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #64748b;
+}
+
+.comment-item {
+  border-color: #dcfce7;
+  background: #f0fdf4;
+}
+
+.comment-item > div {
+  margin-top: 0.15rem;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.comment-item p {
+  margin-bottom: 0;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 768px) {
+  .teacher-bookings-card ::ng-deep .p-card-body {
+    padding: 1rem;
+  }
+
+  .person-phone {
+    display: none;
+  }
+
+  .booking-comments {
+    margin-inline: 0.75rem;
+  }
+}

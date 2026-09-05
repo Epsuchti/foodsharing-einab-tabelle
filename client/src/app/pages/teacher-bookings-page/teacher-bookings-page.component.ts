@@ -37,7 +37,8 @@ type BookingGroup = {
   selector: 'app-teacher-bookings-page',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, ZurichDateTimePipe, AccordionModule, CardModule, ButtonModule, DialogModule, ConfirmDialogModule, TableModule, TagModule, TextareaModule],
-  templateUrl: './teacher-bookings-page.component.html'
+  templateUrl: './teacher-bookings-page.component.html',
+  styleUrl: './teacher-bookings-page.component.scss'
 })
 export class TeacherBookingsPageComponent implements OnInit {
   readonly i18n = inject(I18nService);

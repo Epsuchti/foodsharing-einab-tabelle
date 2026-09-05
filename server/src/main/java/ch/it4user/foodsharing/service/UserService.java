@@ -34,7 +34,7 @@ public class UserService {
         ensureUserCanUseBezirk(bookingUser, bezirk);
         return slotRepository.findAllByBookingUserAndStatusesAndBezirk(
                 bookingUser,
-                Set.of(SlotStatus.BOOKED, SlotStatus.DONE),
+                Set.of(SlotStatus.PENDING_CONFIRMATION, SlotStatus.BOOKED, SlotStatus.DONE),
                 bezirk,
                 PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
     }

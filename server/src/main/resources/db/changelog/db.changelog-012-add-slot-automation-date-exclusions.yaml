@@ -1,0 +1,28 @@
+databaseChangeLog:
+  - changeSet:
+      id: 012-add-slot-automation-date-exclusions
+      author: foodsharing
+      changes:
+        - addColumn:
+            tableName: foodsharing_store_automations
+            columns:
+              - column: {name: public_holiday_rule_enabled, type: BOOLEAN, defaultValueBoolean: false, constraints: {nullable: false}}
+        - createTable:
+            tableName: foodsharing_store_automation_excluded_dates
+            columns:
+              - column: {name: id, type: UUID, constraints: {primaryKey: true, nullable: false}}
+              - column: {name: version, type: BIGINT, defaultValueNumeric: 0, constraints: {nullable: false}}
+              - column: {name: created_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: updated_at, type: TIMESTAMP WITH TIME ZONE, constraints: {nullable: false}}
+              - column: {name: automation_id, type: UUID, constraints: {nullable: false}}
+              - column: {name: excluded_date, type: DATE, constraints: {nullable: false}}
+        - addForeignKeyConstraint:
+            baseTableName: foodsharing_store_automation_excluded_dates
+            baseColumnNames: automation_id
+            referencedTableName: foodsharing_store_automations
+            referencedColumnNames: id
+            constraintName: fk_foodsharing_store_automation_excluded_dates_automation
+        - addUniqueConstraint:
+            tableName: foodsharing_store_automation_excluded_dates
+            columnNames: automation_id, excluded_date
+            constraintName: uk_foodsharing_store_automation_excluded_dates

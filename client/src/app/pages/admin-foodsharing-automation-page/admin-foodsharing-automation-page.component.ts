@@ -28,6 +28,7 @@ import { ButtonModule } from 'primeng/button';
 import { AccordionModule } from 'primeng/accordion';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
+import { DatePickerModule } from 'primeng/datepicker';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
@@ -47,6 +48,7 @@ import { ZurichDateTimePipe } from '../../core/zurich-date-time.pipe';
     ButtonModule,
     CardModule,
     CheckboxModule,
+    DatePickerModule,
     InputNumberModule,
     InputTextModule,
     SelectModule,
@@ -78,7 +80,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly cleaningExemptionFoodsharingId = signal('');
   protected readonly cleaningExemptionReason = signal('');
   protected readonly excludedDateStoreId = signal<number | null>(null);
-  protected readonly excludedDate = signal('');
+  protected readonly excludedDate = signal<Date | null>(null);
   protected readonly slotRunResult = signal<FoodsharingRunResult | null>(null);
   protected readonly requestRunResult = signal<FoodsharingRunResult | null>(null);
   protected readonly advertisementRunResult = signal<FoodsharingRunResult | null>(null);
@@ -89,6 +91,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly selectedStoreId = signal<number | null>(null);
   protected readonly selectedRequestStoreId = signal<number | null>(null);
   protected readonly selectedAdvertisementStoreId = signal<number | null>(null);
+  protected readonly minimumExcludedDate = new Date(new Date().setHours(0, 0, 0, 0));
   protected readonly telegramChatOptions = signal<{ label: string; value: string }[]>([]);
   protected readonly advertisementMessageTabs = signal<Record<string, 'store' | 'telegram' | 'preview'>>({});
   protected telegramBotToken = "";
@@ -633,7 +636,8 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
 
   saveExcludedDate(): void {
     const storeId = this.excludedDateStoreId();
-    const excludedDate = this.excludedDate();
+    const selectedDate = this.excludedDate();
+    const excludedDate = selectedDate ? this.formatDateInput(selectedDate) : '';
     if (storeId == null || !excludedDate) {
       return;
     }
@@ -642,7 +646,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       foodsharingStoreAutomationExcludedDateRequest: { storeId, excludedDate }
     }).subscribe({
       next: () => {
-        this.excludedDate.set('');
+        this.excludedDate.set(null);
         this.loadExcludedDates();
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
@@ -661,6 +665,13 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       next: () => this.loadExcludedDates(),
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
+  }
+
+  private formatDateInput(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private loadFoodsharingStatus(): void {
