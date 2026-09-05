@@ -27,6 +27,8 @@ import ch.it4user.foodsharing.openapi.model.FoodsharingTelegramBotTokenRequest;
 import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomationOverview;
 import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomation;
 import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomationRequest;
+import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomationExcludedDate;
+import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomationExcludedDateRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.openapi.model.TelegramChat;
@@ -272,7 +274,8 @@ public class AdminController implements AdminApi {
                         Boolean.TRUE.equals(request.getGapRuleEnabled()),
                         request.getMinimumGapDays() == null ? 0 : request.getMinimumGapDays(),
                         Boolean.TRUE.equals(request.getCleaningRuleEnabled()),
-                        Boolean.TRUE.equals(request.getExperienceRuleEnabled()));
+                        Boolean.TRUE.equals(request.getExperienceRuleEnabled()),
+                        Boolean.TRUE.equals(request.getPublicHolidayRuleEnabled()));
         return ResponseEntity.ok(toFoodsharingStoreAutomation(
                 foodsharingPickupAutomationService.save(bezirkSlug, storeId, serviceRequest)));
     }
@@ -441,6 +444,31 @@ public class AdminController implements AdminApi {
     }
 
     @Override
+    public ResponseEntity<List<FoodsharingStoreAutomationExcludedDate>> getFoodsharingStoreAutomationExcludedDates(String bezirkSlug) {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
+        return ResponseEntity.ok(foodsharingPickupAutomationService.excludedDates(bezirkSlug).stream()
+                .map(this::toFoodsharingStoreAutomationExcludedDate)
+                .toList());
+    }
+
+    @Override
+    public ResponseEntity<FoodsharingStoreAutomationExcludedDate> saveFoodsharingStoreAutomationExcludedDate(
+            String bezirkSlug,
+            FoodsharingStoreAutomationExcludedDateRequest request) {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
+        return ResponseEntity.ok(toFoodsharingStoreAutomationExcludedDate(foodsharingPickupAutomationService.saveExcludedDate(
+                bezirkSlug,
+                new FoodsharingPickupAutomationService.ExcludedDateRequest(request.getStoreId(), request.getExcludedDate()))));
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteFoodsharingStoreAutomationExcludedDate(String bezirkSlug, UUID excludedDateId) {
+        currentActorService.requirePermission(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
+        foodsharingPickupAutomationService.deleteExcludedDate(bezirkSlug, excludedDateId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
     public ResponseEntity<List<FoodsharingAutomationAudit>> getFoodsharingAutomationAudit(String bezirkSlug, Boolean onlyMine) {
         requireAuditAccess(UserPermission.CAN_USE_AUTOMATION_SLOT_APPROVAL);
         return ResponseEntity.ok(foodsharingPickupAutomationService.audit(bezirkSlug, Boolean.TRUE.equals(onlyMine)).stream()
@@ -484,6 +512,7 @@ public class AdminController implements AdminApi {
         response.setMinimumGapDays(store.minimumGapDays());
         response.setCleaningRuleEnabled(store.cleaningRuleEnabled());
         response.setExperienceRuleEnabled(store.experienceRuleEnabled());
+        response.setPublicHolidayRuleEnabled(store.publicHolidayRuleEnabled());
         response.setEditable(store.editable());
         response.setOwnerName(store.ownerName());
         response.setOwnerEmail(store.ownerEmail());
@@ -610,6 +639,17 @@ public class AdminController implements AdminApi {
         response.setId(exemption.id());
         response.setFoodsharingId(exemption.foodsharingId());
         response.setReason(exemption.reason());
+        return response;
+    }
+
+    private FoodsharingStoreAutomationExcludedDate toFoodsharingStoreAutomationExcludedDate(FoodsharingPickupAutomationService.ExcludedDateView excludedDate) {
+        FoodsharingStoreAutomationExcludedDate response = new FoodsharingStoreAutomationExcludedDate();
+        response.setId(excludedDate.id());
+        response.setStoreId(excludedDate.storeId());
+        response.setStoreName(excludedDate.storeName());
+        response.setExcludedDate(excludedDate.excludedDate());
+        response.setEventName(excludedDate.eventName());
+        response.setManual(excludedDate.manual());
         return response;
     }
 

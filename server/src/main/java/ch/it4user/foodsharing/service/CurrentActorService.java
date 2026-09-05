@@ -9,6 +9,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 public class CurrentActorService {
 
@@ -24,6 +26,15 @@ public class CurrentActorService {
 
     public String requireFoodsharingId() {
         return requirePrincipal();
+    }
+
+    public Optional<User> findCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()
+                || authentication instanceof AnonymousAuthenticationToken) {
+            return Optional.empty();
+        }
+        return userRepository.findByFoodsharingIdIgnoreCaseAndActiveTrue(authentication.getName());
     }
 
     private String requirePrincipal() {

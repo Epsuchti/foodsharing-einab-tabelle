@@ -25,6 +25,7 @@ import ch.it4user.foodsharing.openapi.model.SlotResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherListResponse;
+import ch.it4user.foodsharing.openapi.model.TeacherAssignmentOption;
 import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSelfResponse;
 import ch.it4user.foodsharing.openapi.model.NotificationSubscriptionResponse;
@@ -115,6 +116,14 @@ public class ApiModelMapper {
         return response;
     }
 
+    public TeacherAssignmentOption toTeacherAssignmentOption(User teacher) {
+        TeacherAssignmentOption response = new TeacherAssignmentOption();
+        response.setId(teacher.getId());
+        response.setName(teacher.getName());
+        response.setPhoneNumber(teacher.getPhoneNumber());
+        return response;
+    }
+
     public BookingUserResponse toBookingUserResponse(User bookingUser) {
         BookingUserResponse response = new BookingUserResponse();
         response.setId(bookingUser.getId());
@@ -175,9 +184,11 @@ public class ApiModelMapper {
         response.setStartDateTime(toOffsetDateTime(slot.getEinAb().getStartDateTime()));
         response.setLocation(slot.getEinAb().getPublicLocation());
         response.setPublicLocation(slot.getEinAb().getPublicLocation());
-        response.setTeacherName(slot.getEinAb().getTeacher().getName());
-        response.setTeacherId(slot.getEinAb().getTeacher().getId());
+        User teacher = slotTeacher(slot);
+        response.setTeacherName(teacher.getName());
+        response.setTeacherId(teacher.getId());
         response.setMinimumPickupCount(slot.getEinAb().getMinimumPickupCount());
+        response.setPublicInfo(slot.getEinAb().getPublicInfo());
         response.setVisitFairteiler(slot.getEinAb().isVisitFairteiler());
         response.setStatus(ch.it4user.foodsharing.openapi.model.SlotStatus.fromValue(slot.getStatus().name()));
         return response;
@@ -193,10 +204,11 @@ public class ApiModelMapper {
         response.setLocation(slot.getEinAb().getLocation());
         response.setPublicLocation(slot.getEinAb().getPublicLocation());
         response.setOnlineCallLink(toUri(slot.getEinAb().getOnlineCallLink()));
-        response.setWhatToBring(slot.getEinAb().getWhatToBring());
-        response.setHint(slot.getEinAb().getHint());
-        response.setTeacherName(slot.getEinAb().getTeacher().getName());
-        response.setTeacherPhoneNumber(slot.getEinAb().getTeacher().getPhoneNumber());
+        response.setPrivateInfo(slot.getEinAb().getPrivateInfo());
+        response.setPublicInfo(slot.getEinAb().getPublicInfo());
+        User teacher = slotTeacher(slot);
+        response.setTeacherName(teacher.getName());
+        response.setTeacherPhoneNumber(teacher.getPhoneNumber());
         response.setVisitFairteiler(slot.getEinAb().isVisitFairteiler());
         response.setStatus(ch.it4user.foodsharing.openapi.model.SlotStatus.fromValue(slot.getStatus().name()));
         if (slot.getBookingUser() != null) {
@@ -216,6 +228,10 @@ public class ApiModelMapper {
         SlotResponse response = new SlotResponse();
         response.setId(slot.getId());
         response.setEinAbId(slot.getEinAb().getId());
+        User teacher = slotTeacher(slot);
+        response.setTeacherId(teacher.getId());
+        response.setTeacherName(teacher.getName());
+        response.setTeacherPhoneNumber(teacher.getPhoneNumber());
         response.setStatus(ch.it4user.foodsharing.openapi.model.SlotStatus.fromValue(slot.getStatus().name()));
         response.setBookedAt(toOffsetDateTime(slot.getBookedAt()));
         response.setDoneAt(toOffsetDateTime(slot.getDoneAt()));
@@ -236,8 +252,8 @@ public class ApiModelMapper {
         response.setLocation(einAb.getLocation());
         response.setPublicLocation(einAb.getPublicLocation());
         response.setOnlineCallLink(toUri(einAb.getOnlineCallLink()));
-        response.setWhatToBring(einAb.getWhatToBring());
-        response.setHint(einAb.getHint());
+        response.setPrivateInfo(einAb.getPrivateInfo());
+        response.setPublicInfo(einAb.getPublicInfo());
         response.setTeacher(toTeacherResponse(einAb.getTeacher()));
         response.setVisitFairteiler(einAb.isVisitFairteiler());
         response.setSlotCount(einAb.getSlotCount());
@@ -252,6 +268,10 @@ public class ApiModelMapper {
         copyEinAb(toEinAbResponse(einAb), response);
         response.setSlots(slots.stream().map(this::toSlotResponse).toList());
         return response;
+    }
+
+    private User slotTeacher(Slot slot) {
+        return slot.getTeacher() == null ? slot.getEinAb().getTeacher() : slot.getTeacher();
     }
 
     public TeacherEinAbListResponse toTeacherEinAbListResponse(Page<TeacherEinAbResponse> einAbs) {
@@ -394,8 +414,8 @@ public class ApiModelMapper {
         target.setLocation(source.getLocation());
         target.setPublicLocation(source.getPublicLocation());
         target.setOnlineCallLink(source.getOnlineCallLink());
-        target.setWhatToBring(source.getWhatToBring());
-        target.setHint(source.getHint());
+        target.setPrivateInfo(source.getPrivateInfo());
+        target.setPublicInfo(source.getPublicInfo());
         target.setTeacher(source.getTeacher());
         target.setVisitFairteiler(source.getVisitFairteiler());
         target.setSlotCount(source.getSlotCount());

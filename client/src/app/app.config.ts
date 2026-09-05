@@ -18,6 +18,10 @@ export const appConfig: ApplicationConfig = {
     provideAnimations(),
     provideHttpClient(withInterceptors([authInterceptor])),
     providePrimeNG({
+      translation: {
+        firstDayOfWeek: 1,
+        dateFormat: 'dd.mm.yy'
+      },
       theme: {
         preset: Aura
       }

@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 
 import {
@@ -9,6 +9,7 @@ import {
   IcalCandidateListResponse,
   SlotStatus,
   SlotResponse,
+  TeacherAssignmentOption,
   TeacherEinAbListResponse,
   TeacherEinAbResponse,
   TeacherResponse,
@@ -41,6 +42,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     ReactiveFormsModule,
     ZurichDateTimePipe,
     CardModule,
@@ -66,7 +68,13 @@ export class TeacherDashboardPageComponent implements OnInit {
   protected readonly teacher = signal<TeacherResponse | null>(null);
   protected readonly einAbs = signal<TeacherEinAbResponse[]>([]);
   protected readonly einAbsPage = signal<TeacherEinAbListResponse | null>(null);
+  protected hidePastEinAbs = true;
   protected readonly selectedEinAb = signal<TeacherEinAbResponse | null>(null);
+  protected readonly assignableTeachers = signal<TeacherAssignmentOption[]>([]);
+  protected readonly assignTeacherDialogVisible = signal(false);
+  protected readonly assignTeacherSlot = signal<SlotResponse | null>(null);
+  protected readonly selectedTeacherId = signal<string | null>(null);
+  protected readonly assignTeacherLoading = signal(false);
   protected readonly icalCandidates = signal<IcalCandidate[]>([]);
   protected readonly icalCandidatesPage = signal<IcalCandidateListResponse | null>(null);
   protected readonly bezirke = signal<BezirkResponse[]>([]);
@@ -76,6 +84,10 @@ export class TeacherDashboardPageComponent implements OnInit {
   protected readonly saveLoading = signal(false);
   protected readonly categoryOptions = computed(() => Object.values(EinAbCategory).map((value) => ({ value, label: this.i18n.categoryLabel(value) })));
   protected readonly slotCountOptions = [1, 2, 3].map((value) => ({ value, label: String(value) }));
+  protected readonly assignableTeacherOptions = computed(() => this.assignableTeachers().map((teacher) => ({
+    label: teacher.phoneNumber ? `${teacher.name} (${teacher.phoneNumber})` : teacher.name,
+    value: teacher.id
+  })));
   protected readonly pageSize = 20;
 
   protected einabDialogVisible = false;
@@ -87,8 +99,8 @@ export class TeacherDashboardPageComponent implements OnInit {
     location: [''],
     publicLocation: ['', Validators.required],
     onlineCallLink: [''],
-    whatToBring: [''],
-    hint: [''],
+    privateInfo: [''],
+    publicInfo: [''],
     visitFairteiler: [false],
     slotCount: [1, Validators.required],
     minimumPickupCount: [null as number | null]
@@ -119,6 +131,7 @@ export class TeacherDashboardPageComponent implements OnInit {
           this.bezirkContext.loadBezirke().subscribe((bezirke) => this.bezirke.set(bezirke));
         }
         this.loadTeacherEinAbs(response.bezirk?.slug);
+        this.loadAssignableTeachers(response.bezirk?.slug);
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
@@ -138,7 +151,12 @@ export class TeacherDashboardPageComponent implements OnInit {
       this.selectedEinAb.set(null);
       return;
     }
-    this.teacherApi.getTeacherEinAbs({ bezirkSlug: teacherBezirkSlug, page: this.einAbsPage()?.page ?? 0, size: this.pageSize }).subscribe({
+    this.teacherApi.getTeacherEinAbs({
+      bezirkSlug: teacherBezirkSlug,
+      page: this.einAbsPage()?.page ?? 0,
+      size: this.pageSize,
+      hidePast: this.hidePastEinAbs
+    }).subscribe({
       next: (response) => {
         this.einAbs.set(response.einAbs);
         this.einAbsPage.set(response);
@@ -147,6 +165,17 @@ export class TeacherDashboardPageComponent implements OnInit {
           this.selectedEinAb.set(refreshed);
         }
       },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  private loadAssignableTeachers(teacherBezirkSlug?: string): void {
+    if (!teacherBezirkSlug) {
+      this.assignableTeachers.set([]);
+      return;
+    }
+    this.teacherApi.getTeacherAssignableTeachers({ bezirkSlug: teacherBezirkSlug }).subscribe({
+      next: (response) => this.assignableTeachers.set(response.teachers),
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
   }
@@ -172,6 +201,12 @@ export class TeacherDashboardPageComponent implements OnInit {
   onEinAbsPageChange(event: { page?: number }): void {
     this.einAbsPage.update((current) => current ? { ...current, page: event.page ?? 0 } : current);
     this.reload();
+  }
+
+  onHidePastEinAbsChange(hidePast: boolean): void {
+    this.hidePastEinAbs = hidePast;
+    this.einAbsPage.update((current) => current ? { ...current, page: 0 } : current);
+    this.loadTeacherEinAbs(this.teacher()?.bezirk?.slug);
   }
 
   onIcalPageChange(event: { page?: number }): void {
@@ -219,8 +254,8 @@ export class TeacherDashboardPageComponent implements OnInit {
       location: '',
       publicLocation: '',
       onlineCallLink: '',
-      whatToBring: '',
-      hint: '',
+      privateInfo: '',
+      publicInfo: '',
       visitFairteiler: false,
       slotCount: 1,
       minimumPickupCount: null
@@ -239,8 +274,8 @@ export class TeacherDashboardPageComponent implements OnInit {
       location: candidate.location ?? '',
       publicLocation: '',
       onlineCallLink: '',
-      whatToBring: '',
-      hint: '',
+      privateInfo: '',
+      publicInfo: '',
       visitFairteiler: false,
       slotCount: 1,
       minimumPickupCount: null
@@ -259,8 +294,8 @@ export class TeacherDashboardPageComponent implements OnInit {
       location: einab.location ?? '',
       publicLocation: einab.publicLocation ?? '',
       onlineCallLink: einab.onlineCallLink ?? '',
-      whatToBring: einab.whatToBring ?? '',
-      hint: einab.hint ?? '',
+      privateInfo: einab.privateInfo ?? '',
+      publicInfo: einab.publicInfo ?? '',
       visitFairteiler: einab.visitFairteiler,
       slotCount: einab.slotCount,
       minimumPickupCount: einab.minimumPickupCount ?? null
@@ -284,8 +319,8 @@ export class TeacherDashboardPageComponent implements OnInit {
       location: formValue.location?.trim() || undefined,
       publicLocation: this.isOnline(formValue.category) ? undefined : formValue.publicLocation.trim(),
       onlineCallLink: this.isOnline(formValue.category) ? formValue.onlineCallLink.trim() : undefined,
-      whatToBring: this.isOnline(formValue.category) ? undefined : formValue.whatToBring?.trim() || undefined,
-      hint: formValue.hint?.trim() || undefined,
+      privateInfo: formValue.privateInfo?.trim() || undefined,
+      publicInfo: formValue.publicInfo?.trim() || undefined,
       visitFairteiler: this.isOnline(formValue.category) ? false : formValue.visitFairteiler,
       slotCount: formValue.slotCount,
       minimumPickupCount: this.isOnline(formValue.category) ? undefined : formValue.minimumPickupCount ?? undefined
@@ -334,6 +369,42 @@ export class TeacherDashboardPageComponent implements OnInit {
     });
   }
 
+  openAssignTeacher(slot: SlotResponse): void {
+    if (slot.status !== SlotStatus.Booked || !slot.bookingUser) {
+      return;
+    }
+    this.assignTeacherSlot.set(slot);
+    this.selectedTeacherId.set(slot.teacherId);
+    this.assignTeacherDialogVisible.set(true);
+  }
+
+  assignTeacherToSlot(): void {
+    const slot = this.assignTeacherSlot();
+    const teacherId = this.selectedTeacherId();
+    const bezirkSlug = this.teacher()?.bezirk?.slug;
+    if (!slot || !teacherId || !bezirkSlug || this.assignTeacherLoading()) {
+      return;
+    }
+    this.assignTeacherLoading.set(true);
+    this.teacherApi.assignTeacherToSlot({
+      bezirkSlug,
+      slotId: slot.id,
+      assignTeacherToSlotRequest: { teacherId }
+    }).subscribe({
+      next: () => {
+        this.assignTeacherLoading.set(false);
+        this.assignTeacherDialogVisible.set(false);
+        this.assignTeacherSlot.set(null);
+        this.loadTeacherEinAbs(bezirkSlug);
+        this.messageService.add({ severity: 'success', summary: this.i18n.t('teacher.assignSlotSuccess') });
+      },
+      error: (error) => {
+        this.assignTeacherLoading.set(false);
+        this.toastError(resolveApiError(error, this.i18n));
+      }
+    });
+  }
+
   private toastError(detail: string): void {
     this.messageService.add({ severity: 'error', summary: this.i18n.t('common.error'), detail });
   }
@@ -349,7 +420,7 @@ export class TeacherDashboardPageComponent implements OnInit {
     publicLocation.setValidators(isOnline ? [] : [Validators.required]);
     onlineCallLink.setValidators(isOnline ? [Validators.required] : []);
     if (isOnline) {
-      this.einabForm.patchValue({ location: '', publicLocation: '', whatToBring: '', visitFairteiler: false, slotCount: 1, minimumPickupCount: null }, { emitEvent: false });
+      this.einabForm.patchValue({ location: '', publicLocation: '', privateInfo: '', publicInfo: '', visitFairteiler: false, slotCount: 1, minimumPickupCount: null }, { emitEvent: false });
     } else {
       this.einabForm.patchValue({ onlineCallLink: '' }, { emitEvent: false });
     }

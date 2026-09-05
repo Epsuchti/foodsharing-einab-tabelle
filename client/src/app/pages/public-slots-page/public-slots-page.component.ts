@@ -11,7 +11,6 @@ import {
   AvailableSlotListResponse,
   BookSlotRequest,
   BookingDetailResponse,
-  BookingUserResponse,
   EinAbCategory,
   NotificationSubscriptionRequest,
   PublicService,
@@ -77,7 +76,6 @@ export class PublicSlotsPageComponent implements OnInit {
   protected readonly bookingLoading = signal(false);
   protected readonly subscribeLoading = signal(false);
   protected readonly bookingIdentityLocked = signal(false);
-  protected readonly bookingProfile = signal<BookingUserResponse | null>(null);
   protected readonly bookingDetails = signal<BookingDetailResponse | null>(null);
   protected bookingVisible = false;
   protected bookingSuccessVisible = false;
@@ -157,7 +155,6 @@ export class PublicSlotsPageComponent implements OnInit {
       rejectLabel: this.i18n.t('common.no'),
       accept: () => {
         this.confirmationService.close();
-        window.open(FOODSHARING_BASE_URL, '_blank', 'noopener');
         this.performBooking();
       },
       reject: () => {
@@ -182,7 +179,8 @@ export class PublicSlotsPageComponent implements OnInit {
       bookSlotRequest
     }).pipe(finalize(() => this.bookingLoading.set(false)))
       .subscribe({
-      next: (response) => {
+        next: (response) => {
+          window.open(FOODSHARING_BASE_URL, '_blank', 'noopener');
           this.messageService.add({ severity: 'success', summary: this.i18n.t('book.confirmationSent') });
           this.bookingVisible = false;
           this.bookingForm.reset();
@@ -261,7 +259,6 @@ export class PublicSlotsPageComponent implements OnInit {
         if (!profile) {
           return;
         }
-        this.bookingProfile.set(profile);
         this.bookingIdentityLocked.set(true);
         this.bookingForm.patchValue({
           foodsharingId: profile.foodsharingId
@@ -272,7 +269,6 @@ export class PublicSlotsPageComponent implements OnInit {
   }
 
   private applyLoggedOutBookingDefaults(): void {
-    this.bookingProfile.set(null);
     this.bookingIdentityLocked.set(false);
     this.bookingForm.controls.foodsharingId.enable({ emitEvent: false });
     this.bookingForm.patchValue({ foodsharingId: this.sessionService.session()?.foodsharingId ?? '' });

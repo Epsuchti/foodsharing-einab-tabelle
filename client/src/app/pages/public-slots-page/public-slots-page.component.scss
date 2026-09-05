@@ -53,6 +53,128 @@
   border-top: 1px solid #eef2f6;
 }
 
+.booking-dialog {
+  gap: 1.15rem;
+}
+
+.booking-dialog__summary {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.1rem 1.15rem;
+  border: 1px solid #c9e6dc;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f0fdf8 0%, #f8fafc 100%);
+}
+
+.booking-dialog__summary-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.booking-dialog__eyebrow {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #0f766e;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.booking-dialog__summary h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1.45rem;
+  line-height: 1.15;
+}
+
+.booking-dialog__summary-icon {
+  flex: 0 0 auto;
+  padding: 0.65rem;
+  border-radius: 10px;
+  background: #d1fae5;
+  color: #047857;
+  font-size: 1.1rem;
+}
+
+.booking-dialog__date {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #334155;
+}
+
+.booking-dialog__date i {
+  color: #0f766e;
+}
+
+.booking-dialog__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.booking-dialog__fact {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.booking-dialog__label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.booking-dialog__label i {
+  color: #0f766e;
+}
+
+.booking-dialog__value {
+  color: #0f172a;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.booking-dialog__public-info {
+  padding: 0.9rem 1rem;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #eff6ff;
+}
+
+.booking-dialog__public-info p {
+  margin: 0.45rem 0 0;
+  color: #334155;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.booking-dialog__identity {
+  padding-top: 0.25rem;
+}
+
+.booking-dialog__identity > strong {
+  color: #0f172a;
+}
+
+.booking-dialog__identity label {
+  display: grid;
+  gap: 0.35rem;
+}
+
 @media (max-width: 360px) {
   .slot-card__meta {
     grid-template-columns: 1fr;
@@ -66,5 +188,9 @@
 
   .slots-cards--mobile {
     display: grid;
+  }
+
+  .booking-dialog__facts {
+    grid-template-columns: 1fr;
   }
 }

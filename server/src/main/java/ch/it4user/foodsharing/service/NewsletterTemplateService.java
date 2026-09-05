@@ -85,6 +85,7 @@ public class NewsletterTemplateService {
                 field(resolved, "category") + ": " + categoryLabel(resolved, einAb),
                 field(resolved, "start") + ": " + swissDateTime(einAb.getStartDateTime()),
                 field(resolved, "location") + ": " + valueOrDash(einAb.getPublicLocation()),
+                field(resolved, "public-info") + ": " + valueOrDash(einAb.getPublicInfo()),
                 field(resolved, "fairteiler") + ": " + yesNo(resolved, einAb.isVisitFairteiler()),
                 "",
                 field(resolved, "unsubscribe") + ": " + unsubscribeUrl);
@@ -141,11 +142,13 @@ public class NewsletterTemplateService {
                   %s
                   %s
                   %s
+                  %s
                 </table>
                 """.formatted(
                 fieldRow(language, "category", categoryLabel(language, einAb)),
                 fieldRow(language, "start", swissDateTime(einAb.getStartDateTime())),
                 fieldRow(language, "location", valueOrDash(einAb.getPublicLocation())),
+                fieldRow(language, "public-info", valueOrDash(einAb.getPublicInfo())),
                 fieldRow(language, "fairteiler", yesNo(language, einAb.isVisitFairteiler()))
         );
     }

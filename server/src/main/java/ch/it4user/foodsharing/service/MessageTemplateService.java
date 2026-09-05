@@ -2,6 +2,7 @@ package ch.it4user.foodsharing.service;
 
 import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.Slot;
+import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.enumtype.EinAbCategory;
 import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import java.time.Instant;
@@ -43,7 +44,7 @@ public class MessageTemplateService {
     }
 
     public String bookingConfirmationBody(LanguageCode language, Slot slot, String manageUrl, long confirmWithinMinutes) {
-        Map<String, String> details = bookingDetails(language, slot.getEinAb(), slot.getEinAb().getTeacher().getName(), slot.getEinAb().getTeacher().getPhoneNumber());
+        Map<String, String> details = bookingDetails(language, slot.getEinAb(), slotTeacher(slot).getName(), slotTeacher(slot).getPhoneNumber());
         return String.join("\n\n",
                 message(language, "message.greeting.named", slot.getBookingUser().getName()),
                 confirmWindowText(language, confirmWithinMinutes),
@@ -57,7 +58,7 @@ public class MessageTemplateService {
     }
 
     public String teacherCancellationBody(LanguageCode language, Slot slot, String manageUrl) {
-        Map<String, String> details = bookingDetails(language, slot.getEinAb(), slot.getEinAb().getTeacher().getName(), slot.getEinAb().getTeacher().getPhoneNumber());
+        Map<String, String> details = bookingDetails(language, slot.getEinAb(), slotTeacher(slot).getName(), slotTeacher(slot).getPhoneNumber());
         return String.join("\n\n",
                 message(language, "message.greeting.named", slot.getBookingUser().getName()),
                 message(language, "message.teacher-cancellation.intro"),
@@ -80,9 +81,9 @@ public class MessageTemplateService {
         } else {
             details.put(message(language, "message.details.location"), valueOrDash(einAb.getLocation()));
             details.put(message(language, "message.details.public-location"), valueOrDash(einAb.getPublicLocation()));
-            details.put(message(language, "message.details.what-to-bring"), valueOrDash(einAb.getWhatToBring()));
         }
-        details.put(message(language, "message.details.hint"), valueOrDash(einAb.getHint()));
+        details.put(message(language, "message.details.public-info"), valueOrDash(einAb.getPublicInfo()));
+        details.put(message(language, "message.details.private-info"), valueOrDash(einAb.getPrivateInfo()));
         details.put(message(language, "message.details.fairteiler"), message(language, einAb.isVisitFairteiler() ? "message.yes" : "message.no"));
         return details;
     }
@@ -107,5 +108,9 @@ public class MessageTemplateService {
 
     private String valueOrDash(String value) {
         return value == null || value.isBlank() ? "-" : value;
+    }
+
+    private User slotTeacher(Slot slot) {
+        return slot.getTeacher() == null ? slot.getEinAb().getTeacher() : slot.getTeacher();
     }
 }

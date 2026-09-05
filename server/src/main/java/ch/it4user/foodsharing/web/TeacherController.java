@@ -11,6 +11,8 @@ import ch.it4user.foodsharing.openapi.model.IcalCandidateListResponse;
 import ch.it4user.foodsharing.openapi.model.SlotResponse;
 import ch.it4user.foodsharing.openapi.model.UpdateTeacherMeRequest;
 import ch.it4user.foodsharing.openapi.model.AssignTeacherBezirkRequest;
+import ch.it4user.foodsharing.openapi.model.AssignTeacherToSlotRequest;
+import ch.it4user.foodsharing.openapi.model.TeacherAssignmentOptionListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSelfResponse;
@@ -74,10 +76,10 @@ public class TeacherController implements TeacherApi {
     }
 
     @Override
-    public ResponseEntity<TeacherEinAbListResponse> getTeacherEinAbs(String bezirkSlug, Integer page, Integer size) {
+    public ResponseEntity<TeacherEinAbListResponse> getTeacherEinAbs(String bezirkSlug, Integer page, Integer size, Boolean hidePast) {
         User teacher = currentActorService.requireTeacher();
         org.springframework.data.domain.Page<EinAb> einAbs = teacherService.findTeacherEinAbs(
-                bezirkSlug, teacher, page == null ? 0 : page, size == null ? 20 : size);
+                bezirkSlug, teacher, page == null ? 0 : page, size == null ? 20 : size, hidePast == null || hidePast);
         return ResponseEntity.ok(mapTeacherEinAbs(einAbs));
     }
 
@@ -92,8 +94,8 @@ public class TeacherController implements TeacherApi {
                 upsertEinAbRequest.getLocation(),
                 upsertEinAbRequest.getPublicLocation(),
                 upsertEinAbRequest.getOnlineCallLink() == null ? null : upsertEinAbRequest.getOnlineCallLink().toString(),
-                upsertEinAbRequest.getWhatToBring(),
-                upsertEinAbRequest.getHint(),
+                upsertEinAbRequest.getPrivateInfo(),
+                upsertEinAbRequest.getPublicInfo(),
                 upsertEinAbRequest.getVisitFairteiler(),
                 upsertEinAbRequest.getSlotCount(),
                 upsertEinAbRequest.getMinimumPickupCount()
@@ -116,14 +118,24 @@ public class TeacherController implements TeacherApi {
                 upsertEinAbRequest.getLocation(),
                 upsertEinAbRequest.getPublicLocation(),
                 upsertEinAbRequest.getOnlineCallLink() == null ? null : upsertEinAbRequest.getOnlineCallLink().toString(),
-                upsertEinAbRequest.getWhatToBring(),
-                upsertEinAbRequest.getHint(),
+                upsertEinAbRequest.getPrivateInfo(),
+                upsertEinAbRequest.getPublicInfo(),
                 upsertEinAbRequest.getVisitFairteiler(),
                 upsertEinAbRequest.getSlotCount(),
                 upsertEinAbRequest.getMinimumPickupCount(),
                 currentActorService.canManageUsers()
         );
         return ResponseEntity.ok(mapTeacherEinAb(einAb));
+    }
+
+    @Override
+    public ResponseEntity<TeacherAssignmentOptionListResponse> getTeacherAssignableTeachers(String bezirkSlug) {
+        User teacher = currentActorService.requireTeacher();
+        TeacherAssignmentOptionListResponse response = new TeacherAssignmentOptionListResponse();
+        response.setTeachers(teacherService.findAssignableTeachers(bezirkSlug, teacher).stream()
+                .map(mapper::toTeacherAssignmentOption)
+                .toList());
+        return ResponseEntity.ok(response);
     }
 
     @Override
@@ -194,6 +206,19 @@ public class TeacherController implements TeacherApi {
                         currentActorService.requireTeacher(),
                         slotId,
                         currentActorService.canManageUsers())));
+    }
+
+    @Override
+    public ResponseEntity<SlotResponse> assignTeacherToSlot(
+            String bezirkSlug,
+            UUID slotId,
+            AssignTeacherToSlotRequest request) {
+        return ResponseEntity.ok(mapper.toSlotResponse(
+                teacherService.assignTeacherToSlot(
+                        bezirkSlug,
+                        currentActorService.requireTeacher(),
+                        slotId,
+                        request.getTeacherId())));
     }
 
     private TeacherEinAbListResponse mapTeacherEinAbs(org.springframework.data.domain.Page<EinAb> einAbs) {

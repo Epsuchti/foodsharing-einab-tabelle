@@ -25,6 +25,10 @@ public class Slot extends BaseEntity {
     @JoinColumn(name = "einab_id", nullable = false)
     private EinAb einAb;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "teacher_id", nullable = false)
+    private User teacher;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private SlotStatus status = SlotStatus.AVAILABLE;

@@ -8,6 +8,7 @@ import ch.it4user.foodsharing.domain.entity.FoodsharingPickupAutomationAudit;
 import ch.it4user.foodsharing.domain.entity.FoodsharingStoreMembersCache;
 import ch.it4user.foodsharing.domain.entity.FoodsharingStorePickupsCache;
 import ch.it4user.foodsharing.domain.entity.FoodsharingStoreAutomation;
+import ch.it4user.foodsharing.domain.entity.FoodsharingStoreAutomationExcludedDate;
 import ch.it4user.foodsharing.domain.entity.FoodsharingRequestAutomation;
 import ch.it4user.foodsharing.domain.entity.FoodsharingRequestAutomationAudit;
 import ch.it4user.foodsharing.domain.entity.FoodsharingOpenSlotAdvertisementAutomation;
@@ -22,6 +23,7 @@ import ch.it4user.foodsharing.repository.FoodsharingFuturePickupUsersCacheReposi
 import ch.it4user.foodsharing.repository.FoodsharingStoreMembersCacheRepository;
 import ch.it4user.foodsharing.repository.FoodsharingStorePickupsCacheRepository;
 import ch.it4user.foodsharing.repository.FoodsharingStoreAutomationRepository;
+import ch.it4user.foodsharing.repository.FoodsharingStoreAutomationExcludedDateRepository;
 import ch.it4user.foodsharing.repository.FoodsharingRequestAutomationRepository;
 import ch.it4user.foodsharing.repository.FoodsharingRequestAutomationAuditRepository;
 import ch.it4user.foodsharing.repository.FoodsharingOpenSlotAdvertisementAutomationRepository;
@@ -69,6 +71,8 @@ public class FoodsharingPickupAutomationService {
     private final FoodsharingClient foodsharingClient;
     private final FoodsharingAdminConnectionRepository connectionRepository;
     private final FoodsharingStoreAutomationRepository automationRepository;
+    private final FoodsharingStoreAutomationExcludedDateRepository excludedDateRepository;
+    private final SwissPublicHolidayCalendar publicHolidayCalendar;
     private final FoodsharingRequestAutomationRepository requestAutomationRepository;
     private final FoodsharingRequestAutomationAuditRepository requestAutomationAuditRepository;
     private final FoodsharingOpenSlotAdvertisementAutomationRepository advertisementAutomationRepository;
@@ -85,8 +89,8 @@ public class FoodsharingPickupAutomationService {
     private final RestClient telegramClient = RestClient.create("https://api.telegram.org");
     private final AtomicBoolean scheduledRunInProgress = new AtomicBoolean(false);
 
-    public FoodsharingPickupAutomationService(AppProperties appProperties, BezirkService bezirkService, CurrentActorService currentActorService, CryptoService cryptoService, FoodsharingPickupApiClient client, FoodsharingClient foodsharingClient, FoodsharingAdminConnectionRepository connectionRepository, FoodsharingStoreAutomationRepository automationRepository, FoodsharingRequestAutomationRepository requestAutomationRepository, FoodsharingRequestAutomationAuditRepository requestAutomationAuditRepository, FoodsharingOpenSlotAdvertisementAutomationRepository advertisementAutomationRepository, FoodsharingOpenSlotAdvertisementAuditRepository advertisementAuditRepository, FoodsharingPickupAutomationAuditRepository auditRepository, FoodsharingFuturePickupUsersCacheRepository futurePickupUsersCacheRepository, FoodsharingStoreMembersCacheRepository storeMembersCacheRepository, FoodsharingStorePickupsCacheRepository storePickupsCacheRepository, FoodsharingCleaningRuleExemptionRepository cleaningRuleExemptionRepository, FoodsharingMessageService messageService, MessageSource messageSource, ObjectMapper objectMapper, PlatformTransactionManager transactionManager) {
-        this.appProperties = appProperties; this.bezirkService = bezirkService; this.currentActorService = currentActorService; this.cryptoService = cryptoService; this.client = client; this.foodsharingClient = foodsharingClient; this.connectionRepository = connectionRepository; this.automationRepository = automationRepository; this.requestAutomationRepository = requestAutomationRepository; this.requestAutomationAuditRepository = requestAutomationAuditRepository; this.advertisementAutomationRepository = advertisementAutomationRepository; this.advertisementAuditRepository = advertisementAuditRepository; this.auditRepository = auditRepository; this.futurePickupUsersCacheRepository = futurePickupUsersCacheRepository; this.storeMembersCacheRepository = storeMembersCacheRepository; this.storePickupsCacheRepository = storePickupsCacheRepository; this.cleaningRuleExemptionRepository = cleaningRuleExemptionRepository; this.messageService = messageService; this.messageSource = messageSource; this.objectMapper = objectMapper; this.scheduledPhaseTransaction = new TransactionTemplate(transactionManager);
+    public FoodsharingPickupAutomationService(AppProperties appProperties, BezirkService bezirkService, CurrentActorService currentActorService, CryptoService cryptoService, FoodsharingPickupApiClient client, FoodsharingClient foodsharingClient, FoodsharingAdminConnectionRepository connectionRepository, FoodsharingStoreAutomationRepository automationRepository, FoodsharingStoreAutomationExcludedDateRepository excludedDateRepository, SwissPublicHolidayCalendar publicHolidayCalendar, FoodsharingRequestAutomationRepository requestAutomationRepository, FoodsharingRequestAutomationAuditRepository requestAutomationAuditRepository, FoodsharingOpenSlotAdvertisementAutomationRepository advertisementAutomationRepository, FoodsharingOpenSlotAdvertisementAuditRepository advertisementAuditRepository, FoodsharingPickupAutomationAuditRepository auditRepository, FoodsharingFuturePickupUsersCacheRepository futurePickupUsersCacheRepository, FoodsharingStoreMembersCacheRepository storeMembersCacheRepository, FoodsharingStorePickupsCacheRepository storePickupsCacheRepository, FoodsharingCleaningRuleExemptionRepository cleaningRuleExemptionRepository, FoodsharingMessageService messageService, MessageSource messageSource, ObjectMapper objectMapper, PlatformTransactionManager transactionManager) {
+        this.appProperties = appProperties; this.bezirkService = bezirkService; this.currentActorService = currentActorService; this.cryptoService = cryptoService; this.client = client; this.foodsharingClient = foodsharingClient; this.connectionRepository = connectionRepository; this.automationRepository = automationRepository; this.excludedDateRepository = excludedDateRepository; this.publicHolidayCalendar = publicHolidayCalendar; this.requestAutomationRepository = requestAutomationRepository; this.requestAutomationAuditRepository = requestAutomationAuditRepository; this.advertisementAutomationRepository = advertisementAutomationRepository; this.advertisementAuditRepository = advertisementAuditRepository; this.auditRepository = auditRepository; this.futurePickupUsersCacheRepository = futurePickupUsersCacheRepository; this.storeMembersCacheRepository = storeMembersCacheRepository; this.storePickupsCacheRepository = storePickupsCacheRepository; this.cleaningRuleExemptionRepository = cleaningRuleExemptionRepository; this.messageService = messageService; this.messageSource = messageSource; this.objectMapper = objectMapper; this.scheduledPhaseTransaction = new TransactionTemplate(transactionManager);
     }
 
     @Transactional
@@ -116,6 +120,9 @@ public class FoodsharingPickupAutomationService {
             futurePickupUsersCacheRepository.deleteAllByAdminConnection(connection);
             storeMembersCacheRepository.deleteAllByAdminConnection(connection);
             storePickupsCacheRepository.deleteAllByAdminConnection(connection);
+            automationRepository.findAll().stream()
+                    .filter(automation -> automation.getAdminConnection().getId().equals(connection.getId()))
+                    .forEach(excludedDateRepository::deleteAllByAutomation);
             automationRepository.deleteAllByAdminConnection(connection);
             requestAutomationRepository.deleteAllByAdminConnection(connection);
             advertisementAutomationRepository.deleteAllByAdminConnection(connection);
@@ -178,7 +185,14 @@ public class FoodsharingPickupAutomationService {
                 .map(existing -> {
                     if (!existing.getBezirk().getId().equals(bezirk.getId())
                             || !existing.getAdminConnection().getId().equals(c.getId())) {
-                        throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.VALIDATION_FAILED, List.of("An automation already exists for this store."));
+                        User owner = existing.getAdminConnection().getAdminUser();
+                        String ownerName = owner == null ? null : owner.getName();
+                        String ownerEmail = owner == null ? existing.getAdminConnection().getFoodsharingEmail() : owner.getEmail();
+                        String ownerLabel = ownerName == null || ownerName.isBlank()
+                                ? ownerEmail
+                                : ownerEmail == null || ownerEmail.isBlank() ? ownerName : ownerName + " (" + ownerEmail + ")";
+                        throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.VALIDATION_FAILED, List.of(
+                                "Für diesen Store besteht bereits eine Automation bei " + (ownerLabel == null || ownerLabel.isBlank() ? "einem anderen Benutzer" : ownerLabel) + "."));
                     }
                     return existing;
                 })
@@ -190,6 +204,7 @@ public class FoodsharingPickupAutomationService {
         a.setMinimumGapDays(Math.max(0, request.minimumGapDays()));
         a.setCleaningRuleEnabled(request.cleaningRuleEnabled() && bezirk.getCleaningStoreId() != null);
         a.setExperienceRuleEnabled(request.experienceRuleEnabled());
+        a.setPublicHolidayRuleEnabled(request.publicHolidayRuleEnabled());
         FoodsharingStoreAutomation saved = automationRepository.save(a);
         futurePickupUsersCacheRepository.deleteByAdminConnectionAndBezirk(c, bezirk);
         return view(storeId, saved.getStoreName(), saved, c);
@@ -211,8 +226,64 @@ public class FoodsharingPickupAutomationService {
         FoodsharingStoreAutomation automation = automationRepository.findByBezirkAndStoreId(bezirk, storeId)
                 .filter(entry -> entry.getAdminConnection().getId().equals(connection.getId()))
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND, List.of("Store automation not found.")));
+        excludedDateRepository.deleteAllByAutomation(automation);
         automationRepository.delete(automation);
         futurePickupUsersCacheRepository.deleteByAdminConnectionAndBezirk(connection, bezirk);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExcludedDateView> excludedDates(String bezirkSlug) {
+        FoodsharingAdminConnection connection = requireConnection();
+        Bezirk bezirk = requireBezirk(bezirkSlug, connection.getAdminUser());
+        List<ExcludedDateView> result = new ArrayList<>(excludedDateRepository.findAllByAutomationBezirkOrderByAutomationStoreNameAscExcludedDateAsc(bezirk).stream()
+                .map(date -> new ExcludedDateView(date.getId(), date.getAutomation().getStoreId(), date.getAutomation().getStoreName(), date.getExcludedDate(), null, true))
+                .toList());
+        LocalDate today = LocalDate.now(SWISS_ZONE);
+        try {
+            Map<LocalDate, String> holidays = new HashMap<>();
+            holidays.putAll(publicHolidayCalendar.holidays(today.getYear()));
+            holidays.putAll(publicHolidayCalendar.holidays(today.plusYears(1).getYear()));
+            automationRepository.findAllByBezirk(bezirk).stream()
+                    .filter(FoodsharingStoreAutomation::isPublicHolidayRuleEnabled)
+                    .filter(automation -> automation.getAdminConnection().getId().equals(connection.getId()))
+                    .forEach(automation -> holidays.entrySet().stream()
+                            .filter(holiday -> !holiday.getKey().isBefore(today))
+                            .map(holiday -> new ExcludedDateView(null, automation.getStoreId(), automation.getStoreName(), holiday.getKey(), holiday.getValue(), false))
+                            .forEach(result::add));
+        } catch (SwissPublicHolidayCalendar.PublicHolidayCalendarUnavailableException exception) {
+            log.warn("Foodsharing public-holiday calendar unavailable while listing excluded dates", exception);
+        }
+        return result.stream()
+                .sorted(Comparator.comparing(ExcludedDateView::excludedDate).thenComparing(ExcludedDateView::storeName))
+                .toList();
+    }
+
+    @Transactional
+    public ExcludedDateView saveExcludedDate(String bezirkSlug, ExcludedDateRequest request) {
+        FoodsharingAdminConnection connection = requireConnection();
+        Bezirk bezirk = requireBezirk(bezirkSlug, connection.getAdminUser());
+        FoodsharingStoreAutomation automation = automationRepository.findByBezirkAndStoreId(bezirk, request.storeId())
+                .filter(entry -> entry.getAdminConnection().getId().equals(connection.getId()))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND, List.of("Store automation not found.")));
+        if (request.excludedDate() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED, List.of("Excluded date is required."));
+        }
+        FoodsharingStoreAutomationExcludedDate excludedDate = excludedDateRepository.findByAutomationAndExcludedDate(automation, request.excludedDate())
+                .orElseGet(FoodsharingStoreAutomationExcludedDate::new);
+        excludedDate.setAutomation(automation);
+        excludedDate.setExcludedDate(request.excludedDate());
+        FoodsharingStoreAutomationExcludedDate saved = excludedDateRepository.save(excludedDate);
+        return new ExcludedDateView(saved.getId(), automation.getStoreId(), automation.getStoreName(), saved.getExcludedDate(), null, true);
+    }
+
+    @Transactional
+    public void deleteExcludedDate(String bezirkSlug, UUID excludedDateId) {
+        FoodsharingAdminConnection connection = requireConnection();
+        Bezirk bezirk = requireBezirk(bezirkSlug, connection.getAdminUser());
+        FoodsharingStoreAutomationExcludedDate excludedDate = excludedDateRepository.findByIdAndAutomationBezirk(excludedDateId, bezirk)
+                .filter(entry -> entry.getAutomation().getAdminConnection().getId().equals(connection.getId()))
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.RESOURCE_NOT_FOUND, List.of("Excluded date not found.")));
+        excludedDateRepository.delete(excludedDate);
     }
 
 
@@ -1128,6 +1199,11 @@ public class FoodsharingPickupAutomationService {
             evaluated++;
             try {
                 var decision = evaluate(a, p.date(), u.id(), u.name(), livePickupsCache, initialPickupsCache, foodsharingUserInfoCache); String reason = String.join("\n", decision.reasons());
+                if (decision.skipped()) {
+                    log.info("Foodsharing automation decision=skip dryRun={} admin={} foodsharingUserId={} email={} storeId={} pickupDate={} userId={} userName={}", effectiveDryRun, a.getAdminConnection().getAdminUser().getId(), a.getAdminConnection().getFoodsharingUserId(), a.getAdminConnection().getFoodsharingEmail(), a.getStoreId(), p.date(), u.id(), u.name());
+                    saveAudit(a, u.id(), u.name(), p.date(), effectiveDryRun, FoodsharingPickupAutomationDecision.SKIPPED, reason, null, null);
+                    continue;
+                }
                 if (!decision.allowed()) {
                     reason += "\n\n" + userMessage("message.automation.decline-footer");
                 }
@@ -1170,9 +1246,24 @@ public class FoodsharingPickupAutomationService {
         List<String> reasons = new ArrayList<>();
         String cleaningOverrideMessage = null;
         Instant now = Instant.now();
+        LocalDate pickupLocalDate = pickupDate.atZone(SWISS_ZONE).toLocalDate();
+        if (excludedDateRepository.existsByAutomationAndExcludedDate(a, pickupLocalDate)) {
+            return new FoodsharingPickupModels.Decision(false, true, List.of(userMessage("message.automation.manual-date-exclusion")), null);
+        }
+        if (a.isPublicHolidayRuleEnabled()) {
+            try {
+                java.util.Optional<String> holidayName = publicHolidayCalendar.holidayName(pickupLocalDate);
+                if (holidayName.isPresent()) {
+                    return new FoodsharingPickupModels.Decision(false, true, List.of(userMessage("message.automation.public-holiday", holidayName.get())), null);
+                }
+            } catch (SwissPublicHolidayCalendar.PublicHolidayCalendarUnavailableException exception) {
+                log.warn("Foodsharing public-holiday calendar unavailable for bezirk={} date={}; skipping automatic approval", a.getBezirk().getSlug(), pickupLocalDate, exception);
+                return new FoodsharingPickupModels.Decision(false, true, List.of(userMessage("message.automation.public-holiday-calendar-unavailable")), null);
+            }
+        }
         if (rulesAreSkipped(pickupDate, now)) {
             reasons.add(userMessage("message.automation.rules-skipped-from-two-days-before"));
-            return new FoodsharingPickupModels.Decision(true, reasons, null);
+            return new FoodsharingPickupModels.Decision(true, false, reasons, null);
         }
         if (a.isGapRuleEnabled()) {
                 pickups(livePickupsCache, a.getAdminConnection(), a.getStoreId()).stream()
@@ -1252,7 +1343,7 @@ public class FoodsharingPickupAutomationService {
         String cleaningOverrideUserMessage = reasons.contains(selectedCleaningOverrideMessage)
                 ? selectedCleaningOverrideMessage + "\n\n" + userMessage("message.automation.decline-footer")
                 : null;
-        return new FoodsharingPickupModels.Decision(onlyAllowedReasons, reasons, cleaningOverrideUserMessage);
+        return new FoodsharingPickupModels.Decision(onlyAllowedReasons, false, reasons, cleaningOverrideUserMessage);
     }
 
     private boolean rulesAreSkipped(Instant pickupDate, Instant now) {
@@ -1427,7 +1518,7 @@ public class FoodsharingPickupAutomationService {
     }
     private StoreAutomationView view(long storeId, String storeName, FoodsharingStoreAutomation automation, FoodsharingAdminConnection currentConnection) {
         if (automation == null) {
-            return new StoreAutomationView(storeId, storeName, false, true, false, 0, false, false, true, null, null);
+            return new StoreAutomationView(storeId, storeName, false, true, false, 0, false, false, false, true, null, null);
         }
         User owner = automation.getAdminConnection().getAdminUser();
         return new StoreAutomationView(
@@ -1439,6 +1530,7 @@ public class FoodsharingPickupAutomationService {
                 automation.getMinimumGapDays(),
                 automation.isCleaningRuleEnabled(),
                 automation.isExperienceRuleEnabled(),
+                automation.isPublicHolidayRuleEnabled(),
                 automation.getAdminConnection().getId().equals(currentConnection.getId()),
                 owner == null ? null : owner.getName(),
                 owner == null ? null : owner.getEmail());
@@ -1454,8 +1546,10 @@ public class FoodsharingPickupAutomationService {
     public record ConnectionStatus(boolean connected, String email, String foodsharingUserId, Instant authenticatedAt, boolean telegramBotTokenConfigured, boolean automationEnabled, boolean automationDryRun) {}
     public record ManagedStoreView(long storeId, String storeName) {}
     public record StoreOverviewView(List<StoreAutomationView> automations, List<ManagedStoreView> availableStores) {}
-    public record StoreAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled, boolean gapRuleEnabled, int minimumGapDays, boolean cleaningRuleEnabled, boolean experienceRuleEnabled) {}
-    public record StoreAutomationView(long storeId, String storeName, boolean enabled, boolean dryRunEnabled, boolean gapRuleEnabled, int minimumGapDays, boolean cleaningRuleEnabled, boolean experienceRuleEnabled, boolean editable, String ownerName, String ownerEmail) {}
+    public record StoreAutomationRequest(String storeName, boolean enabled, boolean dryRunEnabled, boolean gapRuleEnabled, int minimumGapDays, boolean cleaningRuleEnabled, boolean experienceRuleEnabled, boolean publicHolidayRuleEnabled) {}
+    public record StoreAutomationView(long storeId, String storeName, boolean enabled, boolean dryRunEnabled, boolean gapRuleEnabled, int minimumGapDays, boolean cleaningRuleEnabled, boolean experienceRuleEnabled, boolean publicHolidayRuleEnabled, boolean editable, String ownerName, String ownerEmail) {}
+    public record ExcludedDateRequest(long storeId, LocalDate excludedDate) {}
+    public record ExcludedDateView(UUID id, long storeId, String storeName, LocalDate excludedDate, String eventName, boolean manual) {}
     public record AuditView(long storeId, String storeName, String foodsharingUserId, String foodsharingUserName, Instant pickupDate, boolean dryRun, String decision, String reasons, String userMessage, String error, Instant createdAt) {}
     public record StorePickupUserView(String foodsharingUserId, String name, int futurePickupCount, List<StorePickupView> futurePickups) {}
     public record StorePickupView(long storeId, String storeName, Instant pickupDate, boolean confirmed, List<String> validationErrors) {}

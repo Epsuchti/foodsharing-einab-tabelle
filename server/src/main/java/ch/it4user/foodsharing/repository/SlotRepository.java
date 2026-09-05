@@ -21,7 +21,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface SlotRepository extends JpaRepository<Slot, UUID> {
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk"})
     @Query("""
         select s from Slot s
         where s.status = ch.it4user.foodsharing.domain.enumtype.SlotStatus.AVAILABLE
@@ -29,6 +29,20 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
           and s.einAb.startDateTime > current_timestamp
           and (:category is null or s.einAb.category = :category)
           and (:visitFairteiler is null or s.einAb.visitFairteiler = :visitFairteiler)
+          and (
+            :bookingUser is null
+            or not exists (
+              select bookedSlot.id from Slot bookedSlot
+              where bookedSlot.bookingUser = :bookingUser
+                and bookedSlot.status in (
+                  ch.it4user.foodsharing.domain.enumtype.SlotStatus.PENDING_CONFIRMATION,
+                  ch.it4user.foodsharing.domain.enumtype.SlotStatus.BOOKED,
+                  ch.it4user.foodsharing.domain.enumtype.SlotStatus.DONE
+                )
+                and bookedSlot.einAb.bezirk = :bezirk
+                and bookedSlot.teacher = s.teacher
+            )
+          )
           and (
             :searchPattern is null
             or lower(s.einAb.teacher.name) like :searchPattern
@@ -41,10 +55,11 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
                                   @Param("searchPattern") String searchPattern,
                                   @Param("category") EinAbCategory category,
                                   @Param("visitFairteiler") Boolean visitFairteiler,
+                                  @Param("bookingUser") User bookingUser,
                                   Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""
         select s from Slot s
         where s.id = :id
@@ -55,10 +70,10 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
         """)
     Optional<Slot> findForUpdateByIdAndBezirk(@Param("id") UUID id, @Param("bezirk") Bezirk bezirk);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     List<Slot> findAllByEinAbInOrderByEinAbStartDateTimeAsc(Collection<EinAb> einAbs);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""
         select s from Slot s
         where s.status in :statuses
@@ -69,7 +84,7 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
                                                                      @Param("bezirk") Bezirk bezirk,
                                                                      Pageable pageable);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""
         select s from Slot s
         where s.bookingUser in :users
@@ -82,7 +97,7 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
                                                                @Param("statuses") Collection<SlotStatus> statuses,
                                                                @Param("bezirk") Bezirk bezirk);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""
         select s from Slot s
         where s.bookingUser in :users
@@ -93,23 +108,23 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
     List<Slot> findAllByActiveBookingUsersAndStatuses(@Param("users") Collection<User> users,
                                                       @Param("statuses") Collection<SlotStatus> statuses);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""
         select s from Slot s
         where s.bookingUser = :bookingUser
           and s.status in :statuses
           and s.einAb.bezirk = :bezirk
-        order by s.einAb.startDateTime desc
+        order by s.einAb.startDateTime asc
         """)
     Page<Slot> findAllByBookingUserAndStatusesAndBezirk(@Param("bookingUser") User bookingUser,
                                                         @Param("statuses") Collection<SlotStatus> statuses,
                                                         @Param("bezirk") Bezirk bezirk,
                                                         Pageable pageable);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""
         select s from Slot s
-        where s.einAb.teacher = :teacher
+        where (s.einAb.teacher = :teacher or s.teacher = :teacher)
           and s.einAb.bezirk = :bezirk
           and s.status in :statuses
         order by s.einAb.startDateTime desc
@@ -131,10 +146,10 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
     boolean existsOpenPendingConfirmationInDifferentBezirk(@Param("bookingUser") User bookingUser,
                                                             @Param("bezirk") Bezirk bezirk);
 
-    boolean existsByBookingUserAndStatusInAndEinAbTeacherAndEinAbBezirk(User bookingUser,
-                                                                        Collection<SlotStatus> statuses,
-                                                                        User teacher,
-                                                                        Bezirk bezirk);
+    boolean existsByBookingUserAndStatusInAndTeacherAndEinAbBezirk(User bookingUser,
+                                                                   Collection<SlotStatus> statuses,
+                                                                   User teacher,
+                                                                   Bezirk bezirk);
 
     boolean existsByBookingUserAndStatusInAndEinAbCategoryAndEinAbBezirk(User bookingUser,
                                                                          Collection<SlotStatus> statuses,
@@ -145,7 +160,7 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
 
     List<Slot> findAllByEinAbOrderByCreatedAtAsc(EinAb einAb);
 
-    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     Optional<Slot> findByPendingConfirmationTokenHash(String tokenHash);
 
     List<Slot> findAllByStatusAndPendingConfirmationExpiresAtBefore(SlotStatus status, java.time.Instant expiresAt);

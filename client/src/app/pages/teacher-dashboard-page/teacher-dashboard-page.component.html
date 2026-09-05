@@ -94,6 +94,7 @@
   }
   <div class="toolbar-row">
     <button pButton icon="pi pi-plus" [label]="i18n.t('teacher.newEinab')" [disabled]="!teacher()?.bezirk" (click)="openCreate()"></button>
+    <label for="hide-past-einabs"><p-checkbox inputId="hide-past-einabs" [(ngModel)]="hidePastEinAbs" [binary]="true" (ngModelChange)="onHidePastEinAbsChange($event)"></p-checkbox>{{ i18n.t('teacher.hidePastEinAbs') }}</label>
   </div>
   <p-table [value]="einAbs()">
     <ng-template pTemplate="header">
@@ -139,10 +140,10 @@
         <span class="slot-card__label">{{ i18n.t('common.onlineCallLink') }}</span>
         <a [href]="selectedEinAb()?.onlineCallLink" target="_blank" rel="noopener noreferrer">{{ selectedEinAb()?.onlineCallLink }}</a>
       </div>
-    } @else if (selectedEinAb()?.whatToBring) {
+    } @else if (selectedEinAb()?.privateInfo) {
       <div style="margin: 0 0 0.75rem;">
-        <span class="slot-card__label">{{ i18n.t('common.whatToBring') }}</span>
-        <p style="white-space: pre-wrap; margin: 0;">{{ selectedEinAb()?.whatToBring }}</p>
+        <span class="slot-card__label">{{ i18n.t('common.privateInfo') }}</span>
+        <p style="white-space: pre-wrap; margin: 0;">{{ selectedEinAb()?.privateInfo }}</p>
       </div>
     }
     <p-table [value]="selectedEinAb()?.slots ?? []" [paginator]="true" [rows]="10">
@@ -153,6 +154,7 @@
           <th>{{ i18n.t('common.name') }}</th>
           <th>{{ i18n.t('common.foodsharingId') }}</th>
           <th>{{ i18n.t('common.phoneNumber') }}</th>
+          <th>{{ i18n.t('slots.teacher') }}</th>
           <th>{{ i18n.t('common.actions') }}</th>
         </tr>
       </ng-template>
@@ -163,8 +165,10 @@
           <td>{{ slot.bookingUser?.name ?? '-' }}</td>
           <td>{{ slot.bookingUser?.foodsharingId ?? '-' }}</td>
           <td>{{ slot.bookingUser?.phoneNumber ?? '-' }}</td>
+          <td>{{ slot.teacherName }}</td>
           <td class="actions-cell">
             @if (slot.bookingUser && slot.status === SlotStatus.Booked) {
+              <button pButton size="small" icon="pi pi-user-edit" [label]="i18n.t('teacher.assignSlot')" (click)="openAssignTeacher(slot)"></button>
               <button pButton size="small" severity="danger" icon="pi pi-times" [label]="i18n.t('teacher.cancelBookedSlot')" (click)="cancelSlotBooking(slot)"></button>
             }
           </td>
@@ -173,6 +177,37 @@
     </p-table>
   </p-card>
 }
+
+<p-dialog
+  [(visible)]="assignTeacherDialogVisible"
+  [modal]="true"
+  [closable]="true"
+  [style]="{ width: 'min(32rem, 96vw)' }"
+  [header]="i18n.t('teacher.assignSlotTitle')">
+  @if (assignTeacherSlot(); as slot) {
+    <div class="stack-form">
+      <p>{{ i18n.t('teacher.assignSlotHint') }}</p>
+      <div>
+        <strong>{{ slot.bookingUser?.name }}</strong>
+        <div>{{ slot.teacherName }}</div>
+      </div>
+      <label>
+        <span>{{ i18n.t('slots.teacher') }}</span>
+        <p-select
+          [options]="assignableTeacherOptions()"
+          optionLabel="label"
+          optionValue="value"
+          [ngModel]="selectedTeacherId()"
+          (ngModelChange)="selectedTeacherId.set($event)">
+        </p-select>
+      </label>
+      <div class="dialog-actions">
+        <button pButton type="button" severity="secondary" [label]="i18n.t('common.cancel')" (click)="assignTeacherDialogVisible.set(false)"></button>
+        <button pButton type="button" icon="pi pi-save" [label]="i18n.t('teacher.assignSlot')" [loading]="assignTeacherLoading()" [disabled]="!selectedTeacherId()" (click)="assignTeacherToSlot()"></button>
+      </div>
+    </div>
+  }
+</p-dialog>
 
 <p-dialog
   [(visible)]="einabDialogVisible"
@@ -209,16 +244,15 @@
     }
 
     <label>
-      <span>{{ i18n.t('common.hint') }}</span>
-      <textarea pInputTextarea rows="3" formControlName="hint"></textarea>
+      <span>{{ i18n.t('common.publicInfo') }}</span>
+      <textarea pInputTextarea rows="3" formControlName="publicInfo"></textarea>
     </label>
 
-    @if (!isOnline(einabForm.controls.category.value)) {
-      <label>
-        <span>{{ i18n.t('common.whatToBring') }}</span>
-        <textarea pInputTextarea rows="5" formControlName="whatToBring"></textarea>
-      </label>
-    }
+    <label>
+      <span>{{ i18n.t('common.privateInfo') }}</span>
+      <small>{{ i18n.t('common.privateInfoExample') }}</small>
+      <textarea pInputTextarea rows="5" formControlName="privateInfo"></textarea>
+    </label>
 
     @if (!isOnline(einabForm.controls.category.value)) {
       <label>

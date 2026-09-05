@@ -6,7 +6,7 @@
       </div>
     } @else if (error()) {
       <div class="confirm-state confirm-state--error">
-        <h1>{{ i18n.t('book.confirmedTitle') }}</h1>
+        <h1>{{ i18n.t('book.invalidTitle') }}</h1>
         <p>{{ error() }}</p>
       </div>
     } @else if (booking()) {
@@ -70,20 +70,12 @@
         }
       </div>
 
-      @if (booking()?.hint || (booking()?.category !== 'ONLINE' && booking()?.whatToBring)) {
+      @if (booking()?.privateInfo) {
         <div class="confirm-notes">
-          @if (booking()?.category !== 'ONLINE' && booking()?.whatToBring) {
-            <section class="confirm-note">
-              <h2>{{ i18n.t('common.whatToBring') }}</h2>
-              <p>{{ booking()?.whatToBring }}</p>
-            </section>
-          }
-          @if (booking()?.hint) {
-            <section class="confirm-note">
-              <h2>{{ i18n.t('common.hint') }}</h2>
-              <p>{{ booking()?.hint }}</p>
-            </section>
-          }
+          <section class="confirm-note">
+            <h2>{{ i18n.t('common.privateInfo') }}</h2>
+            <p>{{ booking()?.privateInfo }}</p>
+          </section>
         </div>
       }
     }

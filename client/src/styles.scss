@@ -283,6 +283,16 @@ p {
   border-radius: 0;
 }
 
+.p-confirmdialog {
+  width: min(36rem, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+}
+
+.p-confirmdialog .p-confirmdialog-message {
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
 @media (max-width: 768px) {
   .page-grid,
   .filters {

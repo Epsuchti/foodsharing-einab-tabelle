@@ -52,4 +52,14 @@ public interface UserRepository extends JpaRepository<User, UUID> {
         """)
     Page<User> findAllTeachersByBezirk(@Param("bezirk") Bezirk bezirk, Pageable pageable);
 
+    @EntityGraph(attributePaths = {"bezirk"})
+    @Query("""
+        select u from User u
+        where u.bezirk = :bezirk
+          and u.active = true
+          and u.canGiveEinAbs = true
+        order by u.name asc
+        """)
+    List<User> findAllAssignableTeachersByBezirk(@Param("bezirk") Bezirk bezirk);
+
 }

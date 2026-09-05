@@ -8,7 +8,8 @@
         <th>{{ i18n.t('slots.date') }}</th>
         <th>{{ i18n.t('slots.teacher') }}</th>
         <th>{{ i18n.t('common.location') }}</th>
-        <th>{{ i18n.t('common.whatToBring') }}</th>
+        <th>{{ i18n.t('common.publicInfo') }}</th>
+        <th>{{ i18n.t('common.privateInfo') }}</th>
         <th>{{ i18n.t('common.phoneNumber') }}</th>
         <th>{{ i18n.t('common.status') }}</th>
         <th>{{ i18n.t('common.actions') }}</th>
@@ -21,7 +22,8 @@
         <td>{{ booking.startDateTime | zurichDateTime }}</td>
         <td>{{ booking.teacherName }}</td>
         <td>{{ booking.location ?? '-' }}</td>
-        <td style="white-space: pre-wrap;">{{ booking.whatToBring ?? '-' }}</td>
+        <td style="white-space: pre-wrap;">{{ booking.publicInfo ?? '-' }}</td>
+        <td style="white-space: pre-wrap;">{{ booking.privateInfo ?? '-' }}</td>
         <td>{{ booking.teacherPhoneNumber ?? '-' }}</td>
         <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
         <td class="actions-cell">

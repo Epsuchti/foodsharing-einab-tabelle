@@ -1,0 +1,29 @@
+databaseChangeLog:
+  - changeSet:
+      id: 010-add-slot-teacher
+      author: codex
+      changes:
+        - addColumn:
+            tableName: slots
+            columns:
+              - column:
+                  name: teacher_id
+                  type: UUID
+        - sql:
+            sql: UPDATE slots SET teacher_id = (SELECT teacher_id FROM einabs WHERE einabs.id = slots.einab_id)
+        - addNotNullConstraint:
+            tableName: slots
+            columnName: teacher_id
+            columnDataType: UUID
+        - addForeignKeyConstraint:
+            baseTableName: slots
+            baseColumnNames: teacher_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_slots_teacher
+        - createIndex:
+            tableName: slots
+            indexName: idx_slots_teacher
+            columns:
+              - column:
+                  name: teacher_id

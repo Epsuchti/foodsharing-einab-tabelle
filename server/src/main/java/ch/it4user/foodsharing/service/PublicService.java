@@ -44,13 +44,20 @@ public class PublicService {
         this.appProperties = appProperties;
     }
 
-    public Page<Slot> findAvailableSlots(String bezirkSlug, String search, EinAbCategory category, Boolean visitFairteiler, int page, int size) {
+    public Page<Slot> findAvailableSlots(String bezirkSlug,
+                                         String search,
+                                         EinAbCategory category,
+                                         Boolean visitFairteiler,
+                                         int page,
+                                         int size,
+                                         User bookingUser) {
         Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
         return slotRepository.findAvailableSlots(
                 bezirk,
                 normalizeSearch(search),
                 category,
                 visitFairteiler,
+                bookingUser,
                 PageRequest.of(Math.max(page, 0), normalizeSize(size)));
     }
 
@@ -71,8 +78,8 @@ public class PublicService {
         if (slot.getStatus() != SlotStatus.AVAILABLE) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.SLOT_NOT_AVAILABLE);
         }
-        if (slotRepository.existsByBookingUserAndStatusInAndEinAbTeacherAndEinAbBezirk(
-                bookingUser, ACTIVE_BOOKING_STATUSES, slot.getEinAb().getTeacher(), bezirk)) {
+        if (slotRepository.existsByBookingUserAndStatusInAndTeacherAndEinAbBezirk(
+                bookingUser, ACTIVE_BOOKING_STATUSES, slot.getTeacher(), bezirk)) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_ALREADY_BOOKED_WITH_TEACHER);
         }
         if (slotRepository.existsByBookingUserAndStatusInAndEinAbCategoryAndEinAbBezirk(
@@ -94,6 +101,7 @@ public class PublicService {
         if (slot.getEinAb().getCategory() == EinAbCategory.ONLINE) {
             Slot nextOnlineSlot = new Slot();
             nextOnlineSlot.setEinAb(slot.getEinAb());
+            nextOnlineSlot.setTeacher(slot.getEinAb().getTeacher());
             nextOnlineSlot.setStatus(SlotStatus.AVAILABLE);
             slotRepository.save(nextOnlineSlot);
         }

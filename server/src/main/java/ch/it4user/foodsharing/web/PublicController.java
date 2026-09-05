@@ -15,6 +15,7 @@ import ch.it4user.foodsharing.openapi.model.TeacherResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherSignupRequest;
 import ch.it4user.foodsharing.service.AuthService;
 import ch.it4user.foodsharing.service.BezirkService;
+import ch.it4user.foodsharing.service.CurrentActorService;
 import ch.it4user.foodsharing.service.PublicService;
 import ch.it4user.foodsharing.service.NewsletterService;
 import ch.it4user.foodsharing.service.TeacherService;
@@ -33,6 +34,7 @@ public class PublicController implements PublicApi {
     private final NewsletterService newsletterService;
     private final AuthService authService;
     private final BezirkService bezirkService;
+    private final CurrentActorService currentActorService;
     private final ApiModelMapper mapper;
 
     public PublicController(PublicService publicService,
@@ -40,12 +42,14 @@ public class PublicController implements PublicApi {
                             NewsletterService newsletterService,
                             AuthService authService,
                             BezirkService bezirkService,
+                            CurrentActorService currentActorService,
                             ApiModelMapper mapper) {
         this.publicService = publicService;
         this.teacherService = teacherService;
         this.newsletterService = newsletterService;
         this.authService = authService;
         this.bezirkService = bezirkService;
+        this.currentActorService = currentActorService;
         this.mapper = mapper;
     }
 
@@ -64,7 +68,8 @@ public class PublicController implements PublicApi {
             Integer size) {
         return ResponseEntity.ok(mapper.toAvailableSlotListResponse(
                 publicService.findAvailableSlots(bezirkSlug, search, mapCategory(category), visitFairteiler,
-                        page == null ? 0 : page, size == null ? 20 : size)));
+                        page == null ? 0 : page, size == null ? 20 : size,
+                        currentActorService.findCurrentUser().orElse(null))));
     }
 
     @Override

@@ -31,6 +31,7 @@
             <th>{{ i18n.t('slots.category') }}</th>
             <th>{{ i18n.t('slots.date') }}</th>
             <th>{{ i18n.t('common.location') }}</th>
+            <th>{{ i18n.t('common.publicInfo') }}</th>
             <th>{{ i18n.t('slots.teacher') }}</th>
             <th>{{ i18n.t('common.visitFairteiler') }}</th>
             <th></th>
@@ -41,6 +42,7 @@
             <td>{{ i18n.categoryLabel(slot.category) }}</td>
             <td>{{ slot.startDateTime | zurichDateTime }}</td>
             <td>{{ displayPublicLocation(slot) }}</td>
+            <td style="white-space: pre-wrap;">{{ slot.publicInfo ?? '-' }}</td>
             <td>{{ slot.teacherName }}</td>
             <td>
               <p-tag [severity]="slot.visitFairteiler ? 'success' : 'secondary'"
@@ -77,6 +79,12 @@
                 <span class="slot-card__label">{{ i18n.t('common.visitFairteiler') }}</span>
                 <div>{{ slot.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no') }}</div>
               </div>
+              @if (slot.publicInfo) {
+                <div class="slot-card__detail">
+                  <span class="slot-card__label">{{ i18n.t('common.publicInfo') }}</span>
+                  <div style="white-space: pre-wrap;">{{ slot.publicInfo }}</div>
+                </div>
+              }
             </div>
 
             <div class="slot-card__actions">
@@ -110,19 +118,79 @@
 
 </section>
 
-<p-dialog [(visible)]="bookingVisible" [modal]="true" [header]="i18n.t('book.dialogTitle')" [style]="{ width: '32rem', maxWidth: '95vw' }">
-  <form class="stack-form" [formGroup]="bookingForm" (ngSubmit)="confirmBooking()">
-    @if (selectedSlot) {
-      <p class="empty-state">{{ i18n.categoryLabel(selectedSlot.category) }} - {{ selectedSlot.startDateTime | zurichDateTime }} - {{ displayPublicLocation(selectedSlot) }}</p>
-    }
-    @if (bookingIdentityLocked() && bookingProfile()) {
-      <div class="info-grid">
-        <div><strong>{{ bookingProfile()?.name }}</strong></div>
-        <div>{{ bookingProfile()?.foodsharingId }}</div>
+<p-dialog [(visible)]="bookingVisible" [modal]="true" [header]="i18n.t('book.dialogTitle')" [style]="{ width: 'min(42rem, 96vw)' }">
+  <form class="stack-form booking-dialog" [formGroup]="bookingForm" (ngSubmit)="confirmBooking()">
+    @if (selectedSlot; as slot) {
+      <section class="booking-dialog__summary" aria-labelledby="booking-dialog-summary-title">
+        <div class="booking-dialog__summary-heading">
+          <div>
+            <span class="booking-dialog__eyebrow">{{ i18n.t('slots.title') }}</span>
+            <h2 id="booking-dialog-summary-title">{{ i18n.categoryLabel(slot.category) }}</h2>
+          </div>
+          <i class="pi pi-calendar booking-dialog__summary-icon" aria-hidden="true"></i>
+        </div>
+        <div class="booking-dialog__date">
+          <i class="pi pi-clock" aria-hidden="true"></i>
+          <strong>{{ slot.startDateTime | zurichDateTime }}</strong>
+        </div>
+      </section>
+
+      <div class="booking-dialog__facts">
+        <div class="booking-dialog__fact">
+          <span class="booking-dialog__label">
+            <i class="pi pi-map-marker" aria-hidden="true"></i>
+            {{ i18n.t(isOnline(slot.category) ? 'common.location' : 'common.publicLocation') }}
+          </span>
+          <span class="booking-dialog__value">{{ displayPublicLocation(slot) }}</span>
+        </div>
+        <div class="booking-dialog__fact">
+          <span class="booking-dialog__label">
+            <i class="pi pi-compass" aria-hidden="true"></i>
+            {{ i18n.t('bezirk.label') }}
+          </span>
+          <span class="booking-dialog__value">{{ slot.bezirk.name }}</span>
+        </div>
+        <div class="booking-dialog__fact">
+          <span class="booking-dialog__label">
+            <i class="pi pi-user" aria-hidden="true"></i>
+            {{ i18n.t('slots.teacher') }}
+          </span>
+          <span class="booking-dialog__value">{{ slot.teacherName }}</span>
+        </div>
+        <div class="booking-dialog__fact">
+          <span class="booking-dialog__label">
+            <i class="pi pi-box" aria-hidden="true"></i>
+            {{ i18n.t('common.visitFairteiler') }}
+          </span>
+          <span class="booking-dialog__value">{{ slot.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no') }}</span>
+        </div>
+        @if (slot.minimumPickupCount !== undefined && slot.minimumPickupCount !== null) {
+          <div class="booking-dialog__fact">
+            <span class="booking-dialog__label">
+              <i class="pi pi-history" aria-hidden="true"></i>
+              {{ i18n.t('common.minimumPickupCount') }}
+            </span>
+            <span class="booking-dialog__value">{{ slot.minimumPickupCount }}</span>
+          </div>
+        }
       </div>
-    } @else {
-      <div class="foodsharing-id-field">
-        <input pInputText formControlName="foodsharingId" [placeholder]="i18n.t('common.foodsharingId')" />
+
+      @if (slot.publicInfo) {
+        <section class="booking-dialog__public-info">
+          <span class="booking-dialog__label">
+            <i class="pi pi-info-circle" aria-hidden="true"></i>
+            {{ i18n.t('common.publicInfo') }}
+          </span>
+          <p>{{ slot.publicInfo }}</p>
+        </section>
+      }
+    }
+    @if (!bookingIdentityLocked()) {
+      <div class="foodsharing-id-field booking-dialog__identity">
+        <label>
+          <span class="booking-dialog__label">{{ i18n.t('common.foodsharingId') }}</span>
+          <input pInputText formControlName="foodsharingId" />
+        </label>
         <a
           pButton
           severity="secondary"
@@ -163,10 +231,10 @@
           <div>{{ displayBookingLocation(bookingDetails()) }}</div>
         </div>
       }
-      @if (!isOnline(bookingDetails()?.category) && bookingDetails()?.whatToBring) {
+      @if (bookingDetails()?.privateInfo) {
         <div>
-          <span class="slot-card__label">{{ i18n.t('common.whatToBring') }}</span>
-          <div style="white-space: pre-wrap;">{{ bookingDetails()?.whatToBring }}</div>
+          <span class="slot-card__label">{{ i18n.t('common.privateInfo') }}</span>
+          <div style="white-space: pre-wrap;">{{ bookingDetails()?.privateInfo }}</div>
         </div>
       }
     </div>

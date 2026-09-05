@@ -55,8 +55,8 @@ public class EinAb extends BaseEntity {
     private String onlineCallLink;
 
     @Column(length = 4000)
-    private String whatToBring;
+    private String privateInfo;
 
     @Column(length = 4000)
-    private String hint;
+    private String publicInfo;
 }

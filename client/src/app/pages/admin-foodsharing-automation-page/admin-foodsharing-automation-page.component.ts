@@ -9,6 +9,7 @@ import {
   FoodsharingAutomationAudit,
   FoodsharingExtraAutomationAudit,
   FoodsharingCleaningRuleExemption,
+  FoodsharingStoreAutomationExcludedDate,
   FoodsharingConnectionStatus,
   FoodsharingFuturePickupUser,
   FoodsharingManagedStore,
@@ -71,10 +72,13 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly refreshingFoodsharingFuturePickupUsers = signal(false);
   protected readonly onlyUsersWithSlotVerificationErrors = signal(false);
   protected readonly cleaningRuleExemptions = signal<FoodsharingCleaningRuleExemption[]>([]);
+  protected readonly excludedDates = signal<FoodsharingStoreAutomationExcludedDate[]>([]);
   protected readonly cleaningStoreConfigured = signal<boolean | null>(null);
   protected readonly foodsharingEmail = signal('');
   protected readonly cleaningExemptionFoodsharingId = signal('');
   protected readonly cleaningExemptionReason = signal('');
+  protected readonly excludedDateStoreId = signal<number | null>(null);
+  protected readonly excludedDate = signal('');
   protected readonly slotRunResult = signal<FoodsharingRunResult | null>(null);
   protected readonly requestRunResult = signal<FoodsharingRunResult | null>(null);
   protected readonly advertisementRunResult = signal<FoodsharingRunResult | null>(null);
@@ -92,7 +96,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
   protected readonly visibleFoodsharingStores = computed(() => this.onlyMyAutomations()
     ? this.foodsharingStores().filter((store) => store.editable)
     : this.foodsharingStores());
-  protected readonly slotApprovalStores = computed(() => this.foodsharingStores()
+  protected readonly slotApprovalStores = computed(() => this.visibleFoodsharingStores()
     .filter((store) => Boolean((store as FoodsharingStoreAutomation & Record<string, unknown>)['slotApprovalConfigured'])));
   protected readonly requestAutomationStores = computed(() => this.visibleFoodsharingStores()
     .filter((store) => Boolean((store as FoodsharingStoreAutomation & Record<string, unknown>)['requestConfigured'])));
@@ -450,7 +454,10 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     this.adminApi.saveFoodsharingStoreAutomation({
       bezirkSlug: this.bezirkContext.currentSlug(),
       storeId: store.storeId,
-      foodsharingStoreAutomationRequest: store
+      foodsharingStoreAutomationRequest: {
+        ...store,
+        minimumGapDays: store.minimumGapDays ?? 0
+      }
     }).subscribe({
       next: (savedStore) => {
         this.foodsharingStores.update((stores) => stores.map((entry) => entry.storeId === savedStore.storeId
@@ -543,7 +550,8 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
         gapRuleEnabled: false,
         minimumGapDays: 0,
         cleaningRuleEnabled: false,
-        experienceRuleEnabled: false
+        experienceRuleEnabled: false,
+        publicHolidayRuleEnabled: false
       }
     }).subscribe({
       next: () => {
@@ -623,6 +631,38 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     });
   }
 
+  saveExcludedDate(): void {
+    const storeId = this.excludedDateStoreId();
+    const excludedDate = this.excludedDate();
+    if (storeId == null || !excludedDate) {
+      return;
+    }
+    this.adminApi.saveFoodsharingStoreAutomationExcludedDate({
+      bezirkSlug: this.bezirkContext.currentSlug(),
+      foodsharingStoreAutomationExcludedDateRequest: { storeId, excludedDate }
+    }).subscribe({
+      next: () => {
+        this.excludedDate.set('');
+        this.loadExcludedDates();
+      },
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
+  deleteExcludedDate(excludedDate: FoodsharingStoreAutomationExcludedDate): void {
+    if (!excludedDate.id) {
+      return;
+    }
+    const excludedDateId = excludedDate.id;
+    this.adminApi.deleteFoodsharingStoreAutomationExcludedDate({
+      bezirkSlug: this.bezirkContext.currentSlug(),
+      excludedDateId
+    }).subscribe({
+      next: () => this.loadExcludedDates(),
+      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+    });
+  }
+
   private loadFoodsharingStatus(): void {
     this.adminApi.getFoodsharingStatus().subscribe({
       next: (status) => {
@@ -663,6 +703,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
       case 'slots':
         this.loadStoreAutomation({ loadRequestOverview: false, loadAdvertisementOverview: false });
         this.loadCleaningRuleExemptions();
+        this.loadExcludedDates();
         this.loadFoodsharingAuditIfActive();
         break;
       case 'advertisements':
@@ -698,6 +739,7 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
                 minimumGapDays: 0,
                 cleaningRuleEnabled: false,
                 experienceRuleEnabled: false,
+                publicHolidayRuleEnabled: false,
                 editable: true
               });
             }
@@ -833,6 +875,17 @@ export class AdminFoodsharingAutomationPageComponent implements OnInit {
     }
     this.adminApi.getFoodsharingCleaningRuleExemptions({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
       next: (exemptions) => this.cleaningRuleExemptions.set(exemptions),
+      error: () => undefined
+    });
+  }
+
+  private loadExcludedDates(): void {
+    if (!this.sessionService.hasPermission(UserPermission.CanUseAutomationSlotApproval)) {
+      this.excludedDates.set([]);
+      return;
+    }
+    this.adminApi.getFoodsharingStoreAutomationExcludedDates({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
+      next: (excludedDates) => this.excludedDates.set(excludedDates),
       error: () => undefined
     });
   }

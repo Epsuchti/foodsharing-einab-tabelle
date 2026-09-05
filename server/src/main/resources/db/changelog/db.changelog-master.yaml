@@ -20,3 +20,12 @@ databaseChangeLog:
   - include:
       file: db.changelog-007-move-late-cancellation-settings-to-store.yaml
       relativeToChangelogFile: true
+  - include:
+      file: db.changelog-010-add-slot-teacher.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: db.changelog-011-refactor-einab-info.yaml
+      relativeToChangelogFile: true
+  - include:
+      file: db.changelog-012-add-slot-automation-date-exclusions.yaml
+      relativeToChangelogFile: true

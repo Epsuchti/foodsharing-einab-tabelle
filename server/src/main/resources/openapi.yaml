@@ -338,6 +338,12 @@ paths:
           schema:
             type: integer
             default: 20
+        - name: hidePast
+          in: query
+          description: Exclude EinAbs whose start date has passed
+          schema:
+            type: boolean
+            default: true
       responses:
         '200':
           description: Teacher EinAbs
@@ -410,6 +416,23 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/teacher/bezirke/{bezirkSlug}/teachers/assignable:
+    get:
+      tags: [teacher]
+      operationId: getTeacherAssignableTeachers
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
+      responses:
+        '200':
+          description: Teachers who can be assigned to a booked slot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherAssignmentOptionListResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/teacher/bezirke/{bezirkSlug}/bookings:
     get:
       tags: [teacher]
@@ -522,6 +545,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SlotResponse'
+  /api/teacher/bezirke/{bezirkSlug}/slots/{slotId}/teacher:
+    put:
+      tags: [teacher]
+      operationId: assignTeacherToSlot
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
+        - $ref: '#/components/parameters/SlotId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignTeacherToSlotRequest'
+      responses:
+        '200':
+          description: Teacher assigned to booked slot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/admin/bezirke/{bezirkSlug}/teachers:
     parameters:
       - $ref: '#/components/parameters/BezirkSlug'
@@ -1340,6 +1391,65 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/automation/excluded-dates:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
+    get:
+      tags: [admin]
+      operationId: getFoodsharingStoreAutomationExcludedDates
+      responses:
+        '200':
+          description: Dates excluded from automatic slot approval
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FoodsharingStoreAutomationExcludedDate'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      tags: [admin]
+      operationId: saveFoodsharingStoreAutomationExcludedDate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FoodsharingStoreAutomationExcludedDateRequest'
+      responses:
+        '200':
+          description: Excluded date saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoodsharingStoreAutomationExcludedDate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/admin/bezirke/{bezirkSlug}/foodsharing/automation/excluded-dates/{excludedDateId}:
+    parameters:
+      - $ref: '#/components/parameters/BezirkSlug'
+    delete:
+      tags: [admin]
+      operationId: deleteFoodsharingStoreAutomationExcludedDate
+      parameters:
+        - name: excludedDateId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Excluded date deleted
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/admin/bezirke/{bezirkSlug}/foodsharing/automation/audit:
     parameters:
       - $ref: '#/components/parameters/BezirkSlug'
@@ -1482,7 +1592,7 @@ components:
             type: string
     ErrorCode:
       type: string
-      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, BEZIRK_NOT_FOUND, USER_BEZIRK_MISMATCH, NOTIFICATION_SUBSCRIPTION_BEZIRK_MISMATCH, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, INVALID_UNSUBSCRIBE_TOKEN, TEACHER_ACCOUNT_REQUIRED, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, EINAB_NOT_FOUND, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED, INVALID_BOOKING_CONFIRMATION_TOKEN, BOOKING_CONFIRMATION_EXPIRED]
+      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, BEZIRK_NOT_FOUND, USER_BEZIRK_MISMATCH, NOTIFICATION_SUBSCRIPTION_BEZIRK_MISMATCH, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, INVALID_UNSUBSCRIBE_TOKEN, TEACHER_ACCOUNT_REQUIRED, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_ASSIGNABLE, ASSIGNABLE_TEACHER_NOT_FOUND, EINAB_NOT_FOUND, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED, INVALID_BOOKING_CONFIRMATION_TOKEN, BOOKING_CONFIRMATION_EXPIRED]
     BezirkResponse:
       type: object
       required: [id, name, slug]
@@ -1895,7 +2005,7 @@ components:
           type: boolean
     FoodsharingStoreAutomationRequest:
       type: object
-      required: [enabled, dryRunEnabled, gapRuleEnabled, minimumGapDays, cleaningRuleEnabled, experienceRuleEnabled]
+      required: [enabled, dryRunEnabled, gapRuleEnabled, minimumGapDays, cleaningRuleEnabled, experienceRuleEnabled, publicHolidayRuleEnabled]
       properties:
         storeName:
           type: string
@@ -1912,6 +2022,8 @@ components:
         cleaningRuleEnabled:
           type: boolean
         experienceRuleEnabled:
+          type: boolean
+        publicHolidayRuleEnabled:
           type: boolean
     FoodsharingStoreAutomation:
       allOf:
@@ -2001,6 +2113,33 @@ components:
             id:
               type: string
               format: uuid
+    FoodsharingStoreAutomationExcludedDateRequest:
+      type: object
+      required: [storeId, excludedDate]
+      properties:
+        storeId:
+          type: integer
+          format: int64
+        excludedDate:
+          type: string
+          format: date
+    FoodsharingStoreAutomationExcludedDate:
+      allOf:
+        - $ref: '#/components/schemas/FoodsharingStoreAutomationExcludedDateRequest'
+        - type: object
+          required: [storeName, manual]
+          properties:
+            id:
+              type: string
+              format: uuid
+              nullable: true
+            storeName:
+              type: string
+            eventName:
+              type: string
+              nullable: true
+            manual:
+              type: boolean
     FoodsharingAutomationAudit:
       type: object
       required: [storeId, storeName, foodsharingUserId, pickupDate, dryRun, decision, reasons, createdAt]
@@ -2114,6 +2253,32 @@ components:
           format: date-time
         bezirk:
           $ref: '#/components/schemas/BezirkResponse'
+    AssignTeacherToSlotRequest:
+      type: object
+      required: [teacherId]
+      properties:
+        teacherId:
+          type: string
+          format: uuid
+    TeacherAssignmentOption:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        phoneNumber:
+          type: string
+    TeacherAssignmentOptionListResponse:
+      type: object
+      required: [teachers]
+      properties:
+        teachers:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeacherAssignmentOption'
     TeacherListResponse:
       type: object
       required: [teachers, page, size, totalElements, totalPages]
@@ -2272,9 +2437,9 @@ components:
         onlineCallLink:
           type: string
           format: uri
-        whatToBring:
+        privateInfo:
           type: string
-        hint:
+        publicInfo:
           type: string
         teacher:
           $ref: '#/components/schemas/TeacherResponse'
@@ -2292,7 +2457,7 @@ components:
           format: date-time
     SlotResponse:
       type: object
-      required: [id, einAbId, status, createdAt, updatedAt]
+      required: [id, einAbId, teacherId, teacherName, teacherPhoneNumber, status, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -2300,6 +2465,13 @@ components:
         einAbId:
           type: string
           format: uuid
+        teacherId:
+          type: string
+          format: uuid
+        teacherName:
+          type: string
+        teacherPhoneNumber:
+          type: string
         status:
           $ref: '#/components/schemas/SlotStatus'
         bookedAt:
@@ -2333,6 +2505,8 @@ components:
         location:
           type: string
         publicLocation:
+          type: string
+        publicInfo:
           type: string
         teacherName:
           type: string
@@ -2390,9 +2564,9 @@ components:
         onlineCallLink:
           type: string
           format: uri
-        whatToBring:
+        privateInfo:
           type: string
-        hint:
+        publicInfo:
           type: string
         teacherName:
           type: string
@@ -2495,10 +2669,10 @@ components:
         onlineCallLink:
           type: string
           format: uri
-        whatToBring:
+        privateInfo:
           type: string
           maxLength: 4000
-        hint:
+        publicInfo:
           type: string
           maxLength: 4000
         visitFairteiler:
