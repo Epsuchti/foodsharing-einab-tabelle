@@ -18,7 +18,6 @@ import {
   UpdateTeacherMeRequest,
   BezirkResponse,
   BookingCommentResponse,
-  BookingDetailResponse,
   CreateBookingCommentRequest,
   UpsertEinAbRequest
 } from '../../api';
@@ -38,16 +37,7 @@ import { SelectModule } from 'primeng/select';
 import { PaginatorModule } from 'primeng/paginator';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
-import { AccordionModule } from 'primeng/accordion';
 import { ConfirmationService, MessageService } from 'primeng/api';
-
-interface BookingGroup {
-  bookingUserId: string;
-  name: string;
-  foodsharingId: string;
-  phoneNumber?: string;
-  bookings: BookingDetailResponse[];
-}
 
 @Component({
   selector: 'app-teacher-dashboard-page',
@@ -68,8 +58,7 @@ interface BookingGroup {
     SelectModule,
     PaginatorModule,
     TableModule,
-    TagModule,
-    AccordionModule
+    TagModule
   ],
   templateUrl: './teacher-dashboard-page.component.html',
   styleUrl: './teacher-dashboard-page.component.scss'
@@ -80,12 +69,12 @@ export class TeacherDashboardPageComponent implements OnInit {
 
   protected readonly teacher = signal<TeacherResponse | null>(null);
   protected readonly einAbs = signal<TeacherEinAbResponse[]>([]);
+  protected readonly todoEinAbs = signal<TeacherEinAbResponse[]>([]);
   protected readonly einAbsPage = signal<TeacherEinAbListResponse | null>(null);
-  protected hidePastEinAbs = true;
-  protected readonly selectedEinAb = signal<TeacherEinAbResponse | null>(null);
+  protected showPastEinAbs = false;
   protected readonly assignableTeachers = signal<TeacherAssignmentOption[]>([]);
   protected readonly assignTeacherDialogVisible = signal(false);
-  protected readonly assignTeacherSlot = signal<SlotResponse | null>(null);
+  protected readonly assignTeacherEinAb = signal<TeacherEinAbResponse | null>(null);
   protected readonly selectedTeacherId = signal<string | null>(null);
   protected readonly assignTeacherLoading = signal(false);
   protected readonly icalCandidates = signal<IcalCandidate[]>([]);
@@ -94,12 +83,11 @@ export class TeacherDashboardPageComponent implements OnInit {
   protected readonly bezirkSaveLoading = signal(false);
   protected readonly settingsSaveLoading = signal(false);
   protected readonly saveLoading = signal(false);
-  protected readonly bookings = signal<BookingDetailResponse[]>([]);
-  protected readonly commentsByUserId = signal<Record<string, BookingCommentResponse[]>>({});
-  protected readonly bookingsLoading = signal(false);
+  protected readonly commentsBySlotId = signal<Record<string, BookingCommentResponse[]>>({});
+  protected readonly commentsLoaded = signal(false);
   protected readonly commentLoading = signal(false);
   protected readonly commentDialogVisible = signal(false);
-  protected readonly commentTarget = signal<BookingGroup | null>(null);
+  protected readonly commentTarget = signal<SlotResponse | null>(null);
   protected readonly categoryOptions = computed(() => Object.values(EinAbCategory).map((value) => ({ value, label: this.i18n.categoryLabel(value) })));
   protected readonly slotCountOptions = [1, 2, 3].map((value) => ({ value, label: String(value) }));
   protected readonly assignableTeacherOptions = computed(() => this.assignableTeachers().map((teacher) => ({
@@ -118,7 +106,7 @@ export class TeacherDashboardPageComponent implements OnInit {
   protected readonly einabForm = inject(FormBuilder).nonNullable.group({
     category: [EinAbCategory.Supermarket, Validators.required],
     startDateTime: [new Date(), Validators.required],
-    location: [''],
+    location: ['', Validators.required],
     publicLocation: ['', Validators.required],
     onlineCallLink: [''],
     privateInfo: [''],
@@ -132,19 +120,15 @@ export class TeacherDashboardPageComponent implements OnInit {
     icalLink: ['']
   });
 
-  protected readonly bookingGroups = computed<BookingGroup[]>(() => {
-    const groups = new Map<string, BookingGroup>();
-    for (const booking of this.bookings()) {
-      const user = booking.bookingUser;
-      if (!user?.id) continue;
-      const existing = groups.get(user.id);
-      if (existing) {
-        existing.bookings.push(booking);
-      } else {
-        groups.set(user.id, { bookingUserId: user.id, name: user.name, foodsharingId: user.foodsharingId, phoneNumber: user.phoneNumber, bookings: [booking] });
-      }
+  protected readonly todoSlots = computed(() => {
+    if (!this.commentsLoaded()) {
+      return [];
     }
-    return Array.from(groups.values()).sort((left, right) => left.name.localeCompare(right.name));
+    return this.todoEinAbs().flatMap((einab) => this.isPast(einab.startDateTime)
+      ? einab.slots
+        .filter((slot) => slot.bookingUser && !this.commentsForSlot(slot.id).length)
+        .map((slot) => ({ einab, slot }))
+      : []);
   });
 
   private readonly teacherApi = inject(TeacherService);
@@ -167,7 +151,6 @@ export class TeacherDashboardPageComponent implements OnInit {
         }
         this.loadTeacherEinAbs(response.bezirk?.slug);
         this.loadAssignableTeachers(response.bezirk?.slug);
-        this.loadBookings(response.bezirk?.slug);
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
@@ -183,23 +166,33 @@ export class TeacherDashboardPageComponent implements OnInit {
   private loadTeacherEinAbs(teacherBezirkSlug?: string): void {
     if (!teacherBezirkSlug) {
       this.einAbs.set([]);
+      this.todoEinAbs.set([]);
       this.einAbsPage.set(null);
-      this.selectedEinAb.set(null);
+      this.commentsBySlotId.set({});
+      this.commentsLoaded.set(true);
       return;
     }
-    this.teacherApi.getTeacherEinAbs({
-      bezirkSlug: teacherBezirkSlug,
-      page: this.einAbsPage()?.page ?? 0,
-      size: this.pageSize,
-      hidePast: this.hidePastEinAbs
+    this.commentsLoaded.set(false);
+    forkJoin({
+      visible: this.teacherApi.getTeacherEinAbs({
+        bezirkSlug: teacherBezirkSlug,
+        page: this.einAbsPage()?.page ?? 0,
+        size: this.pageSize,
+        pastOnly: this.showPastEinAbs
+      }),
+      todo: this.teacherApi.getTeacherEinAbs({
+        bezirkSlug: teacherBezirkSlug,
+        page: 0,
+        size: 100,
+        pastOnly: true
+      }).pipe(catchError(() => of(null)))
     }).subscribe({
-      next: (response) => {
-        this.einAbs.set(response.einAbs);
-        this.einAbsPage.set(response);
-        if (this.selectedEinAb()) {
-          const refreshed = response.einAbs.find((item) => item.id === this.selectedEinAb()?.id) ?? null;
-          this.selectedEinAb.set(refreshed);
-        }
+      next: ({ visible, todo }) => {
+        const todoEinAbs = todo?.einAbs ?? [];
+        this.einAbs.set(visible.einAbs);
+        this.einAbsPage.set(visible);
+        this.todoEinAbs.set(todoEinAbs);
+        this.loadComments(teacherBezirkSlug, [...visible.einAbs, ...todoEinAbs].flatMap((einab) => einab.slots.filter((slot) => Boolean(slot.bookingUser)).map((slot) => slot.id)));
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });
@@ -221,8 +214,8 @@ export class TeacherDashboardPageComponent implements OnInit {
     this.reload();
   }
 
-  onHidePastEinAbsChange(hidePast: boolean): void {
-    this.hidePastEinAbs = hidePast;
+  onShowPastEinAbsChange(showPast: boolean): void {
+    this.showPastEinAbs = showPast;
     this.einAbsPage.update((current) => current ? { ...current, page: 0 } : current);
     this.loadTeacherEinAbs(this.teacher()?.bezirk?.slug);
   }
@@ -270,10 +263,6 @@ export class TeacherDashboardPageComponent implements OnInit {
         this.toastError(resolveApiError(error, this.i18n));
       }
     });
-  }
-
-  selectEinAb(einab: TeacherEinAbResponse): void {
-    this.selectedEinAb.set(einab);
   }
 
   openCreate(): void {
@@ -390,9 +379,9 @@ export class TeacherDashboardPageComponent implements OnInit {
     });
   }
 
-  cancelSlotBooking(slot: SlotResponse): void {
+  cancelSlotBooking(slot: SlotResponse, startDateTime: string): void {
     this.confirmationService.confirm({
-      message: this.i18n.t('confirm.cancelTeacherBooking'),
+      message: this.i18n.t(this.isPast(startDateTime) ? 'confirm.markDidNotShowUp' : 'confirm.cancelTeacherBooking'),
       accept: () => {
         this.teacherApi.cancelTeacherSlotBooking({ bezirkSlug: this.teacher()!.bezirk!.slug, slotId: slot.id }).subscribe({
           next: () => this.reload(),
@@ -402,43 +391,34 @@ export class TeacherDashboardPageComponent implements OnInit {
     });
   }
 
-  cancelBooking(slotId: string): void {
-    this.confirmationService.confirm({
-      message: this.i18n.t('confirm.cancelTeacherBooking'),
-      accept: () => {
-        const bezirkSlug = this.teacher()?.bezirk?.slug;
-        if (!bezirkSlug) return;
-        this.teacherApi.cancelTeacherSlotBooking({ bezirkSlug, slotId }).subscribe({
-          next: () => this.reload(),
-          error: (error) => this.toastError(resolveApiError(error, this.i18n))
-        });
-      }
-    });
+  protected isPast(startDateTime: string): boolean {
+    return new Date(startDateTime).getTime() < Date.now();
   }
 
-  commentsForUser(userId: string): BookingCommentResponse[] {
-    return this.commentsByUserId()[userId] ?? [];
+  commentsForSlot(slotId: string): BookingCommentResponse[] {
+    return this.commentsBySlotId()[slotId] ?? [];
   }
 
-  openCommentDialog(group: BookingGroup): void {
-    this.commentTarget.set(group);
+  openCommentDialog(slot: SlotResponse): void {
+    if (!slot.bookingUser) return;
+    this.commentTarget.set(slot);
     this.commentForm.reset({ comment: '' });
     this.commentDialogVisible.set(true);
   }
 
   saveComment(): void {
-    const group = this.commentTarget();
+    const slot = this.commentTarget();
     const bezirkSlug = this.teacher()?.bezirk?.slug;
     const comment = this.commentForm.getRawValue().comment.trim();
-    if (!group || !bezirkSlug || !comment || this.commentForm.invalid) return;
+    if (!slot?.bookingUser || !bezirkSlug || !comment || this.commentForm.invalid) return;
 
     this.commentLoading.set(true);
     const createBookingCommentRequest: CreateBookingCommentRequest = { comment };
-    this.teacherApi.addTeacherBookingComment({ bezirkSlug, bookingUserId: group.bookingUserId, createBookingCommentRequest }).subscribe({
+    this.teacherApi.addTeacherSlotComment({ bezirkSlug, slotId: slot.id, createBookingCommentRequest }).subscribe({
       next: () => {
         this.commentDialogVisible.set(false);
         this.commentTarget.set(null);
-        this.refreshComments(group.bookingUserId);
+        this.refreshComments(slot.id);
       },
       error: (error) => {
         this.commentLoading.set(false);
@@ -447,34 +427,31 @@ export class TeacherDashboardPageComponent implements OnInit {
     });
   }
 
-  openAssignTeacher(slot: SlotResponse): void {
-    if (slot.status !== SlotStatus.Booked || !slot.bookingUser) {
-      return;
-    }
-    this.assignTeacherSlot.set(slot);
-    this.selectedTeacherId.set(slot.teacherId);
+  openAssignTeacher(einab: TeacherEinAbResponse): void {
+    this.assignTeacherEinAb.set(einab);
+    this.selectedTeacherId.set(einab.teacher.id);
     this.assignTeacherDialogVisible.set(true);
   }
 
-  assignTeacherToSlot(): void {
-    const slot = this.assignTeacherSlot();
+  assignTeacherToEinAb(): void {
+    const einab = this.assignTeacherEinAb();
     const teacherId = this.selectedTeacherId();
     const bezirkSlug = this.teacher()?.bezirk?.slug;
-    if (!slot || !teacherId || !bezirkSlug || this.assignTeacherLoading()) {
+    if (!einab || !teacherId || !bezirkSlug || this.assignTeacherLoading()) {
       return;
     }
     this.assignTeacherLoading.set(true);
-    this.teacherApi.assignTeacherToSlot({
+    this.teacherApi.assignTeacherToEinAb({
       bezirkSlug,
-      slotId: slot.id,
-      assignTeacherToSlotRequest: { teacherId }
+      einAbId: einab.id,
+      assignTeacherToEinAbRequest: { teacherId }
     }).subscribe({
       next: () => {
         this.assignTeacherLoading.set(false);
         this.assignTeacherDialogVisible.set(false);
-        this.assignTeacherSlot.set(null);
+        this.assignTeacherEinAb.set(null);
         this.loadTeacherEinAbs(bezirkSlug);
-        this.messageService.add({ severity: 'success', summary: this.i18n.t('teacher.assignSlotSuccess') });
+        this.messageService.add({ severity: 'success', summary: this.i18n.t('teacher.assignEinAbSuccess') });
       },
       error: (error) => {
         this.assignTeacherLoading.set(false);
@@ -487,47 +464,28 @@ export class TeacherDashboardPageComponent implements OnInit {
     this.messageService.add({ severity: 'error', summary: this.i18n.t('common.error'), detail });
   }
 
-  private loadBookings(bezirkSlug?: string): void {
-    if (!bezirkSlug) {
-      this.bookings.set([]);
-      this.commentsByUserId.set({});
+  private loadComments(bezirkSlug: string, slotIds: string[]): void {
+    const uniqueSlotIds = Array.from(new Set(slotIds));
+    if (!uniqueSlotIds.length) {
+      this.commentsBySlotId.set({});
+      this.commentsLoaded.set(true);
       return;
     }
-    this.bookingsLoading.set(true);
-    this.teacherApi.getTeacherBookings({ bezirkSlug, page: 0, size: 100 }).subscribe({
-      next: (response) => {
-        this.bookings.set(response.bookings);
-        this.loadComments(bezirkSlug, response.bookings);
-      },
-      error: (error) => {
-        this.bookingsLoading.set(false);
-        this.toastError(resolveApiError(error, this.i18n));
-      }
-    });
-  }
-
-  private loadComments(bezirkSlug: string, bookings: BookingDetailResponse[]): void {
-    const userIds = Array.from(new Set(bookings.map((booking) => booking.bookingUser?.id).filter((id): id is string => Boolean(id))));
-    if (!userIds.length) {
-      this.commentsByUserId.set({});
-      this.bookingsLoading.set(false);
-      return;
-    }
-    forkJoin(userIds.map((bookingUserId) => this.teacherApi.getTeacherBookingComments({ bezirkSlug, bookingUserId }).pipe(
-      map((response) => [bookingUserId, response.comments] as const),
-      catchError(() => of([bookingUserId, []] as const))
+    forkJoin(uniqueSlotIds.map((slotId) => this.teacherApi.getTeacherSlotComments({ bezirkSlug, slotId }).pipe(
+      map((response) => [slotId, response.comments] as const),
+      catchError(() => of([slotId, []] as const))
     ))).subscribe((entries) => {
-      this.commentsByUserId.set(Object.fromEntries(entries));
-      this.bookingsLoading.set(false);
+      this.commentsBySlotId.set(Object.fromEntries(entries));
+      this.commentsLoaded.set(true);
     });
   }
 
-  private refreshComments(bookingUserId: string): void {
+  private refreshComments(slotId: string): void {
     const bezirkSlug = this.teacher()?.bezirk?.slug;
     if (!bezirkSlug) return;
-    this.teacherApi.getTeacherBookingComments({ bezirkSlug, bookingUserId }).subscribe({
+    this.teacherApi.getTeacherSlotComments({ bezirkSlug, slotId }).subscribe({
       next: (response) => {
-        this.commentsByUserId.update((comments) => ({ ...comments, [bookingUserId]: response.comments }));
+        this.commentsBySlotId.update((comments) => ({ ...comments, [slotId]: response.comments }));
         this.commentLoading.set(false);
       },
       error: (error) => {
@@ -547,8 +505,10 @@ export class TeacherDashboardPageComponent implements OnInit {
 
   private configureOnlineFields(category: EinAbCategory): void {
     const isOnline = this.isOnline(category);
+    const location = this.einabForm.controls.location;
     const publicLocation = this.einabForm.controls.publicLocation;
     const onlineCallLink = this.einabForm.controls.onlineCallLink;
+    location.setValidators(isOnline ? [] : [Validators.required]);
     publicLocation.setValidators(isOnline ? [] : [Validators.required]);
     onlineCallLink.setValidators(isOnline ? [Validators.required] : []);
     if (isOnline) {
@@ -556,6 +516,7 @@ export class TeacherDashboardPageComponent implements OnInit {
     } else {
       this.einabForm.patchValue({ onlineCallLink: '' }, { emitEvent: false });
     }
+    location.updateValueAndValidity({ emitEvent: false });
     publicLocation.updateValueAndValidity({ emitEvent: false });
     onlineCallLink.updateValueAndValidity({ emitEvent: false });
   }

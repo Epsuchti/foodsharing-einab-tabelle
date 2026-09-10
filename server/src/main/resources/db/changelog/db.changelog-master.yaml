@@ -29,3 +29,6 @@ databaseChangeLog:
   - include:
       file: db.changelog-012-add-slot-automation-date-exclusions.yaml
       relativeToChangelogFile: true
+  - include:
+      file: db.changelog-013-link-booking-comments-to-slots.yaml
+      relativeToChangelogFile: true

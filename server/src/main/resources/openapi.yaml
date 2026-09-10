@@ -338,12 +338,12 @@ paths:
           schema:
             type: integer
             default: 20
-        - name: hidePast
+        - name: pastOnly
           in: query
-          description: Exclude EinAbs whose start date has passed
+          description: Show only EinAbs whose start date has passed
           schema:
             type: boolean
-            default: true
+            default: false
       responses:
         '200':
           description: Teacher EinAbs
@@ -416,6 +416,32 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+  /api/teacher/bezirke/{bezirkSlug}/einabs/{einAbId}/teacher:
+    put:
+      tags: [teacher]
+      operationId: assignTeacherToEinAb
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
+        - $ref: '#/components/parameters/EinAbId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignTeacherToEinAbRequest'
+      responses:
+        '200':
+          description: Teacher assigned to EinAb and all of its slots
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeacherEinAbResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /api/teacher/bezirke/{bezirkSlug}/teachers/assignable:
     get:
       tags: [teacher]
@@ -424,7 +450,7 @@ paths:
         - $ref: '#/components/parameters/BezirkSlug'
       responses:
         '200':
-          description: Teachers who can be assigned to a booked slot
+          description: Teachers who can be assigned an EinAb
           content:
             application/json:
               schema:
@@ -456,13 +482,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BookingListResponse'
-  /api/teacher/bezirke/{bezirkSlug}/bookings/{bookingUserId}/comments:
+  /api/teacher/bezirke/{bezirkSlug}/slots/{slotId}/comments:
     get:
       tags: [teacher]
-      operationId: getTeacherBookingComments
+      operationId: getTeacherSlotComments
       parameters:
         - $ref: '#/components/parameters/BezirkSlug'
-        - name: bookingUserId
+        - name: slotId
           in: path
           required: true
           schema:
@@ -481,10 +507,10 @@ paths:
           $ref: '#/components/responses/NotFound'
     post:
       tags: [teacher]
-      operationId: addTeacherBookingComment
+      operationId: addTeacherSlotComment
       parameters:
         - $ref: '#/components/parameters/BezirkSlug'
-        - name: bookingUserId
+        - name: slotId
           in: path
           required: true
           schema:
@@ -545,34 +571,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SlotResponse'
-  /api/teacher/bezirke/{bezirkSlug}/slots/{slotId}/teacher:
-    put:
-      tags: [teacher]
-      operationId: assignTeacherToSlot
-      parameters:
-        - $ref: '#/components/parameters/BezirkSlug'
-        - $ref: '#/components/parameters/SlotId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AssignTeacherToSlotRequest'
-      responses:
-        '200':
-          description: Teacher assigned to booked slot
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SlotResponse'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
   /api/admin/bezirke/{bezirkSlug}/teachers:
     parameters:
       - $ref: '#/components/parameters/BezirkSlug'
@@ -1611,7 +1609,7 @@ components:
             type: string
     ErrorCode:
       type: string
-      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, BEZIRK_NOT_FOUND, USER_BEZIRK_MISMATCH, NOTIFICATION_SUBSCRIPTION_BEZIRK_MISMATCH, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, INVALID_UNSUBSCRIBE_TOKEN, TEACHER_ACCOUNT_REQUIRED, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_ASSIGNABLE, ASSIGNABLE_TEACHER_NOT_FOUND, EINAB_NOT_FOUND, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED, INVALID_BOOKING_CONFIRMATION_TOKEN, BOOKING_CONFIRMATION_EXPIRED]
+      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, BEZIRK_NOT_FOUND, USER_BEZIRK_MISMATCH, NOTIFICATION_SUBSCRIPTION_BEZIRK_MISMATCH, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, INVALID_UNSUBSCRIBE_TOKEN, TEACHER_ACCOUNT_REQUIRED, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_ASSIGNABLE, ASSIGNABLE_TEACHER_NOT_FOUND, EINAB_NOT_FOUND, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, LOCATION_REQUIRED, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED, INVALID_BOOKING_CONFIRMATION_TOKEN, BOOKING_CONFIRMATION_EXPIRED]
     BezirkResponse:
       type: object
       required: [id, name, slug]
@@ -2282,7 +2280,7 @@ components:
           format: date-time
         bezirk:
           $ref: '#/components/schemas/BezirkResponse'
-    AssignTeacherToSlotRequest:
+    AssignTeacherToEinAbRequest:
       type: object
       required: [teacherId]
       properties:
@@ -2728,6 +2726,9 @@ components:
           type: string
           format: uuid
         bookingUserId:
+          type: string
+          format: uuid
+        slotId:
           type: string
           format: uuid
         teacherId:

@@ -1,0 +1,23 @@
+databaseChangeLog:
+  - changeSet:
+      id: 013-link-booking-comments-to-slots
+      author: codex
+      changes:
+        - addColumn:
+            tableName: booking_comments
+            columns:
+              - column:
+                  name: slot_id
+                  type: UUID
+        - addForeignKeyConstraint:
+            baseTableName: booking_comments
+            baseColumnNames: slot_id
+            referencedTableName: slots
+            referencedColumnNames: id
+            constraintName: fk_booking_comments_slot
+        - createIndex:
+            tableName: booking_comments
+            indexName: idx_booking_comments_slot_id
+            columns:
+              - column:
+                  name: slot_id

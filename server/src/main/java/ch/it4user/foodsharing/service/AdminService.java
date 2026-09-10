@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminService {
 
     private static final List<SlotStatus> ACTIVE_BOOKING_STATUSES = List.of(SlotStatus.BOOKED, SlotStatus.DONE);
+    private static final List<SlotStatus> USER_BOOKING_DISPLAY_STATUSES = List.of(SlotStatus.BOOKED, SlotStatus.DONE, SlotStatus.CANCELLED);
 
     private final TeacherService teacherService;
     private final BezirkService bezirkService;
@@ -103,7 +104,7 @@ public class AdminService {
         Map<UUID, List<BookingComment>> commentsByUser = groupComments(users);
         List<User> sortedUsers = users.stream()
                 .filter(user -> !activeOnly || user.isActive())
-                .filter(user -> !threePickupsOnly || bookingsByUser.getOrDefault(user.getId(), List.of()).size() >= 3)
+                .filter(user -> !threePickupsOnly || countedPickupCount(bookingsByUser.getOrDefault(user.getId(), List.of())) >= 3)
                 .sorted(Comparator
                         .comparing((User user) -> latestPickupAt(bookingsByUser.getOrDefault(user.getId(), List.of())),
                                 Comparator.nullsLast(Comparator.reverseOrder()))
@@ -194,8 +195,8 @@ public class AdminService {
             return Map.of();
         }
         List<Slot> bookings = allBezirke
-                ? slotRepository.findAllByActiveBookingUsersAndStatuses(users, ACTIVE_BOOKING_STATUSES)
-                : slotRepository.findAllByActiveBookingUsersAndStatusesAndBezirk(users, ACTIVE_BOOKING_STATUSES, bezirk);
+                ? slotRepository.findAllByActiveBookingUsersAndStatuses(users, USER_BOOKING_DISPLAY_STATUSES)
+                : slotRepository.findAllByActiveBookingUsersAndStatusesAndBezirk(users, USER_BOOKING_DISPLAY_STATUSES, bezirk);
         return bookings.stream().collect(Collectors.groupingBy(slot -> slot.getBookingUser().getId()));
     }
 
@@ -209,9 +210,16 @@ public class AdminService {
 
     private java.time.Instant latestPickupAt(List<Slot> bookings) {
         return bookings.stream()
+                .filter(slot -> ACTIVE_BOOKING_STATUSES.contains(slot.getStatus()))
                 .map(slot -> slot.getEinAb().getStartDateTime())
                 .max(Comparator.naturalOrder())
                 .orElse(null);
+    }
+
+    private long countedPickupCount(List<Slot> bookings) {
+        return bookings.stream()
+                .filter(slot -> ACTIVE_BOOKING_STATUSES.contains(slot.getStatus()))
+                .count();
     }
 
     public record UserPermissions(boolean canGiveEinAbs, boolean canManageUsers, boolean canUseAutomations,

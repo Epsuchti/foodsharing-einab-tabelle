@@ -71,6 +71,9 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
     Optional<Slot> findForUpdateByIdAndBezirk(@Param("id") UUID id, @Param("bezirk") Bezirk bezirk);
 
     @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
+    Optional<Slot> findByIdAndEinAbBezirk(UUID id, Bezirk bezirk);
+
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     List<Slot> findAllByEinAbInOrderByEinAbStartDateTimeAsc(Collection<EinAb> einAbs);
 
     @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
@@ -158,7 +161,12 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
 
     boolean existsByEinAbAndStatusIn(EinAb einAb, Collection<SlotStatus> statuses);
 
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     List<Slot> findAllByEinAbOrderByCreatedAtAsc(EinAb einAb);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Slot s where s.einAb = :einAb")
+    List<Slot> findAllForUpdateByEinAb(@Param("einAb") EinAb einAb);
 
     @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     @Query("""

@@ -11,7 +11,7 @@ import ch.it4user.foodsharing.openapi.model.IcalCandidateListResponse;
 import ch.it4user.foodsharing.openapi.model.SlotResponse;
 import ch.it4user.foodsharing.openapi.model.UpdateTeacherMeRequest;
 import ch.it4user.foodsharing.openapi.model.AssignTeacherBezirkRequest;
-import ch.it4user.foodsharing.openapi.model.AssignTeacherToSlotRequest;
+import ch.it4user.foodsharing.openapi.model.AssignTeacherToEinAbRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherAssignmentOptionListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherEinAbResponse;
@@ -76,10 +76,10 @@ public class TeacherController implements TeacherApi {
     }
 
     @Override
-    public ResponseEntity<TeacherEinAbListResponse> getTeacherEinAbs(String bezirkSlug, Integer page, Integer size, Boolean hidePast) {
+    public ResponseEntity<TeacherEinAbListResponse> getTeacherEinAbs(String bezirkSlug, Integer page, Integer size, Boolean pastOnly) {
         User teacher = currentActorService.requireTeacher();
         org.springframework.data.domain.Page<EinAb> einAbs = teacherService.findTeacherEinAbs(
-                bezirkSlug, teacher, page == null ? 0 : page, size == null ? 20 : size, hidePast == null || hidePast);
+                bezirkSlug, teacher, page == null ? 0 : page, size == null ? 20 : size, pastOnly != null && pastOnly);
         return ResponseEntity.ok(mapTeacherEinAbs(einAbs));
     }
 
@@ -159,25 +159,25 @@ public class TeacherController implements TeacherApi {
     }
 
     @Override
-    public ResponseEntity<BookingCommentResponse> addTeacherBookingComment(
+    public ResponseEntity<BookingCommentResponse> addTeacherSlotComment(
             String bezirkSlug,
-            UUID bookingUserId,
+            UUID slotId,
             CreateBookingCommentRequest createBookingCommentRequest) {
         return ResponseEntity.status(201).body(mapper.toBookingCommentResponse(
-                teacherService.addBookingComment(
+                teacherService.addSlotComment(
                         bezirkSlug,
                         currentActorService.requireTeacher(),
-                        bookingUserId,
+                        slotId,
                         createBookingCommentRequest.getComment())));
     }
 
     @Override
-    public ResponseEntity<BookingCommentListResponse> getTeacherBookingComments(String bezirkSlug, UUID bookingUserId) {
+    public ResponseEntity<BookingCommentListResponse> getTeacherSlotComments(String bezirkSlug, UUID slotId) {
         return ResponseEntity.ok(mapper.toBookingCommentListResponse(
-                teacherService.findBookingComments(
+                teacherService.findSlotComments(
                         bezirkSlug,
                         currentActorService.requireTeacher(),
-                        bookingUserId)));
+                        slotId)));
     }
 
     @Override
@@ -209,16 +209,18 @@ public class TeacherController implements TeacherApi {
     }
 
     @Override
-    public ResponseEntity<SlotResponse> assignTeacherToSlot(
+    public ResponseEntity<TeacherEinAbResponse> assignTeacherToEinAb(
             String bezirkSlug,
-            UUID slotId,
-            AssignTeacherToSlotRequest request) {
-        return ResponseEntity.ok(mapper.toSlotResponse(
-                teacherService.assignTeacherToSlot(
+            UUID einAbId,
+            AssignTeacherToEinAbRequest request) {
+        EinAb einAb = teacherService.assignTeacherToEinAb(
                         bezirkSlug,
                         currentActorService.requireTeacher(),
-                        slotId,
-                        request.getTeacherId())));
+                        einAbId,
+                        request.getTeacherId());
+        return ResponseEntity.ok(mapper.toTeacherEinAbResponse(
+                einAb,
+                slotRepository.findAllByEinAbOrderByCreatedAtAsc(einAb)));
     }
 
     private TeacherEinAbListResponse mapTeacherEinAbs(org.springframework.data.domain.Page<EinAb> einAbs) {

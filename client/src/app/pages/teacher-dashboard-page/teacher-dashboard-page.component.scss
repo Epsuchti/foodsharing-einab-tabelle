@@ -1,19 +1,9 @@
-.teacher-page-header {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.25rem 0;
-}
-
-.teacher-page-header__title,
 .page-heading {
   display: flex;
   align-items: center;
   gap: 0.875rem;
 }
 
-.teacher-page-header__icon,
 .page-heading__icon {
   display: grid;
   flex: 0 0 auto;
@@ -26,18 +16,11 @@
   font-size: 1.2rem;
 }
 
-.teacher-page-header__icon {
-  background: linear-gradient(135deg, #2d9154, #195d35);
-  box-shadow: 0 7px 16px rgb(25 93 53 / 0.2);
-  color: #fff;
-}
-
 .page-heading__icon--people {
   background: #e6f4f8;
   color: var(--app-info);
 }
 
-.teacher-page-header h1,
 .page-heading h1,
 .page-heading h2 {
   margin: 0;
@@ -50,14 +33,20 @@
   font-size: 1.3rem;
 }
 
-.teacher-page-header p,
 .page-heading p {
   margin: 0.25rem 0 0;
   color: var(--app-text-muted);
   font-size: 0.9rem;
 }
 
-.teacher-page-header__actions {
+.einabs-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.einabs-card__toolbar {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -65,13 +54,63 @@
   flex-wrap: wrap;
 }
 
-.einabs-card,
-.booking-history-card {
+.einabs-card__toolbar .filter-toggle {
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.einabs-card {
   margin: 0;
 }
 
-.einabs-card ::ng-deep .p-card-title,
-.booking-history-card ::ng-deep .p-card-title {
+.todo-card {
+  margin: 0;
+  border-color: #e7c76a;
+  background: #fffaf0;
+}
+
+.todo-card ::ng-deep .p-card-title {
+  margin-bottom: 0.35rem;
+}
+
+.todo-card__title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #795b00;
+}
+
+.todo-card__hint {
+  margin: 0 0 0.85rem;
+  color: var(--app-text-muted);
+}
+
+.todo-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid #f0dfaa;
+}
+
+.todo-item > div {
+  display: grid;
+  min-width: 0;
+  gap: 0.15rem;
+}
+
+.todo-item small {
+  color: var(--app-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.einabs-card ::ng-deep .p-card-title {
   margin-bottom: 1.25rem;
 }
 
@@ -86,84 +125,88 @@
   color: var(--app-text);
 }
 
+.desktop-table ::ng-deep .einab-expandable-row {
+  cursor: pointer;
+}
+
+.einab-slots-row > td {
+  padding: 0;
+  background: var(--app-surface-muted);
+}
+
+.einab-slots {
+  padding: 0.85rem 1rem;
+}
+
+.einab-detail-label {
+  color: var(--app-text-muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.einab-slots {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.einab-slot-card {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: #fff;
+  box-shadow: 0 3px 8px rgb(23 49 38 / 0.04);
+}
+
+.einab-slot-card__header,
+.einab-slot-card__status {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.einab-slot-card__header {
+  justify-content: space-between;
+}
+
+.einab-slot-card__details {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.einab-slot-card__details > div {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+  color: var(--app-text);
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.einab-card__slots {
+  display: none;
+}
+
 .einab-cards,
 .slot-cards,
 .candidate-cards {
   display: none;
 }
 
-.booking-groups {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.booking-groups ::ng-deep .p-accordionpanel {
-  overflow: hidden;
-  border-color: var(--app-border);
-  border-radius: var(--app-radius);
-}
-
-.booking-groups ::ng-deep .p-accordionheader {
-  padding: 0.9rem 1rem;
-  background: var(--app-surface-muted);
-}
-
-.booking-groups ::ng-deep .p-accordioncontent-content {
-  padding: 0;
-}
-
-.booking-person {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.booking-person > span:last-child,
-.booking-row > span {
-  display: grid;
-  gap: 0.15rem;
-}
-
-.booking-person small,
-.booking-row small,
 .comment-item small {
   color: var(--app-text-muted);
 }
 
-.person-avatar {
-  display: grid;
-  width: 2.25rem;
-  height: 2.25rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--app-primary-soft);
-  color: var(--app-primary-strong);
-  font-weight: 750;
+.slot-comments {
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--app-border);
 }
 
-.booking-list {
-  padding: 0.25rem 1rem;
-}
-
-.booking-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.85rem 0;
-  border-bottom: 1px solid var(--app-border);
-}
-
-.booking-row > span {
-  margin-right: auto;
-}
-
-.booking-comments {
-  margin: 0 1rem 1rem;
-  padding-top: 1rem;
-}
-
-.booking-comments h3 {
+.slot-comments h3 {
   margin: 0;
   font-size: 1rem;
 }
@@ -302,16 +345,16 @@
 }
 
 @media (max-width: 768px) {
-  .teacher-page-header {
+  .einabs-card__header {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .teacher-page-header__actions {
+  .einabs-card__toolbar {
     justify-content: space-between;
   }
 
-  .teacher-page-header__actions > button {
+  .einabs-card__toolbar > button {
     flex: 1;
   }
 
@@ -376,13 +419,24 @@
     flex-wrap: wrap;
   }
 
-  .booking-row {
+  .todo-item {
     align-items: flex-start;
-    flex-wrap: wrap;
+    flex-direction: column;
   }
 
-  .booking-row button {
-    margin-left: auto;
+  .einab-card__slots {
+    display: grid;
+    gap: 0.6rem;
+  }
+
+  .einab-card__slots summary {
+    cursor: pointer;
+    color: var(--app-primary-strong);
+    font-weight: 700;
+  }
+
+  .einab-slot-card__details {
+    grid-template-columns: 1fr;
   }
 
   .planning-tools__content {

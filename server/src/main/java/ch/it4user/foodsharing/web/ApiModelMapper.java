@@ -6,6 +6,7 @@ import ch.it4user.foodsharing.domain.entity.EinAb;
 import ch.it4user.foodsharing.domain.entity.Slot;
 import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.entity.NotificationSubscription;
+import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserResponse;
 import ch.it4user.foodsharing.openapi.model.AdminBezirkResponse;
@@ -165,7 +166,9 @@ public class ApiModelMapper {
         List<Slot> bookings = bookingsByUser.getOrDefault(bookingUser.getId(), List.of());
         response.setBookings(bookings.stream().map(this::toBookingDetailResponse).toList());
         response.setComments(commentsByUser.getOrDefault(bookingUser.getId(), List.of()).stream().map(this::toBookingCommentResponse).toList());
-        response.setPickupCount(bookings.size());
+        response.setPickupCount((int) bookings.stream()
+                .filter(booking -> booking.getStatus() == SlotStatus.BOOKED || booking.getStatus() == SlotStatus.DONE)
+                .count());
         return response;
     }
 
@@ -292,6 +295,7 @@ public class ApiModelMapper {
         BookingCommentResponse response = new BookingCommentResponse();
         response.setId(comment.getId());
         response.setBookingUserId(comment.getBookingUser().getId());
+        response.setSlotId(comment.getSlot() == null ? null : comment.getSlot().getId());
         response.setTeacherId(comment.getTeacher().getId());
         response.setTeacherName(comment.getTeacher().getName());
         response.setComment(comment.getComment());
