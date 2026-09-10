@@ -118,7 +118,7 @@ public class AuthService {
         if (!user.isActive()) {
             throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ACCOUNT_NOT_FOUND);
         }
-        if (user.getBezirk() == null && (user.isCanGiveEinAbs() || user.isWantsToBeTeacher())) {
+        if (user.getBezirk() == null) {
             bookingUserService.assignToBezirk(user, selectedBezirk);
         }
         String targetBezirkSlug = user.getBezirk() == null ? selectedBezirk.getSlug() : user.getBezirk().getSlug();

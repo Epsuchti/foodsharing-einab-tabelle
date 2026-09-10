@@ -810,6 +810,25 @@ paths:
                 $ref: '#/components/schemas/BookingUserResponse'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/admin/users:
+    post:
+      tags: [admin]
+      operationId: createAdminBookingUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingUserRequest'
+      responses:
+        '201':
+          description: Created booking user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingUserResponse'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/admin/users/{userId}/bezirk:
     put:
       tags: [admin]
@@ -1635,6 +1654,16 @@ components:
         bezirkSlug:
           type: string
           nullable: true
+    CreateBookingUserRequest:
+      type: object
+      required: [foodsharingId, bezirkSlug]
+      properties:
+        foodsharingId:
+          type: string
+          minLength: 1
+        bezirkSlug:
+          type: string
+          minLength: 1
     Language:
       type: string
       enum: [de, en, gws]

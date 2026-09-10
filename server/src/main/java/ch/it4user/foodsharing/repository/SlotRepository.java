@@ -161,6 +161,17 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
     List<Slot> findAllByEinAbOrderByCreatedAtAsc(EinAb einAb);
 
     @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
+    @Query("""
+        select s from Slot s
+        where s.einAb.id = :einAbId
+          and s.status in :statuses
+          and s.bookingUser.active = true
+        order by s.createdAt asc
+        """)
+    List<Slot> findAllByEinAbIdAndStatusIn(@Param("einAbId") UUID einAbId,
+                                           @Param("statuses") Collection<SlotStatus> statuses);
+
+    @EntityGraph(attributePaths = {"einAb", "einAb.bezirk", "einAb.teacher", "einAb.teacher.bezirk", "teacher", "teacher.bezirk", "bookingUser", "bookingUser.bezirk"})
     Optional<Slot> findByPendingConfirmationTokenHash(String tokenHash);
 
     List<Slot> findAllByStatusAndPendingConfirmationExpiresAtBefore(SlotStatus status, java.time.Instant expiresAt);

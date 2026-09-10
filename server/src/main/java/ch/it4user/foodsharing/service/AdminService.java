@@ -4,6 +4,7 @@ import ch.it4user.foodsharing.domain.entity.Bezirk;
 import ch.it4user.foodsharing.domain.entity.BookingComment;
 import ch.it4user.foodsharing.domain.entity.User;
 import ch.it4user.foodsharing.domain.entity.EinAb;
+import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.domain.entity.Slot;
 import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
 import ch.it4user.foodsharing.repository.BookingCommentRepository;
@@ -60,6 +61,15 @@ public class AdminService {
 
     public User setTeacherAdmin(UUID teacherId, boolean admin) {
         return teacherService.setTeacherAdmin(teacherId, admin);
+    }
+
+    @Transactional
+    public User createBookingUser(String foodsharingId, String bezirkSlug) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        User user = bookingUserService.getOrCreate(foodsharingId, LanguageCode.DE);
+        bookingUserService.assignToBezirk(user, bezirk);
+        user.setActive(true);
+        return user;
     }
 
     public Page<EinAb> getEinAbs(String bezirkSlug, int page, int size) {

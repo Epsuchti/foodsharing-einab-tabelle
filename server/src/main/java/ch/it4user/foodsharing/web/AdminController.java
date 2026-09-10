@@ -5,6 +5,7 @@ import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
 import ch.it4user.foodsharing.openapi.model.AdminBezirkResponse;
 import ch.it4user.foodsharing.openapi.model.AutomationRunSummary;
 import ch.it4user.foodsharing.openapi.model.BookingUserResponse;
+import ch.it4user.foodsharing.openapi.model.CreateBookingUserRequest;
 import ch.it4user.foodsharing.openapi.model.FoodsharingAutomationAudit;
 import ch.it4user.foodsharing.openapi.model.FoodsharingCleaningRuleExemption;
 import ch.it4user.foodsharing.openapi.model.FoodsharingCleaningRuleExemptionRequest;
@@ -176,6 +177,13 @@ public class AdminController implements AdminApi {
     public ResponseEntity<BookingUserResponse> grantAdminBookingUser(UUID bookingUserId) {
         currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
         return ResponseEntity.ok(mapper.toBookingUserResponse(adminService.grantBookingUserAdmin(bookingUserId)));
+    }
+
+    @Override
+    public ResponseEntity<BookingUserResponse> createAdminBookingUser(CreateBookingUserRequest request) {
+        currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toBookingUserResponse(
+                adminService.createBookingUser(request.getFoodsharingId(), request.getBezirkSlug())));
     }
 
     @Override

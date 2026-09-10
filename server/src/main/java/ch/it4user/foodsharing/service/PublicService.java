@@ -7,6 +7,7 @@ import ch.it4user.foodsharing.domain.enumtype.LanguageCode;
 import ch.it4user.foodsharing.domain.enumtype.EinAbCategory;
 import ch.it4user.foodsharing.domain.enumtype.SlotStatus;
 import ch.it4user.foodsharing.repository.SlotRepository;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
@@ -14,11 +15,14 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 @Service
 public class PublicService {
 
     private static final Set<SlotStatus> ACTIVE_BOOKING_STATUSES = Set.of(SlotStatus.PENDING_CONFIRMATION, SlotStatus.BOOKED, SlotStatus.DONE);
+    private static final Set<SlotStatus> EINAB_UPDATE_NOTIFICATION_STATUSES = Set.of(SlotStatus.PENDING_CONFIRMATION, SlotStatus.BOOKED);
 
     private final SlotRepository slotRepository;
     private final BezirkService bezirkService;
@@ -139,7 +143,35 @@ public class PublicService {
         slot.setStatus(SlotStatus.BOOKED);
         slot.setPendingConfirmationTokenHash(null);
         slot.setPendingConfirmationExpiresAt(null);
+        sendTeacherBookingConfirmationMessage(slot);
         return slot;
+    }
+
+    private void sendTeacherBookingConfirmationMessage(Slot slot) {
+        User teacher = slot.getTeacher();
+        LanguageCode language = teacher.getPreferredLanguage();
+        messageService.send(
+                teacher.getFoodsharingId(),
+                messageTemplateService.teacherBookingConfirmationSubject(language),
+                messageTemplateService.teacherBookingConfirmationBody(language, slot));
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleEinAbUpdated(EinAbUpdatedEvent event) {
+        Set<UUID> notifiedBookingUsers = new HashSet<>();
+        for (Slot slot : slotRepository.findAllByEinAbIdAndStatusIn(event.einAbId(), EINAB_UPDATE_NOTIFICATION_STATUSES)) {
+            User bookingUser = slot.getBookingUser();
+            if (bookingUser == null || !notifiedBookingUsers.add(bookingUser.getId())) {
+                continue;
+            }
+            LanguageCode language = bookingUser.getPreferredLanguage() == null
+                    ? LanguageCode.DE
+                    : bookingUser.getPreferredLanguage();
+            messageService.send(
+                    bookingUser.getFoodsharingId(),
+                    messageTemplateService.einAbUpdatedSubject(language),
+                    messageTemplateService.einAbUpdatedBody(language, slot));
+        }
     }
 
     private int normalizeSize(int size) {

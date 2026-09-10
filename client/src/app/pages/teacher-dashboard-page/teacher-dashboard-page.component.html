@@ -1,84 +1,25 @@
-<section class="teacher-top-stack">
-  <details class="teacher-settings">
-    <summary class="teacher-settings__summary">
-      <span class="teacher-settings__title"><i class="pi pi-cog" aria-hidden="true"></i>{{ i18n.t('teacherSettings.title') }}</span>
-      <i class="pi pi-chevron-down teacher-settings__chevron" aria-hidden="true"></i>
-    </summary>
-    <div class="teacher-settings__content">
-      <form class="teacher-settings-form" [formGroup]="teacherSettingsForm" (ngSubmit)="saveTeacherSettings()">
-        <label class="teacher-settings-form__field">
-          <span>{{ i18n.t('common.icalLink') }}</span>
-          <input pInputText type="url" formControlName="icalLink" />
-        </label>
-        <p class="teacher-settings-form__hint">{{ i18n.t('teacher.icalTutorial') }}</p>
-        <div class="teacher-settings-form__actions">
-          <button pButton type="submit" icon="pi pi-save" [label]="i18n.t('common.save')" [loading]="settingsSaveLoading()"></button>
-        </div>
-      </form>
-      @if (!teacher()?.active) {
-        <p class="teacher-settings-inactive">{{ i18n.t('teacher.inactiveHint') }}</p>
-      }
-      @if (!teacher()?.bezirk) {
-        <div class="teacher-settings-assignment">
-          <p class="empty-state">{{ i18n.t('teacher.unassignedHint') }}</p>
-          <select [disabled]="bezirkSaveLoading()" (change)="assignBezirk($any($event.target).value)">
-            <option value="">{{ i18n.t('teacher.chooseBezirk') }}</option>
-            @for (bezirk of bezirke(); track bezirk.id) {
-              <option [value]="bezirk.slug">{{ bezirk.name }}</option>
-            }
-          </select>
-        </div>
-      }
-    </div>
-  </details>
-
-  <p-card>
-    <ng-template pTemplate="title">{{ i18n.t('teacher.futurePickups') }}</ng-template>
-    @if (!icalCandidates().length) {
-      <p>{{ i18n.t('teacher.noIcal') }}</p>
-    } @else {
-      <p-table [value]="icalCandidates()">
-        <ng-template pTemplate="header">
-          <tr>
-            <th>{{ i18n.t('slots.date') }}</th>
-            <th>{{ i18n.t('common.comment') }}</th>
-            <th>{{ i18n.t('common.location') }}</th>
-            <th>{{ i18n.t('common.actions') }}</th>
-          </tr>
-        </ng-template>
-        <ng-template pTemplate="body" let-candidate>
-          <tr>
-            <td>{{ candidate.startDateTime | zurichDateTime }}</td>
-            <td>{{ candidate.summary }}</td>
-            <td>{{ candidate.location ?? '-' }}</td>
-            <td>
-              <button pButton size="small" icon="pi pi-calendar-plus" [label]="i18n.t('teacher.useCandidate')" (click)="openCreateFromCandidate(candidate)"></button>
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-      <p-paginator
-        [rows]="pageSize"
-        [totalRecords]="icalCandidatesPage()?.totalElements ?? 0"
-        [first]="(icalCandidatesPage()?.page ?? 0) * pageSize"
-        [showCurrentPageReport]="true"
-        currentPageReportTemplate="{first} - {last} / {totalRecords}"
-        (onPageChange)="onIcalPageChange($event)">
-      </p-paginator>
-    }
-  </p-card>
+<section class="teacher-page-header">
+  <div class="teacher-page-header__title">
+    <div class="teacher-page-header__icon" aria-hidden="true"><i class="pi pi-calendar"></i></div>
+    <div><h1>{{ i18n.t('teacher.einabs') }}</h1><p>{{ i18n.t('teacher.pageIntro') }}</p></div>
+  </div>
+  <div class="teacher-page-header__actions">
+    <label class="filter-toggle" for="hide-past-einabs"><p-checkbox inputId="hide-past-einabs" [(ngModel)]="hidePastEinAbs" [binary]="true" (ngModelChange)="onHidePastEinAbsChange($event)"></p-checkbox>{{ i18n.t('teacher.hidePastEinAbs') }}</label>
+    <button pButton icon="pi pi-plus" [label]="i18n.t('teacher.newEinab')" [disabled]="!teacher()?.bezirk" (click)="openCreate()"></button>
+  </div>
 </section>
 
-<p-card>
-  <ng-template pTemplate="title">{{ i18n.t('teacher.einabs') }}</ng-template>
+<p-card class="einabs-card">
+  <ng-template pTemplate="title">
+    <div class="page-heading">
+      <div class="page-heading__icon" aria-hidden="true"><i class="pi pi-calendar"></i></div>
+      <div><h2>{{ i18n.t('teacher.einabs') }}</h2><p>{{ i18n.t('teacher.slotManagement') }}</p></div>
+    </div>
+  </ng-template>
   @if (!teacher()?.bezirk) {
     <p class="empty-state">{{ i18n.t('teacher.unassignedHint') }}</p>
   }
-  <div class="toolbar-row">
-    <button pButton icon="pi pi-plus" [label]="i18n.t('teacher.newEinab')" [disabled]="!teacher()?.bezirk" (click)="openCreate()"></button>
-    <label for="hide-past-einabs"><p-checkbox inputId="hide-past-einabs" [(ngModel)]="hidePastEinAbs" [binary]="true" (ngModelChange)="onHidePastEinAbsChange($event)"></p-checkbox>{{ i18n.t('teacher.hidePastEinAbs') }}</label>
-  </div>
-  <p-table [value]="einAbs()">
+  <p-table class="desktop-table" [value]="einAbs()">
     <ng-template pTemplate="header">
         <tr>
           <th>{{ i18n.t('slots.category') }}</th>
@@ -95,7 +36,7 @@
         <td>{{ einab.startDateTime | zurichDateTime }}</td>
         <td>{{ isOnline(einab.category) ? '-' : einab.location ?? '-' }}</td>
         <td>{{ isOnline(einab.category) ? '-' : einab.publicLocation ?? '-' }}</td>
-        <td>{{ isOnline(einab.category) ? i18n.t('common.unlimited') : einab.slotCount }}</td>
+        <td>{{ isOnline(einab.category) ? i18n.t('common.unlimited') : bookedSlotCount(einab) + ' / ' + einab.slotCount }}</td>
         <td class="actions-cell">
           <button pButton size="small" icon="pi pi-eye" (click)="selectEinAb(einab)"></button>
           <button pButton size="small" severity="secondary" icon="pi pi-pencil" (click)="openEdit(einab)"></button>
@@ -104,6 +45,23 @@
       </tr>
     </ng-template>
   </p-table>
+  <div class="einab-cards">
+    @for (einab of einAbs(); track einab.id) {
+      <article class="einab-card" [class.einab-card--selected]="selectedEinAb()?.id === einab.id">
+        <div class="einab-card__topline">
+          <strong>{{ i18n.categoryLabel(einab.category) }}</strong>
+          <p-tag [value]="isOnline(einab.category) ? i18n.t('common.unlimited') : bookedSlotCount(einab) + ' / ' + einab.slotCount"></p-tag>
+        </div>
+        <div class="einab-card__date"><i class="pi pi-clock"></i>{{ einab.startDateTime | zurichDateTime }}</div>
+        <div class="einab-card__location"><i class="pi pi-map-marker"></i>{{ isOnline(einab.category) ? einab.onlineCallLink : einab.publicLocation ?? einab.location ?? '-' }}</div>
+        <div class="einab-card__actions">
+          <button pButton size="small" severity="secondary" icon="pi pi-users" [label]="i18n.t('teacher.slotManagement')" (click)="selectEinAb(einab)"></button>
+          <button pButton size="small" severity="secondary" icon="pi pi-pencil" [attr.aria-label]="i18n.t('common.edit')" (click)="openEdit(einab)"></button>
+          <button pButton size="small" severity="danger" icon="pi pi-trash" [attr.aria-label]="i18n.t('common.delete')" (click)="confirmDelete(einab)"></button>
+        </div>
+      </article>
+    }
+  </div>
   <p-paginator
     [rows]="pageSize"
     [totalRecords]="einAbsPage()?.totalElements ?? 0"
@@ -128,7 +86,7 @@
         <p style="white-space: pre-wrap; margin: 0;">{{ selectedEinAb()?.privateInfo }}</p>
       </div>
     }
-    <p-table [value]="selectedEinAb()?.slots ?? []" [paginator]="true" [rows]="10">
+    <p-table class="desktop-table" [value]="selectedEinAb()?.slots ?? []" [paginator]="true" [rows]="10">
       <ng-template pTemplate="header">
         <tr>
           <th>{{ i18n.t('common.id') }}</th>
@@ -157,8 +115,92 @@
         </tr>
       </ng-template>
     </p-table>
+    <div class="slot-cards">
+      @for (slot of selectedEinAb()?.slots ?? []; track slot.id) {
+        <article class="slot-card">
+          <div><p-tag [value]="i18n.statusLabel(slot.status)"></p-tag><strong>{{ slot.bookingUser?.name ?? '-' }}</strong></div>
+          <span>{{ slot.bookingUser?.foodsharingId ?? '-' }}</span>
+          <span>{{ slot.bookingUser?.phoneNumber ?? '-' }}</span>
+          <span>{{ i18n.t('slots.teacher') }}: {{ slot.teacherName }}</span>
+          @if (slot.bookingUser && slot.status === SlotStatus.Booked) {
+            <div class="slot-card__actions">
+              <button pButton size="small" severity="secondary" icon="pi pi-user-edit" [label]="i18n.t('teacher.assignSlot')" (click)="openAssignTeacher(slot)"></button>
+              <button pButton size="small" severity="danger" icon="pi pi-times" [label]="i18n.t('teacher.cancelBookedSlot')" (click)="cancelSlotBooking(slot)"></button>
+            </div>
+          }
+        </article>
+      }
+    </div>
   </p-card>
 }
+
+<p-card class="booking-history-card">
+  <ng-template pTemplate="title">
+    <div class="page-heading">
+      <div class="page-heading__icon page-heading__icon--people" aria-hidden="true"><i class="pi pi-users"></i></div>
+      <div><h2>{{ i18n.t('teacherBookings.title') }}</h2><p>{{ i18n.t('teacherBookings.comments') }}</p></div>
+    </div>
+  </ng-template>
+  @if (bookingsLoading()) { <p>{{ i18n.t('common.loading') }}</p> }
+  @else if (!bookingGroups().length) { <p class="empty-state">{{ i18n.t('teacherBookings.empty') }}</p> }
+  @else {
+    <p-accordion class="booking-groups" [multiple]="true">
+      @for (group of bookingGroups(); track group.bookingUserId) {
+        <p-accordion-panel [value]="group.bookingUserId">
+          <p-accordion-header>
+            <div class="booking-person"><span class="person-avatar">{{ group.name.charAt(0) }}</span><span><strong>{{ group.name }}</strong><small>{{ group.foodsharingId }} · {{ group.phoneNumber ?? '-' }}</small></span></div>
+          </p-accordion-header>
+          <p-accordion-content>
+            <div class="booking-list">
+              @for (booking of group.bookings; track booking.slotId) {
+                <div class="booking-row"><span><strong>{{ i18n.categoryLabel(booking.category) }}</strong><small>{{ booking.startDateTime | zurichDateTime }} · {{ booking.location ?? '-' }}</small></span><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag>@if (booking.status === SlotStatus.Booked) { <button pButton size="small" severity="danger" icon="pi pi-times" [attr.aria-label]="i18n.t('teacher.cancelBookedSlot')" (click)="cancelBooking(booking.slotId)"></button> }</div>
+              }
+            </div>
+            <div class="booking-comments"><div class="toolbar-row"><h3>{{ i18n.t('teacherBookings.comments') }}</h3><button pButton size="small" icon="pi pi-plus" [label]="i18n.t('teacherBookings.addComment')" (click)="openCommentDialog(group)"></button></div>
+              @if (!commentsForUser(group.bookingUserId).length) { <p class="empty-state">{{ i18n.t('teacherBookings.noComments') }}</p> }
+              @else { @for (comment of commentsForUser(group.bookingUserId); track comment.id) { <div class="comment-item"><strong>{{ comment.teacherName }}</strong><small>{{ comment.createdAt | zurichDateTime: 'short' }}</small><p>{{ comment.comment }}</p></div> } }
+            </div>
+          </p-accordion-content>
+        </p-accordion-panel>
+      }
+    </p-accordion>
+  }
+</p-card>
+
+<details class="planning-tools">
+  <summary class="planning-tools__summary">
+    <span><i class="pi pi-wrench" aria-hidden="true"></i>{{ i18n.t('teacher.planningTools') }}</span>
+    <i class="pi pi-chevron-down teacher-settings__chevron" aria-hidden="true"></i>
+  </summary>
+  <div class="planning-tools__content">
+    <section class="planning-tools__section">
+      <div class="planning-tools__heading"><h2>{{ i18n.t('teacher.futurePickups') }}</h2><p>{{ i18n.t('teacher.icalCandidates') }}</p></div>
+      @if (!icalCandidates().length) { <p class="empty-state">{{ i18n.t('teacher.noIcal') }}</p> }
+      @else {
+        <p-table class="desktop-table" [value]="icalCandidates()">
+          <ng-template pTemplate="header"><tr><th>{{ i18n.t('slots.date') }}</th><th>{{ i18n.t('common.comment') }}</th><th>{{ i18n.t('common.location') }}</th><th></th></tr></ng-template>
+          <ng-template pTemplate="body" let-candidate><tr><td>{{ candidate.startDateTime | zurichDateTime }}</td><td>{{ candidate.summary }}</td><td>{{ candidate.location ?? '-' }}</td><td><button pButton size="small" severity="secondary" icon="pi pi-calendar-plus" [label]="i18n.t('teacher.useCandidate')" (click)="openCreateFromCandidate(candidate)"></button></td></tr></ng-template>
+        </p-table>
+        <div class="candidate-cards">
+          @for (candidate of icalCandidates(); track candidate.startDateTime + candidate.summary) { <article><strong>{{ candidate.startDateTime | zurichDateTime }}</strong><span>{{ candidate.summary }}</span><small>{{ candidate.location ?? '-' }}</small><button pButton size="small" severity="secondary" icon="pi pi-calendar-plus" [label]="i18n.t('teacher.useCandidate')" (click)="openCreateFromCandidate(candidate)"></button></article> }
+        </div>
+        <p-paginator [rows]="pageSize" [totalRecords]="icalCandidatesPage()?.totalElements ?? 0" [first]="(icalCandidatesPage()?.page ?? 0) * pageSize" [showCurrentPageReport]="true" currentPageReportTemplate="{first} - {last} / {totalRecords}" (onPageChange)="onIcalPageChange($event)"></p-paginator>
+      }
+    </section>
+    <section class="planning-tools__section planning-tools__section--settings">
+      <div class="planning-tools__heading"><h2>{{ i18n.t('teacherSettings.title') }}</h2><p>{{ i18n.t('common.icalLink') }}</p></div>
+      <form class="teacher-settings-form" [formGroup]="teacherSettingsForm" (ngSubmit)="saveTeacherSettings()">
+        <label class="teacher-settings-form__field"><span>{{ i18n.t('common.icalLink') }}</span><input pInputText type="url" formControlName="icalLink" /></label>
+        <p class="teacher-settings-form__hint">{{ i18n.t('teacher.icalTutorial') }}</p>
+        <div class="teacher-settings-form__actions"><button pButton type="submit" icon="pi pi-save" [label]="i18n.t('common.save')" [loading]="settingsSaveLoading()"></button></div>
+      </form>
+      @if (!teacher()?.active) { <p class="teacher-settings-inactive">{{ i18n.t('teacher.inactiveHint') }}</p> }
+      @if (!teacher()?.bezirk) {
+        <div class="teacher-settings-assignment"><p class="empty-state">{{ i18n.t('teacher.unassignedHint') }}</p><select [disabled]="bezirkSaveLoading()" (change)="assignBezirk($any($event.target).value)"><option value="">{{ i18n.t('teacher.chooseBezirk') }}</option>@for (bezirk of bezirke(); track bezirk.id) { <option [value]="bezirk.slug">{{ bezirk.name }}</option> }</select></div>
+      }
+    </section>
+  </div>
+</details>
 
 <p-dialog
   [(visible)]="assignTeacherDialogVisible"
@@ -189,6 +231,14 @@
       </div>
     </div>
   }
+</p-dialog>
+
+<p-dialog [(visible)]="commentDialogVisible" [modal]="true" [style]="{ width: 'min(36rem, 96vw)' }" [header]="i18n.t('teacherBookings.addComment')">
+  <form class="stack-form" [formGroup]="commentForm">
+    <div><strong>{{ commentTarget()?.name }}</strong><div>{{ commentTarget()?.foodsharingId }}</div></div>
+    <label><span>{{ i18n.t('common.comment') }}</span><textarea pTextarea rows="5" formControlName="comment"></textarea></label>
+    <div class="dialog-actions"><button pButton type="button" severity="secondary" [label]="i18n.t('common.cancel')" (click)="commentDialogVisible.set(false)"></button><button pButton type="button" icon="pi pi-save" [label]="i18n.t('common.save')" [loading]="commentLoading()" [disabled]="commentForm.invalid" (click)="saveComment()"></button></div>
+  </form>
 </p-dialog>
 
 <p-dialog

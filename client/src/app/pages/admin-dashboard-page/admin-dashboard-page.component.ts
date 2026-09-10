@@ -20,6 +20,7 @@ import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
@@ -38,6 +39,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     CheckboxModule,
     ConfirmDialogModule,
     InputNumberModule,
+    InputTextModule,
     PaginatorModule,
     SelectModule,
     TableModule,
@@ -60,6 +62,8 @@ export class AdminDashboardPageComponent implements OnInit {
   protected readonly onlyThreePickups = signal(false);
   protected readonly activeOnly = signal(true);
   protected readonly selectedBezirkFilter = signal('');
+  protected readonly newUserFoodsharingId = signal('');
+  protected readonly creatingUser = signal(false);
   protected readonly usersLoading = signal(true);
   protected readonly expandedUserIds = signal<Record<string, boolean>>({});
 
@@ -122,6 +126,31 @@ export class AdminDashboardPageComponent implements OnInit {
   setBezirkFilter(bezirkSlug: string): void {
     this.selectedBezirkFilter.set(bezirkSlug);
     this.loadUsersPage(0);
+  }
+
+  createBookingUser(): void {
+    const foodsharingId = this.newUserFoodsharingId().trim();
+    if (!foodsharingId || this.creatingUser()) {
+      return;
+    }
+    this.creatingUser.set(true);
+    this.adminApi.createAdminBookingUser({
+      createBookingUserRequest: {
+        foodsharingId,
+        bezirkSlug: this.bezirkContext.currentSlug()
+      }
+    }).subscribe({
+      next: () => {
+        this.newUserFoodsharingId.set('');
+        this.creatingUser.set(false);
+        this.messageService.add({ severity: 'success', summary: this.i18n.t('common.created') });
+        this.loadUsersPage(0);
+      },
+      error: (error) => {
+        this.creatingUser.set(false);
+        this.toastError(resolveApiError(error, this.i18n));
+      }
+    });
   }
 
   saveBezirkSettings(): void {

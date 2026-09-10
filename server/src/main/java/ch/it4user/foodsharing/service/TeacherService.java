@@ -238,6 +238,7 @@ public class TeacherService {
         if (!isOnline(category) && slotCount > existingSlots) {
             createSlots(einAb, slotCount - existingSlots);
         }
+        eventPublisher.publishEvent(new EinAbUpdatedEvent(einAb.getId()));
         return reloadEinAbWithTeacher(einAb.getId(), bezirk);
     }
 

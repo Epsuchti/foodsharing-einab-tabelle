@@ -22,6 +22,25 @@
     <ng-template pTemplate="title">{{ i18n.t('admin.users') }}</ng-template>
     <div class="admin-users-toolbar">
       <label>
+        {{ i18n.t('admin.addUser') }}
+        <input
+          pInputText
+          type="text"
+          [ngModel]="newUserFoodsharingId()"
+          (ngModelChange)="newUserFoodsharingId.set($event)"
+          [placeholder]="i18n.t('common.foodsharingId')"
+          (keyup.enter)="createBookingUser()">
+      </label>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-user-plus"
+        [label]="i18n.t('common.create')"
+        [loading]="creatingUser()"
+        [disabled]="!newUserFoodsharingId().trim()"
+        (click)="createBookingUser()">
+      </button>
+      <label>
         {{ i18n.t('bezirk.label') }}
         <p-select
           [options]="userFilterOptions()"

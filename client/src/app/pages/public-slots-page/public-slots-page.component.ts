@@ -14,6 +14,7 @@ import {
   EinAbCategory,
   NotificationSubscriptionRequest,
   PublicService,
+  UserPermission,
   UserService
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
@@ -70,6 +71,7 @@ export class PublicSlotsPageComponent implements OnInit {
     value,
     label: this.i18n.categoryLabel(value)
   })));
+  protected readonly canBookEinAbs = computed(() => !this.sessionService.hasPermission(UserPermission.CanGiveEinAbs));
   protected readonly slots = signal<AvailableSlotResponse[]>([]);
   protected readonly slotsPage = signal<AvailableSlotListResponse | null>(null);
   protected readonly loading = signal(false);
@@ -136,6 +138,9 @@ export class PublicSlotsPageComponent implements OnInit {
   }
 
   openBooking(slot: AvailableSlotResponse): void {
+    if (!this.canBookEinAbs()) {
+      return;
+    }
     this.selectedSlot = slot;
     if (!this.bookingIdentityLocked()) {
       this.applyLoggedOutBookingDefaults();

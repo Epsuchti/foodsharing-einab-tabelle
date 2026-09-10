@@ -23,12 +23,11 @@
         @if (!sessionService.isAuthenticated()) {
           <a [routerLink]="bezirkContext.route('login')" routerLinkActive="active">{{ i18n.t('nav.login') }}</a>
         }
-        @if (sessionService.isAuthenticated()) {
+        @if (sessionService.isAuthenticated() && !sessionService.hasPermission(UserPermission.CanGiveEinAbs)) {
           <a [routerLink]="bezirkContext.route('my-bookings')" routerLinkActive="active">{{ i18n.t('nav.bookings') }}</a>
         }
         @if (sessionService.hasPermission(UserPermission.CanGiveEinAbs)) {
           <a [routerLink]="bezirkContext.route('teacher')" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.teacher') }}</a>
-          <a [routerLink]="bezirkContext.route('teacher', 'bookings')" routerLinkActive="active">{{ i18n.t('nav.teacherBookings') }}</a>
         }
         @if (sessionService.hasPermission(UserPermission.CanManageUsers)) {
           <a [routerLink]="bezirkContext.route('admin')" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">{{ i18n.t('nav.admin') }}</a>
@@ -60,12 +59,11 @@
           @if (!sessionService.isAuthenticated()) {
             <a [routerLink]="bezirkContext.route('login')" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.login') }}</a>
           }
-          @if (sessionService.isAuthenticated()) {
+          @if (sessionService.isAuthenticated() && !sessionService.hasPermission(UserPermission.CanGiveEinAbs)) {
             <a [routerLink]="bezirkContext.route('my-bookings')" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.bookings') }}</a>
           }
           @if (sessionService.hasPermission(UserPermission.CanGiveEinAbs)) {
             <a [routerLink]="bezirkContext.route('teacher')" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">{{ i18n.t('nav.teacher') }}</a>
-            <a [routerLink]="bezirkContext.route('teacher', 'bookings')" routerLinkActive="active" (click)="closeMobileMenu()">{{ i18n.t('nav.teacherBookings') }}</a>
           }
           @if (sessionService.hasPermission(UserPermission.CanManageUsers)) {
             <a [routerLink]="bezirkContext.route('admin')" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMobileMenu()">{{ i18n.t('nav.admin') }}</a>

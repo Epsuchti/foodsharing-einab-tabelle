@@ -49,7 +49,9 @@
                 [value]="slot.visitFairteiler ? i18n.t('common.yes') : i18n.t('common.no')"></p-tag>
             </td>
             <td class="actions-cell">
-              <button pButton size="small" icon="pi pi-calendar-plus" [label]="i18n.t('slots.book')" (click)="openBooking(slot)"></button>
+              @if (canBookEinAbs()) {
+                <button pButton size="small" icon="pi pi-calendar-plus" [label]="i18n.t('slots.book')" (click)="openBooking(slot)"></button>
+              }
             </td>
           </tr>
         </ng-template>
@@ -87,9 +89,11 @@
               }
             </div>
 
-            <div class="slot-card__actions">
-              <button pButton size="small" icon="pi pi-calendar-plus" [label]="i18n.t('slots.book')" (click)="openBooking(slot)"></button>
-            </div>
+            @if (canBookEinAbs()) {
+              <div class="slot-card__actions">
+                <button pButton size="small" icon="pi pi-calendar-plus" [label]="i18n.t('slots.book')" (click)="openBooking(slot)"></button>
+              </div>
+            }
           </article>
         }
       </div>

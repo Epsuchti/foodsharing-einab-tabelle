@@ -601,6 +601,7 @@ public class FoodsharingPickupAutomationService {
                                 if (sendMessage) client.sendUserMessage(a.getAdminConnection(), audit.getFoodsharingUserId(), reminder);
                                 if (storeMessage != null) client.sendStoreChatMessage(a.getAdminConnection(), a.getStoreId(), storeMessage);
                                 Integer telegramMessageId = telegramMessage != null && a.getTelegramChatId() != null ? sendTelegram(a, telegramMessage) : null;
+                                if (telegramMessageId != null) deletePreviousTelegramAdvertisementsForSlot(a, p.date());
                                 audit.setStatus(sendMessage && sendAdvertisement ? "LATE_CANCELLATION_REMINDER_AND_ADVERTISEMENT_SENT" : sendMessage ? "LATE_CANCELLATION_REMINDER_SENT" : "LATE_CANCELLATION_ADVERTISEMENT_SENT");
                                 audit.setReason("Pickup was released after this notification time.");
                                 audit.setMessage(sendMessage ? reminder : combineAdvertisementMessages(storeMessage, telegramMessage));
@@ -638,7 +639,10 @@ public class FoodsharingPickupAutomationService {
                         : null;
                 if (!dryRun && storeMessage != null) client.sendStoreChatMessage(a.getAdminConnection(), a.getStoreId(), storeMessage);
                 Integer telegramMessageId = null;
-                if (!dryRun && telegramMessage != null && a.getTelegramChatId() != null) telegramMessageId = sendTelegram(a, telegramMessage);
+                if (!dryRun && telegramMessage != null && a.getTelegramChatId() != null) {
+                    telegramMessageId = sendTelegram(a, telegramMessage);
+                    if (telegramMessageId != null) deletePreviousTelegramAdvertisementsForSlot(a, p.date());
+                }
                 if (dryRun) {
                     automationActed++;
                 } else {
@@ -810,6 +814,12 @@ public class FoodsharingPickupAutomationService {
 
     private void deleteTelegramAdvertisementsForFilledSlot(FoodsharingOpenSlotAdvertisementAutomation automation, Instant pickupDate) {
         deleteTelegramAdvertisements(automation, advertisementAuditRepository.findAllByAutomationAndPickupDateAndTelegramMessageIdIsNotNullAndTelegramDeletedAtIsNull(automation, pickupDate));
+    }
+
+    private void deletePreviousTelegramAdvertisementsForSlot(FoodsharingOpenSlotAdvertisementAutomation automation, Instant pickupDate) {
+        for (FoodsharingOpenSlotAdvertisementAudit audit : advertisementAuditRepository.findAllByAutomationAdminConnectionAndPickupDateAndTelegramMessageIdIsNotNullAndTelegramDeletedAtIsNull(automation.getAdminConnection(), pickupDate)) {
+            deleteTelegramAdvertisements(audit.getAutomation(), List.of(audit));
+        }
     }
 
     private void deleteTelegramAdvertisementsForPassedSlots(FoodsharingOpenSlotAdvertisementAutomation automation, Instant now) {

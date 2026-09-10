@@ -53,6 +53,18 @@ public class MessageTemplateService {
                 message(language, "message.booking-confirmation.link", manageUrl));
     }
 
+    public String einAbUpdatedSubject(LanguageCode language) {
+        return message(language, "message.einab-updated.subject");
+    }
+
+    public String einAbUpdatedBody(LanguageCode language, Slot slot) {
+        Map<String, String> details = bookingDetails(language, slot.getEinAb(), slotTeacher(slot).getName(), slotTeacher(slot).getPhoneNumber());
+        return String.join("\n\n",
+                message(language, "message.greeting.named", slot.getBookingUser().getName()),
+                message(language, "message.einab-updated.intro"),
+                formatDetails(details));
+    }
+
     public String teacherCancellationSubject(LanguageCode language) {
         return message(language, "message.teacher-cancellation.subject");
     }
@@ -64,6 +76,20 @@ public class MessageTemplateService {
                 message(language, "message.teacher-cancellation.intro"),
                 formatDetails(details),
                 message(language, "message.teacher-cancellation.link", manageUrl));
+    }
+
+    public String teacherBookingConfirmationSubject(LanguageCode language) {
+        return message(language, "message.teacher-booking-confirmation.subject");
+    }
+
+    public String teacherBookingConfirmationBody(LanguageCode language, Slot slot) {
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put(message(language, "message.details.category"), categoryLabel(language, slot.getEinAb().getCategory()));
+        details.put(message(language, "message.details.start"), swissDateTime(slot.getEinAb().getStartDateTime()));
+        return String.join("\n\n",
+                message(language, "message.greeting.named", slotTeacher(slot).getName()),
+                message(language, "message.teacher-booking-confirmation.intro", slot.getBookingUser().getName()),
+                formatDetails(details));
     }
 
     public String swissDateTime(Instant value) {
