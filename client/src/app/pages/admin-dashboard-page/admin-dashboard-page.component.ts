@@ -45,7 +45,8 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     TableModule,
     TagModule
   ],
-  templateUrl: './admin-dashboard-page.component.html'
+  templateUrl: './admin-dashboard-page.component.html',
+  styleUrl: './admin-dashboard-page.component.scss'
 })
 export class AdminDashboardPageComponent implements OnInit {
   private static readonly ALL_BEZIRKE = '__all__';
@@ -65,7 +66,7 @@ export class AdminDashboardPageComponent implements OnInit {
   protected readonly newUserFoodsharingId = signal('');
   protected readonly creatingUser = signal(false);
   protected readonly usersLoading = signal(true);
-  protected readonly expandedUserIds = signal<Record<string, boolean>>({});
+  protected readonly expandedPickupUserIds = signal<Record<string, boolean>>({});
 
   protected readonly pageSize = 20;
 
@@ -260,8 +261,8 @@ export class AdminDashboardPageComponent implements OnInit {
     ];
   }
 
-  toggleExpandedUser(user: AdminBookingUserResponse): void {
-    this.expandedUserIds.update((current) => {
+  toggleUserPickups(user: AdminBookingUserResponse): void {
+    this.expandedPickupUserIds.update((current) => {
       const next = { ...current };
       if (next[user.user.id]) {
         delete next[user.user.id];
@@ -272,8 +273,8 @@ export class AdminDashboardPageComponent implements OnInit {
     });
   }
 
-  isUserExpanded(user: AdminBookingUserResponse): boolean {
-    return !!this.expandedUserIds()[user.user.id];
+  isUserPickupsExpanded(user: AdminBookingUserResponse): boolean {
+    return this.expandedPickupUserIds()[user.user.id];
   }
 
   private loadBezirkSettings(): void {

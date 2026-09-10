@@ -4,7 +4,7 @@
 }
 
 .automation-page--audit-expanded {
-  padding-bottom: 50vh;
+  padding-bottom: 0;
 }
 
 .automation-tabs ::ng-deep .p-tabpanels {
@@ -216,11 +216,7 @@
 }
 
 .automation-audit-console {
-  position: fixed;
-  z-index: 1000;
-  right: 1rem;
-  bottom: 1rem;
-  left: 1rem;
+  position: static;
   max-height: 50vh;
   overflow: hidden;
   border: 1px solid #334155;
@@ -231,11 +227,7 @@
 }
 
 .automation-audit-host {
-  position: fixed;
-  z-index: 1000;
-  right: 1rem;
-  bottom: 1rem;
-  left: 1rem;
+  position: static;
   max-height: 50vh;
   overflow: auto;
   padding: 0.75rem;
@@ -762,4 +754,297 @@
 .advert-message-row textarea {
   width: 100%;
   min-height: 6rem;
+}
+
+/* Keep this dense administration screen within the same visual system as the
+   rest of the app.  These overrides intentionally come last so older, more
+   specific sections do not introduce a second palette or floating panels. */
+.automation-page--audit-expanded {
+  padding-bottom: 0;
+}
+
+.automation-tabs {
+  margin-top: 1.25rem;
+}
+
+.automation-tabs ::ng-deep .p-tablist,
+.advert-message-tabs ::ng-deep .p-tablist {
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem 0;
+  border-bottom-color: var(--app-border);
+  background: var(--app-surface-muted);
+}
+
+.automation-tabs ::ng-deep .p-tab,
+.advert-message-tabs ::ng-deep .p-tab {
+  border-radius: var(--app-radius-sm) var(--app-radius-sm) 0 0;
+  color: var(--app-text-muted);
+  font-weight: 650;
+}
+
+.automation-tabs ::ng-deep .p-tab-active,
+.advert-message-tabs ::ng-deep .p-tab-active {
+  color: var(--app-primary-strong);
+}
+
+.automation-tabpanel {
+  gap: 1.25rem;
+  padding: 1.25rem 0;
+}
+
+.automation-group {
+  gap: 1rem;
+  padding: 1.1rem;
+  border-color: var(--app-border);
+  border-radius: var(--app-radius);
+  background: #fff;
+  box-shadow: none;
+}
+
+.automation-group__label,
+.automation-audit-console__eyebrow {
+  color: var(--app-primary-strong);
+}
+
+.automation-group__label::after {
+  background: var(--app-border);
+}
+
+.automation-toolbar,
+.automation-filter-group {
+  padding: 0.8rem 0.9rem;
+  border-color: var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface-muted);
+}
+
+.automation-toolbar__add {
+  min-width: min(100%, 18rem);
+}
+
+.automation-mode-banner {
+  border-radius: var(--app-radius-sm);
+}
+
+.automation-mode-banner--dry-run {
+  border-color: #edd9ad;
+  background: #fff9eb;
+  color: #815114;
+}
+
+.automation-mode-banner--active {
+  border-color: #b9dbbf;
+  background: var(--app-primary-soft);
+  color: var(--app-primary-strong);
+}
+
+.automation-mode-banner--disabled {
+  border-color: var(--app-border);
+  background: var(--app-surface-muted);
+  color: var(--app-text-muted);
+}
+
+.automation-help,
+.automation-exemption-card,
+.advert-config {
+  border-color: var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: var(--app-surface-muted);
+  color: var(--app-text);
+}
+
+.automation-help,
+.automation-exemption-card,
+.advert-config {
+  box-shadow: none;
+}
+
+.automation-help p,
+.automation-help li,
+.automation-help ul,
+.automation-help__note,
+.automation-exemption-card__note,
+.advert-config__block-note,
+.advert-messages__note {
+  color: var(--app-text-muted);
+}
+
+.automation-help__title,
+.automation-help__section,
+.advert-config h4,
+.advert-config__field-label,
+.automation-field__label {
+  color: var(--app-text);
+}
+
+.automation-help__decision-table th,
+.automation-help__decision-table td {
+  border-color: var(--app-border);
+}
+
+.automation-help__decision-table th {
+  background: var(--app-surface-strong);
+  color: var(--app-text);
+}
+
+.automation-group ::ng-deep .p-datatable {
+  border-color: var(--app-border);
+  border-radius: var(--app-radius-sm);
+}
+
+.automation-group ::ng-deep .p-datatable-thead > tr > th,
+.automation-table ::ng-deep .p-datatable-thead > tr > th.p-datatable-column-sorted {
+  background: var(--app-surface-strong);
+  color: var(--app-text-muted);
+}
+
+.automation-group ::ng-deep .p-datatable-tbody > tr > td {
+  border-color: #eaf0eb;
+  color: var(--app-text);
+}
+
+.automation-exemption-form__block,
+.advert-config__block {
+  border-color: var(--app-border);
+  border-radius: var(--app-radius-sm);
+  background: #fff;
+}
+
+.advert-config {
+  min-width: 0;
+}
+
+.advert-config__header,
+.advert-config__actions {
+  border-color: var(--app-border);
+}
+
+.advert-preview {
+  border-color: var(--app-border-strong);
+  border-radius: var(--app-radius-sm);
+  background: #fff;
+  color: var(--app-text-muted);
+}
+
+.automation-audit-console,
+.automation-audit-host {
+  position: static;
+  right: auto;
+  bottom: auto;
+  left: auto;
+  max-height: none;
+  margin-top: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: #fff;
+  box-shadow: none;
+  color: var(--app-text);
+}
+
+.automation-audit-host__header,
+.automation-audit-console__header {
+  min-height: 3rem;
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+}
+
+.automation-audit-host h3,
+.automation-audit-console__header h3 {
+  color: var(--app-text);
+}
+
+.automation-audit-host__header .p-button,
+.automation-audit-console__header .p-button {
+  color: var(--app-primary-strong);
+}
+
+.automation-audit-console__body {
+  max-height: 32rem;
+  padding: 0.9rem;
+  overflow: auto;
+  background: #fff;
+}
+
+.automation-audit-host > label,
+.automation-audit-console__body label {
+  color: var(--app-text);
+}
+
+.automation-audit-host ::ng-deep .p-datatable,
+.automation-audit-console__body ::ng-deep .p-datatable {
+  border: 1px solid var(--app-border);
+  background: #fff;
+  color: var(--app-text);
+}
+
+.automation-audit-host ::ng-deep .p-datatable-thead > tr > th,
+.automation-audit-console__body ::ng-deep .p-datatable-thead > tr > th {
+  background: var(--app-surface-strong);
+  color: var(--app-text-muted);
+}
+
+.automation-audit-host ::ng-deep .p-datatable-tbody > tr > td,
+.automation-audit-console__body ::ng-deep .p-datatable-tbody > tr > td {
+  border-color: #eaf0eb;
+  background: #fff;
+  color: var(--app-text);
+}
+
+.automation-audit-console__body ::ng-deep .p-paginator,
+.automation-audit-host ::ng-deep .p-paginator {
+  border-top-color: var(--app-border);
+  background: #fff;
+  color: var(--app-text);
+}
+
+.automation-audit-console__body ::ng-deep .p-paginator .p-paginator-page,
+.automation-audit-console__body ::ng-deep .p-paginator .p-paginator-first,
+.automation-audit-console__body ::ng-deep .p-paginator .p-paginator-prev,
+.automation-audit-console__body ::ng-deep .p-paginator .p-paginator-next,
+.automation-audit-console__body ::ng-deep .p-paginator .p-paginator-last,
+.automation-audit-host ::ng-deep .p-paginator .p-paginator-page,
+.automation-audit-host ::ng-deep .p-paginator .p-paginator-first,
+.automation-audit-host ::ng-deep .p-paginator .p-paginator-prev,
+.automation-audit-host ::ng-deep .p-paginator .p-paginator-next,
+.automation-audit-host ::ng-deep .p-paginator .p-paginator-last {
+  color: var(--app-text-muted);
+}
+
+@media (max-width: 768px) {
+  .automation-tabpanel {
+    padding-top: 1rem;
+  }
+
+  .automation-group,
+  .advert-config {
+    padding: 0.9rem;
+  }
+
+  .automation-toolbar,
+  .automation-toolbar__add,
+  .advert-config__header,
+  .advert-config__settings,
+  .advert-config__toggles--header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .automation-toolbar__add {
+    flex-basis: auto;
+  }
+
+  .automation-toolbar__add > *,
+  .automation-toolbar__actions > *,
+  .advert-config__actions > * {
+    width: 100%;
+  }
+
+  .automation-audit-console__body {
+    max-height: 26rem;
+    padding: 0.75rem;
+  }
 }

@@ -58,7 +58,7 @@ export class ConfirmBookingPageComponent implements OnInit {
     const expiresAt = headers.get('X-Auth-Expires-At');
     const foodsharingId = headers.get('X-Auth-Foodsharing-Id');
     const permissions = headers.get('X-Auth-Permissions');
-    if (!authToken || !expiresAt || !foodsharingId || !permissions) {
+    if (!authToken || !expiresAt || !foodsharingId || permissions === null) {
       return;
     }
     const displayName = headers.get('X-Auth-Display-Name') || undefined;

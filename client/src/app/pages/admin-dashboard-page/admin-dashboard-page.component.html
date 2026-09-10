@@ -1,4 +1,4 @@
-<section class="page-stack">
+<section class="page-shell page-stack">
   <p-card>
     <ng-template pTemplate="title">{{ i18n.t('admin.bezirkSettings') }}: {{ bezirkSettings()?.name }}</ng-template>
     <div class="stack-form">
@@ -19,10 +19,10 @@
   </p-card>
 
   <p-card>
-    <ng-template pTemplate="title">{{ i18n.t('admin.users') }}</ng-template>
-    <div class="admin-users-toolbar">
+    <ng-template pTemplate="title">{{ i18n.t('admin.addUser') }}</ng-template>
+    <div class="form-grid">
       <label>
-        {{ i18n.t('admin.addUser') }}
+        {{ i18n.t('common.foodsharingId') }}
         <input
           pInputText
           type="text"
@@ -31,15 +31,23 @@
           [placeholder]="i18n.t('common.foodsharingId')"
           (keyup.enter)="createBookingUser()">
       </label>
-      <button
-        pButton
-        type="button"
-        icon="pi pi-user-plus"
-        [label]="i18n.t('common.create')"
-        [loading]="creatingUser()"
-        [disabled]="!newUserFoodsharingId().trim()"
-        (click)="createBookingUser()">
-      </button>
+      <div class="dialog-actions">
+        <button
+          pButton
+          type="button"
+          icon="pi pi-user-plus"
+          [label]="i18n.t('common.create')"
+          [loading]="creatingUser()"
+          [disabled]="!newUserFoodsharingId().trim()"
+          (click)="createBookingUser()">
+        </button>
+      </div>
+    </div>
+  </p-card>
+
+  <p-card>
+    <ng-template pTemplate="title">{{ i18n.t('admin.users') }}</ng-template>
+    <div class="admin-users-toolbar">
       <label>
         {{ i18n.t('bezirk.label') }}
         <p-select
@@ -65,10 +73,9 @@
     @if (usersLoading()) {
       <p class="loading-box">{{ i18n.t('common.loading') }}</p>
     } @else if (usersPage()?.users?.length) {
-      <p-table [value]="userPanels()" dataKey="user.id">
+      <p-table class="admin-users-table admin-users-table--desktop" [value]="userPanels()" dataKey="user.id">
         <ng-template pTemplate="header">
           <tr>
-            <th></th>
             <th>{{ i18n.t('common.name') }}</th>
             <th>{{ i18n.t('bezirk.label') }}</th>
             <th>{{ i18n.t('admin.changeBezirk') }}</th>
@@ -82,16 +89,6 @@
         </ng-template>
         <ng-template pTemplate="body" let-user>
           <tr>
-            <td>
-              <button
-                pButton
-                type="button"
-                size="small"
-                severity="secondary"
-                [icon]="isUserExpanded(user) ? 'pi pi-chevron-down' : 'pi pi-chevron-right'"
-                (click)="toggleExpandedUser(user)">
-              </button>
-            </td>
             <td>{{ user.user.name }}</td>
             <td>{{ user.user.bezirk?.name ?? i18n.t('bezirk.unassigned') }}</td>
             <td>
@@ -118,7 +115,24 @@
                 [value]="user.user.wantsToBeTeacher ? i18n.t('common.yes') : i18n.t('common.no')">
               </p-tag>
             </td>
-            <td>{{ user.pickupCount }}</td>
+            <td>
+              <button
+                type="button"
+                class="pickup-count-button"
+                [class.pickup-count-button--expanded]="isUserPickupsExpanded(user)"
+                [attr.aria-expanded]="isUserPickupsExpanded(user)"
+                [attr.aria-controls]="'desktop-user-pickups-' + user.user.id"
+                [attr.aria-label]="i18n.t('admin.userPickups') + ': ' + user.pickupCount"
+                (click)="toggleUserPickups(user)">
+                <span>{{ user.pickupCount }}</span>
+                <i
+                  class="pi"
+                  [class.pi-chevron-down]="isUserPickupsExpanded(user)"
+                  [class.pi-chevron-right]="!isUserPickupsExpanded(user)"
+                  aria-hidden="true">
+                </i>
+              </button>
+            </td>
             <td class="actions-cell">
               @if (user.user.active) {
                 <button pButton type="button" size="small" severity="danger" [label]="i18n.t('admin.disableBookingUser')" (click)="disableBookingUser(user)"></button>
@@ -128,11 +142,11 @@
               <button pButton type="button" size="small" [label]="i18n.t('admin.saveBezirk')" (click)="saveUserBezirk(user)"></button>
             </td>
           </tr>
-          @if (isUserExpanded(user)) {
+          @if (isUserPickupsExpanded(user)) {
             <tr>
-              <td [attr.colspan]="10">
-                <div class="page-stack">
-                  <div>
+              <td [attr.colspan]="9">
+                <div class="page-stack admin-user-details" [id]="'desktop-user-pickups-' + user.user.id">
+                  <div class="admin-user-details__permissions">
                     <h4>{{ i18n.t('admin.userPermissions') }}</h4>
                     <p>{{ i18n.t('admin.userPermissionsHelp') }}</p>
                     <div class="user-permissions-form">
@@ -148,7 +162,7 @@
                     </div>
                   </div>
 
-                  <div>
+                  <div class="admin-user-details__pickups">
                     <h4>{{ i18n.t('admin.userPickups') }}</h4>
                     @if (user.bookings.length) {
                       <p-table [value]="user.bookings" [paginator]="true" [rows]="5">
@@ -205,6 +219,150 @@
           }
         </ng-template>
       </p-table>
+
+      <div class="admin-user-cards admin-user-cards--mobile">
+        @for (user of userPanels(); track user.user.id) {
+          <article class="admin-user-card">
+            <div class="admin-user-card__header">
+              <div>
+                <h3>{{ user.user.name }}</h3>
+                <span>{{ user.user.foodsharingId }}</span>
+              </div>
+              <p-tag
+                [severity]="user.user.active ? 'success' : 'warn'"
+                [value]="user.user.active ? i18n.t('common.active') : i18n.t('common.inactive')">
+              </p-tag>
+            </div>
+
+            <div class="admin-user-card__facts">
+              <div class="admin-user-card__fact">
+                <span class="admin-user-card__label">{{ i18n.t('bezirk.label') }}</span>
+                <span>{{ user.user.bezirk?.name ?? i18n.t('bezirk.unassigned') }}</span>
+              </div>
+              <div class="admin-user-card__fact">
+                <span class="admin-user-card__label">{{ i18n.t('common.phoneNumber') }}</span>
+                <span>{{ user.user.phoneNumber ?? '-' }}</span>
+              </div>
+              <div class="admin-user-card__fact">
+                <span class="admin-user-card__label">{{ i18n.t('admin.requested') }}</span>
+                <p-tag
+                  [severity]="user.user.wantsToBeTeacher ? 'warn' : 'secondary'"
+                  [value]="user.user.wantsToBeTeacher ? i18n.t('common.yes') : i18n.t('common.no')">
+                </p-tag>
+              </div>
+              <div class="admin-user-card__fact">
+                <span class="admin-user-card__label">EinAb</span>
+                <button
+                  type="button"
+                  class="pickup-count-button admin-user-card__pickup-button"
+                  [class.pickup-count-button--expanded]="isUserPickupsExpanded(user)"
+                  [attr.aria-expanded]="isUserPickupsExpanded(user)"
+                  [attr.aria-controls]="'mobile-user-pickups-' + user.user.id"
+                  [attr.aria-label]="i18n.t('admin.userPickups') + ': ' + user.pickupCount"
+                  (click)="toggleUserPickups(user)">
+                  <span>{{ user.pickupCount }}</span>
+                  <i
+                    class="pi"
+                    [class.pi-chevron-down]="isUserPickupsExpanded(user)"
+                    [class.pi-chevron-right]="!isUserPickupsExpanded(user)"
+                    aria-hidden="true">
+                  </i>
+                </button>
+              </div>
+            </div>
+
+            <label class="admin-user-card__bezirk">
+              <span class="admin-user-card__label">{{ i18n.t('admin.changeBezirk') }}</span>
+              <p-select
+                [options]="bezirkOptions()"
+                optionLabel="label"
+                optionValue="value"
+                [ngModel]="selectedBezirkSlug(user)"
+                (ngModelChange)="setSelectedBezirkSlug(user, $event)"
+                appendTo="body">
+              </p-select>
+            </label>
+
+            <div class="admin-user-card__actions">
+              @if (user.user.active) {
+                <button pButton type="button" severity="danger" [label]="i18n.t('admin.disableBookingUser')" (click)="disableBookingUser(user)"></button>
+              } @else {
+                <button pButton type="button" severity="contrast" [label]="i18n.t('admin.enableBookingUser')" (click)="enableBookingUser(user)"></button>
+              }
+              <button pButton type="button" [label]="i18n.t('admin.saveBezirk')" (click)="saveUserBezirk(user)"></button>
+            </div>
+
+            @if (isUserPickupsExpanded(user)) {
+              <section class="admin-user-card__pickups" [id]="'mobile-user-pickups-' + user.user.id">
+                <h4>{{ i18n.t('admin.userPickups') }}</h4>
+                @if (user.bookings.length) {
+                  <div class="admin-user-slot-list">
+                    @for (booking of user.bookings; track booking.slotId) {
+                      <article class="admin-user-slot-card">
+                        <div class="admin-user-slot-card__header">
+                          <strong>{{ i18n.categoryLabel(booking.category) }}</strong>
+                          <p-tag [value]="i18n.statusLabel(booking.status)"></p-tag>
+                        </div>
+                        <div class="admin-user-slot-card__facts">
+                          <div>
+                            <span class="admin-user-card__label">{{ i18n.t('slots.date') }}</span>
+                            <span>{{ booking.startDateTime | zurichDateTime }}</span>
+                          </div>
+                          <div>
+                            <span class="admin-user-card__label">{{ i18n.t('common.location') }}</span>
+                            <span>{{ booking.location ?? '-' }}</span>
+                          </div>
+                          <div>
+                            <span class="admin-user-card__label">{{ i18n.t('slots.teacher') }}</span>
+                            <span>{{ booking.teacherName }}</span>
+                          </div>
+                        </div>
+                      </article>
+                    }
+                  </div>
+                } @else {
+                  <p class="empty-state">{{ i18n.t('admin.noPickups') }}</p>
+                }
+
+                <details class="admin-user-card__additional-details">
+                  <summary>{{ i18n.t('admin.userPermissions') }}</summary>
+                  <p>{{ i18n.t('admin.userPermissionsHelp') }}</p>
+                  <div class="user-permissions-form">
+                    <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canGiveEinAbs"></p-checkbox><span>{{ i18n.t('permission.canGiveEinAbs') }}</span></label>
+                    <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canManageUsers"></p-checkbox><span>{{ i18n.t('permission.canManageUsers') }}</span></label>
+                    <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomations"></p-checkbox><span>{{ i18n.t('permission.canUseAutomations') }}</span></label>
+                    <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeUserPickupCountGrouping"></p-checkbox><span>{{ i18n.t('permission.canSeeUserPickupCountGrouping') }}</span></label>
+                    <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationSlotApproval"></p-checkbox><span>{{ i18n.t('permission.canUseAutomationSlotApproval') }}</span></label>
+                    <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationRequestApproval"></p-checkbox><span>{{ i18n.t('permission.canUseAutomationRequestApproval') }}</span></label>
+                    <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canUseAutomationOpenSlotAdvertising"></p-checkbox><span>{{ i18n.t('permission.canUseAutomationOpenSlotAdvertising') }}</span></label>
+                    <label class="user-permission-toggle"><p-checkbox [binary]="true" [(ngModel)]="user.user.canSeeAllAutomationDecisions"></p-checkbox><span>{{ i18n.t('permission.canSeeAllAutomationDecisions') }}</span></label>
+                    <div class="dialog-actions"><button pButton type="button" size="small" [label]="i18n.t('common.save')" (click)="saveUserPermissions(user)"></button></div>
+                  </div>
+                </details>
+
+                <details class="admin-user-card__additional-details">
+                  <summary>{{ i18n.t('admin.userComments') }}</summary>
+                  @if (user.comments.length) {
+                    <div class="admin-user-comment-list">
+                      @for (comment of user.comments; track comment.id) {
+                        <article class="admin-user-comment">
+                          <div>
+                            <strong>{{ comment.teacherName }}</strong>
+                            <small>{{ comment.createdAt | zurichDateTime }}</small>
+                          </div>
+                          <p>{{ comment.comment }}</p>
+                        </article>
+                      }
+                    </div>
+                  } @else {
+                    <p class="empty-state">{{ i18n.t('admin.noComments') }}</p>
+                  }
+                </details>
+              </section>
+            }
+          </article>
+        }
+      </div>
 
       <p-paginator
         [rows]="pageSize"

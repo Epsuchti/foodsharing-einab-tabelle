@@ -85,7 +85,7 @@
   "book.confirmationWindowHint": "Du musst dich innerhalb der nächsten Stunde auf der Foodsharing-Plattform anmelden, um dieses EinAb zu bestätigen.",
   "book.confirmedTitle": "Buchung bestätigt",
   "book.invalidTitle": "Buchung ungültig",
-  "book.confirmedLoggedIn": "Buchung bestätigt. Du bist jetzt auf der Foodsharing-Plattform angemeldet.",
+  "book.confirmedLoggedIn": "Buchung bestätigt.",
   "book.submit": "Verbindlich buchen",
   "book.guestConfirmTitle": "Buchung bestätigen",
   "book.guestConfirmMessage": "Möchtest du dieses EinAb buchen?\n\nBitte bestätige diese Buchung innerhalb der nächsten Stunde auf der Foodsharing-Plattform.\n\nWir haben dir dort einen Bestätigungslink geschickt.",

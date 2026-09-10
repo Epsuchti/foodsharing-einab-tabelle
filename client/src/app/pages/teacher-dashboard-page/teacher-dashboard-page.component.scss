@@ -3,38 +3,212 @@
   align-items: end;
   justify-content: space-between;
   gap: 1rem;
+  padding: 0.25rem 0;
+}
+
+.teacher-page-header__title,
+.page-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.teacher-page-header__icon,
+.page-heading__icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 2.8rem;
+  height: 2.8rem;
+  place-items: center;
+  border-radius: 0.85rem;
+  background: var(--app-primary-soft);
+  color: var(--app-primary-strong);
+  font-size: 1.2rem;
+}
+
+.teacher-page-header__icon {
+  background: linear-gradient(135deg, #2d9154, #195d35);
+  box-shadow: 0 7px 16px rgb(25 93 53 / 0.2);
+  color: #fff;
+}
+
+.page-heading__icon--people {
+  background: #e6f4f8;
+  color: var(--app-info);
+}
+
+.teacher-page-header h1,
+.page-heading h1,
+.page-heading h2 {
+  margin: 0;
+  color: var(--app-text);
+  font-size: clamp(1.35rem, 2.5vw, 1.8rem);
+  line-height: 1.15;
+}
+
+.page-heading h2 {
+  font-size: 1.3rem;
+}
+
+.teacher-page-header p,
+.page-heading p {
+  margin: 0.25rem 0 0;
+  color: var(--app-text-muted);
+  font-size: 0.9rem;
+}
+
+.teacher-page-header__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.875rem;
+  flex-wrap: wrap;
+}
+
+.einabs-card,
+.booking-history-card {
+  margin: 0;
+}
+
+.einabs-card ::ng-deep .p-card-title,
+.booking-history-card ::ng-deep .p-card-title {
   margin-bottom: 1.25rem;
 }
 
-.teacher-page-header__title { display: flex; align-items: center; gap: 0.875rem; }
-.teacher-page-header__icon { display: grid; width: 3rem; height: 3rem; place-items: center; border-radius: 14px; background: #166534; color: #fff; font-size: 1.35rem; box-shadow: 0 8px 18px rgba(22, 101, 52, 0.2); }
-.teacher-page-header h1 { margin: 0; color: #0f172a; font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.15; }
-.teacher-page-header p { margin: 0.25rem 0 0; color: #64748b; }
-.teacher-page-header__actions { display: flex; align-items: center; justify-content: flex-end; gap: 1rem; flex-wrap: wrap; }
-
-.teacher-settings {
-  border: 1px solid #d9e0ea;
-  border-radius: 8px;
-  background: #ffffff;
+.desktop-table ::ng-deep .p-datatable-thead > tr > th {
+  background: var(--app-surface-strong);
+  border-color: var(--app-border);
+  color: var(--app-text-muted);
 }
 
-.teacher-settings__summary {
+.desktop-table ::ng-deep .p-datatable-tbody > tr > td {
+  border-color: #eaf0eb;
+  color: var(--app-text);
+}
+
+.einab-cards,
+.slot-cards,
+.candidate-cards {
+  display: none;
+}
+
+.booking-groups {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.booking-groups ::ng-deep .p-accordionpanel {
+  overflow: hidden;
+  border-color: var(--app-border);
+  border-radius: var(--app-radius);
+}
+
+.booking-groups ::ng-deep .p-accordionheader {
+  padding: 0.9rem 1rem;
+  background: var(--app-surface-muted);
+}
+
+.booking-groups ::ng-deep .p-accordioncontent-content {
+  padding: 0;
+}
+
+.booking-person {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.booking-person > span:last-child,
+.booking-row > span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.booking-person small,
+.booking-row small,
+.comment-item small {
+  color: var(--app-text-muted);
+}
+
+.person-avatar {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--app-primary-soft);
+  color: var(--app-primary-strong);
+  font-weight: 750;
+}
+
+.booking-list {
+  padding: 0.25rem 1rem;
+}
+
+.booking-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.booking-row > span {
+  margin-right: auto;
+}
+
+.booking-comments {
+  margin: 0 1rem 1rem;
+  padding-top: 1rem;
+}
+
+.booking-comments h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.comment-item {
+  margin-top: 0.6rem;
+  border-color: #cce3d0;
+  background: #f1f9f2;
+}
+
+.comment-item small {
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.comment-item p {
+  margin: 0.4rem 0 0;
+  white-space: pre-wrap;
+}
+
+.planning-tools {
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: #fff;
+  box-shadow: var(--app-shadow);
+}
+
+.planning-tools__summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1rem 1.125rem;
+  padding: 1rem 1.25rem;
   cursor: pointer;
   list-style: none;
-  color: #0f172a;
-  font-weight: 700;
+  color: var(--app-text);
+  font-weight: 750;
 }
 
-.teacher-settings__summary::-webkit-details-marker {
+.planning-tools__summary::-webkit-details-marker {
   display: none;
 }
 
-.teacher-settings__title {
+.planning-tools__summary span {
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -44,51 +218,77 @@
   transition: transform 150ms ease;
 }
 
-.teacher-settings[open] .teacher-settings__chevron {
+.planning-tools[open] .teacher-settings__chevron {
   transform: rotate(180deg);
 }
 
-.teacher-settings__content {
+.planning-tools__content {
   display: grid;
-  gap: 1.1rem;
-  padding: 0 1.125rem 1.125rem;
+  grid-template-columns: minmax(0, 1.5fr) minmax(18rem, 1fr);
+  border-top: 1px solid var(--app-border);
+}
+
+.planning-tools__section {
+  min-width: 0;
+  padding: 1.25rem;
+}
+
+.planning-tools__section--settings {
+  border-left: 1px solid var(--app-border);
+  background: var(--app-surface-muted);
+}
+
+.planning-tools__heading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.planning-tools__heading p {
+  margin: 0.2rem 0 1rem;
+  color: var(--app-text-muted);
+  font-size: 0.85rem;
 }
 
 .teacher-settings-form {
   display: grid;
-  gap: 1.1rem;
+  gap: 0.9rem;
 }
 
 .teacher-settings-form__field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #64748b;
+  display: grid;
+  gap: 0.4rem;
+  color: var(--app-text-muted);
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.045em;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
 }
 
 .teacher-settings-form__field ::ng-deep .p-inputtext {
   width: 100%;
-  font-size: 1rem;
-  font-weight: 400;
-  text-transform: none;
+  font-size: 0.95rem;
+  font-weight: 500;
   letter-spacing: normal;
+  text-transform: none;
 }
 
 .teacher-settings-form__hint,
 .teacher-settings-inactive {
   margin: 0;
-  padding: 1rem 1.05rem;
-  border-radius: 8px;
+  padding: 0.85rem 0.9rem;
+  border-radius: var(--app-radius-sm);
 }
 
 .teacher-settings-form__hint {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  color: #334155;
+  border: 1px solid var(--app-border);
+  background: #fff;
+  color: var(--app-text-muted);
+}
+
+.teacher-settings-inactive {
+  border: 1px solid #edd9ad;
+  background: #fff9eb;
+  color: #815114;
 }
 
 .teacher-settings-form__actions {
@@ -96,107 +296,106 @@
   justify-content: flex-end;
 }
 
-.teacher-settings-inactive {
-  background: #fff7ed;
-  border: 1px solid #fdba74;
-  color: #9a3412;
-}
-
 .teacher-settings-assignment {
   display: grid;
   gap: 0.75rem;
 }
 
-.einabs-card,
-.booking-history-card {
-  margin-top: 1.25rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
-}
-
-.page-heading {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-}
-
-.page-heading__icon {
-  display: grid;
-  width: 2.75rem;
-  height: 2.75rem;
-  place-items: center;
-  border-radius: 12px;
-  background: #dcfce7;
-  color: #15803d;
-  font-size: 1.25rem;
-}
-
-.page-heading__icon--people { background: #e0f2fe; color: #0369a1; }
-.page-heading h1, .page-heading h2 { margin: 0; color: #1e293b; font-size: 1.45rem; }
-.page-heading p { margin: 0.2rem 0 0; color: #64748b; font-size: 0.875rem; font-weight: 400; }
-
-.einab-cards, .slot-cards { display: none; }
-
-.einabs-card ::ng-deep .p-card-body,
-.booking-history-card ::ng-deep .p-card-body { padding: 1.25rem; }
-.einabs-card ::ng-deep .p-card-title,
-.booking-history-card ::ng-deep .p-card-title { margin-bottom: 1.25rem; }
-.desktop-table ::ng-deep .p-datatable-thead > tr > th { padding: 0.75rem 1rem; border-color: #e2e8f0; background: #f8fafc; color: #64748b; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
-.desktop-table ::ng-deep .p-datatable-tbody > tr > td { padding: 0.9rem 1rem; border-color: #eef2f7; color: #334155; vertical-align: middle; }
-.desktop-table ::ng-deep .p-datatable-tbody > tr:hover { background: #f8fafc; }
-.desktop-table ::ng-deep .p-paginator { border: 0; border-top: 1px solid #eef2f7; }
-
-.booking-groups { display: grid; gap: 0.75rem; }
-.booking-groups ::ng-deep .p-accordionpanel { overflow: hidden; border: 1px solid #e2e8f0; border-radius: 14px; }
-.booking-groups ::ng-deep .p-accordionheader { padding: 0.85rem 1rem; background: #f8fafc; }
-.booking-groups ::ng-deep .p-accordioncontent-content { padding: 0; }
-.booking-person { display: flex; align-items: center; gap: 0.75rem; }
-.booking-person > span:last-child { display: grid; gap: 0.15rem; }
-.booking-person small, .booking-row small, .comment-item small { color: #64748b; }
-.person-avatar { display: grid; width: 2.25rem; height: 2.25rem; place-items: center; border-radius: 50%; background: #bbf7d0; color: #166534; font-weight: 700; }
-.booking-list { padding: 0.25rem 1rem; }
-.booking-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.85rem 0; border-bottom: 1px solid #eef2f7; }
-.booking-row > span { display: grid; gap: 0.2rem; margin-right: auto; }
-.booking-comments { margin: 0 1rem 1rem; padding-top: 1rem; }
-.booking-comments h3 { margin: 0; font-size: 1rem; }
-.comment-item { margin-top: 0.6rem; padding: 0.75rem; border: 1px solid #dcfce7; border-radius: 8px; background: #f0fdf4; }
-.comment-item small { display: block; margin-top: 0.15rem; }
-.comment-item p { margin: 0.4rem 0 0; white-space: pre-wrap; }
-
-.planning-tools { margin-top: 1.25rem; overflow: hidden; border: 1px solid #dbe4ec; border-radius: 14px; background: #fff; }
-.planning-tools__summary { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; cursor: pointer; list-style: none; color: #334155; font-weight: 700; }
-.planning-tools__summary::-webkit-details-marker { display: none; }
-.planning-tools__summary span { display: flex; align-items: center; gap: 0.6rem; }
-.planning-tools[open] .teacher-settings__chevron { transform: rotate(180deg); }
-.planning-tools__content { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(18rem, 1fr); border-top: 1px solid #e2e8f0; }
-.planning-tools__section { min-width: 0; padding: 1.25rem; }
-.planning-tools__section--settings { border-left: 1px solid #e2e8f0; }
-.planning-tools__heading h2 { margin: 0; color: #1e293b; font-size: 1rem; }
-.planning-tools__heading p { margin: 0.2rem 0 1rem; color: #64748b; font-size: 0.8125rem; }
-.candidate-cards { display: none; }
-
 @media (max-width: 768px) {
-  .teacher-page-header { align-items: stretch; flex-direction: column; }
-  .teacher-page-header__actions { justify-content: space-between; }
-  .teacher-page-header__actions > button { flex: 1; }
-  .desktop-table { display: none; }
-  .einab-cards, .slot-cards { display: grid; gap: 0.75rem; }
-  .einab-card, .slot-card { display: grid; gap: 0.65rem; padding: 1rem; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
-  .einab-card--selected { border-color: #22c55e; box-shadow: 0 0 0 2px #dcfce7; }
-  .einab-card__topline, .einab-card__date, .einab-card__location, .slot-card > div:first-child { display: flex; align-items: center; gap: 0.55rem; }
-  .einab-card__topline p-tag { margin-left: auto; }
-  .einab-card__date, .einab-card__location, .slot-card > span { color: #475569; font-size: 0.875rem; overflow-wrap: anywhere; }
-  .einab-card__date i, .einab-card__location i { color: #16a34a; }
-  .einab-card__actions, .slot-card__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.25rem; }
-  .booking-row { align-items: flex-start; flex-wrap: wrap; }
-  .booking-row button { margin-left: auto; }
-  .einabs-card ::ng-deep .p-card-body, .booking-history-card ::ng-deep .p-card-body { padding: 1rem; }
-  .planning-tools__content { grid-template-columns: 1fr; }
-  .planning-tools__section--settings { border-top: 1px solid #e2e8f0; border-left: 0; }
-  .candidate-cards { display: grid; gap: 0.65rem; }
-  .candidate-cards article { display: grid; gap: 0.35rem; padding: 0.85rem; border: 1px solid #e2e8f0; border-radius: 10px; }
-  .candidate-cards span { color: #334155; }
-  .candidate-cards small { color: #64748b; }
-  .candidate-cards button { justify-self: start; margin-top: 0.25rem; }
+  .teacher-page-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .teacher-page-header__actions {
+    justify-content: space-between;
+  }
+
+  .teacher-page-header__actions > button {
+    flex: 1;
+  }
+
+  .desktop-table {
+    display: none;
+  }
+
+  .einab-cards,
+  .slot-cards,
+  .candidate-cards {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .einab-card,
+  .slot-card,
+  .candidate-cards article {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.9rem;
+    border: 1px solid var(--app-border);
+    border-radius: var(--app-radius-sm);
+    background: #fff;
+  }
+
+  .einab-card--selected {
+    border-color: #78bb86;
+    box-shadow: 0 0 0 3px var(--app-primary-soft);
+  }
+
+  .einab-card__topline,
+  .einab-card__date,
+  .einab-card__location,
+  .slot-card > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+  }
+
+  .einab-card__topline p-tag {
+    margin-left: auto;
+  }
+
+  .einab-card__date,
+  .einab-card__location,
+  .slot-card > span,
+  .candidate-cards span,
+  .candidate-cards small {
+    color: var(--app-text-muted);
+    overflow-wrap: anywhere;
+  }
+
+  .einab-card__date i,
+  .einab-card__location i {
+    color: var(--app-primary);
+  }
+
+  .einab-card__actions,
+  .slot-card__actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .booking-row {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .booking-row button {
+    margin-left: auto;
+  }
+
+  .planning-tools__content {
+    grid-template-columns: 1fr;
+  }
+
+  .planning-tools__section--settings {
+    border-top: 1px solid var(--app-border);
+    border-left: 0;
+  }
+
+  .candidate-cards button {
+    justify-self: start;
+    margin-top: 0.25rem;
+  }
 }

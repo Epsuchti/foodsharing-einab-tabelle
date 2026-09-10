@@ -85,7 +85,7 @@
   "book.confirmationWindowHint": "You need to log in to the Foodsharing platform within the next hour to confirm this EinAb.",
   "book.confirmedTitle": "Booking confirmed",
   "book.invalidTitle": "Booking invalid",
-  "book.confirmedLoggedIn": "Booking confirmed. You are now logged in on the Foodsharing platform.",
+  "book.confirmedLoggedIn": "Booking confirmed.",
   "book.submit": "Book EinAb",
   "book.guestConfirmTitle": "Confirm booking",
   "book.guestConfirmMessage": "Do you want to book this EinAb?\n\nPlease confirm this booking within the next hour on the Foodsharing platform.\n\nWe sent you a confirmation link there.",

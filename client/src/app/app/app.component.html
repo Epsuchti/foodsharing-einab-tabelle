@@ -4,7 +4,10 @@
 <header class="app-header">
   <div class="app-header__content">
     <div class="app-header__topline">
-      <a routerLink="/" class="brand" (click)="closeMobileMenu()">{{ i18n.t('app.title') }}</a>
+      <a routerLink="/" class="brand" (click)="closeMobileMenu()">
+        <span class="brand__mark" aria-hidden="true"><i class="pi pi-heart-fill"></i></span>
+        <span>{{ i18n.t('app.title') }}</span>
+      </a>
       <button
         pButton
         type="button"

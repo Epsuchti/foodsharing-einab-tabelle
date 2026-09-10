@@ -6,3 +6,5 @@ client/dist/
 server/target/
 /client/node/
 /client/src/app/api/
+/server/data/foodsharing.mv.db
+/server/data/foodsharing.trace.db
