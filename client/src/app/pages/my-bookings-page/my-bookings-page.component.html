@@ -28,7 +28,7 @@
         <td>{{ booking.teacherPhoneNumber ?? '-' }}</td>
         <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
         <td class="actions-cell">
-          @if (booking.status === SlotStatus.Booked) {
+          @if (booking.status === SlotStatus.Booked && !isPast(booking.startDateTime)) {
             <button pButton size="small" severity="danger" icon="pi pi-times" [label]="i18n.t('bookings.cancel')" (click)="confirmCancel(booking.slotId)"></button>
           }
         </td>

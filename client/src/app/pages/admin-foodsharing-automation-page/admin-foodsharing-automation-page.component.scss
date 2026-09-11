@@ -1034,13 +1034,24 @@
   }
 
   .automation-toolbar__add {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
     flex-basis: auto;
   }
 
-  .automation-toolbar__add > *,
   .automation-toolbar__actions > *,
   .advert-config__actions > * {
     width: 100%;
+  }
+
+  .automation-toolbar__add > p-select {
+    width: 100%;
+  }
+
+  .automation-toolbar__add > button {
+    width: auto;
+    white-space: nowrap;
   }
 
   .automation-audit-console__body {

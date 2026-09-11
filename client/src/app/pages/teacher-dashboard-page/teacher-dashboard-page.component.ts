@@ -309,6 +309,10 @@ export class TeacherDashboardPageComponent implements OnInit {
     if (!this.requireActiveTeacher()) {
       return;
     }
+    if (this.isPast(einab.startDateTime)) {
+      this.toastError(this.i18n.t('error.PAST_EINAB_NOT_EDITABLE'));
+      return;
+    }
     this.editingEinAb.set(einab);
     this.einabForm.reset({
       category: einab.category,
@@ -368,6 +372,10 @@ export class TeacherDashboardPageComponent implements OnInit {
   }
 
   confirmDelete(einab: TeacherEinAbResponse): void {
+    if (this.isPast(einab.startDateTime)) {
+      this.toastError(this.i18n.t('error.PAST_EINAB_NOT_DELETABLE'));
+      return;
+    }
     this.confirmationService.confirm({
       message: this.i18n.t('confirm.deleteEinab'),
       accept: () => {
@@ -384,6 +392,21 @@ export class TeacherDashboardPageComponent implements OnInit {
       message: this.i18n.t(this.isPast(startDateTime) ? 'confirm.markDidNotShowUp' : 'confirm.cancelTeacherBooking'),
       accept: () => {
         this.teacherApi.cancelTeacherSlotBooking({ bezirkSlug: this.teacher()!.bezirk!.slug, slotId: slot.id }).subscribe({
+          next: () => this.reload(),
+          error: (error) => this.toastError(resolveApiError(error, this.i18n))
+        });
+      }
+    });
+  }
+
+  confirmCountAgain(slot: SlotResponse): void {
+    this.confirmationService.confirm({
+      message: this.i18n.t('confirm.countAgain'),
+      accept: () => {
+        this.teacherApi.countTeacherSlotBooking({
+          bezirkSlug: this.teacher()!.bezirk!.slug,
+          slotId: slot.id
+        }).subscribe({
           next: () => this.reload(),
           error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });
@@ -428,6 +451,10 @@ export class TeacherDashboardPageComponent implements OnInit {
   }
 
   openAssignTeacher(einab: TeacherEinAbResponse): void {
+    if (this.isPast(einab.startDateTime)) {
+      this.toastError(this.i18n.t('error.PAST_EINAB_NOT_REASSIGNABLE'));
+      return;
+    }
     this.assignTeacherEinAb.set(einab);
     this.selectedTeacherId.set(einab.teacher.id);
     this.assignTeacherDialogVisible.set(true);

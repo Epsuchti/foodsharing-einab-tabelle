@@ -1,3 +1,15 @@
+.admin-booking-settings {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.stack-form .admin-booking-settings__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  cursor: pointer;
+}
+
 .admin-user-cards {
   display: none;
   gap: 0.875rem;

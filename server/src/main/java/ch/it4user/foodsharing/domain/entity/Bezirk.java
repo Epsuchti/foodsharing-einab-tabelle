@@ -24,6 +24,15 @@ public class Bezirk extends BaseEntity {
     private Long cleaningStoreId;
 
     @Column(nullable = false)
+    private boolean preventDuplicateTeacherBookings = true;
+
+    @Column(nullable = false)
+    private boolean preventDuplicateCategoryBookings = true;
+
+    @Column(nullable = false)
+    private int maxActiveBookingsPerUser = 3;
+
+    @Column(nullable = false)
     private int sortOrder;
 
     @Column(nullable = false)

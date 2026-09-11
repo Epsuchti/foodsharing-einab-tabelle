@@ -2,10 +2,13 @@ package ch.it4user.foodsharing.web;
 
 import ch.it4user.foodsharing.openapi.api.AdminApi;
 import ch.it4user.foodsharing.openapi.model.AdminBookingUserPageResponse;
+import ch.it4user.foodsharing.openapi.model.AdminBookingCountRequest;
 import ch.it4user.foodsharing.openapi.model.AdminBezirkResponse;
 import ch.it4user.foodsharing.openapi.model.AutomationRunSummary;
+import ch.it4user.foodsharing.openapi.model.BookingCommentResponse;
 import ch.it4user.foodsharing.openapi.model.BookingUserResponse;
 import ch.it4user.foodsharing.openapi.model.CreateBookingUserRequest;
+import ch.it4user.foodsharing.openapi.model.CreateBookingCommentRequest;
 import ch.it4user.foodsharing.openapi.model.FoodsharingAutomationAudit;
 import ch.it4user.foodsharing.openapi.model.FoodsharingCleaningRuleExemption;
 import ch.it4user.foodsharing.openapi.model.FoodsharingCleaningRuleExemptionRequest;
@@ -32,6 +35,7 @@ import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomationExcludedDa
 import ch.it4user.foodsharing.openapi.model.FoodsharingStoreAutomationExcludedDateRequest;
 import ch.it4user.foodsharing.openapi.model.TeacherListResponse;
 import ch.it4user.foodsharing.openapi.model.TeacherResponse;
+import ch.it4user.foodsharing.openapi.model.SlotResponse;
 import ch.it4user.foodsharing.openapi.model.TelegramChat;
 import ch.it4user.foodsharing.openapi.model.TelegramTestMessageRequest;
 import ch.it4user.foodsharing.openapi.model.UserPermissionsRequest;
@@ -116,6 +120,7 @@ public class AdminController implements AdminApi {
     @Override
     public ResponseEntity<AdminBookingUserPageResponse> getAdminUsers(
             String bezirkSlug,
+            String search,
             Integer page,
             Integer size,
             Boolean threePickupsOnly,
@@ -130,12 +135,33 @@ public class AdminController implements AdminApi {
         return ResponseEntity.ok(mapper.toAdminBookingUserPageResponse(
                 adminService.getUsers(
                         bezirkSlug,
+                        search,
                         Boolean.TRUE.equals(unassigned),
                         Boolean.TRUE.equals(allBezirke),
                         resolvedPage,
                         resolvedSize,
                         resolvedThreePickupsOnly,
                         resolvedActiveOnly)));
+    }
+
+    @Override
+    public ResponseEntity<SlotResponse> setAdminBookingCounted(
+            String bezirkSlug,
+            UUID slotId,
+            AdminBookingCountRequest request) {
+        currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
+        return ResponseEntity.ok(mapper.toSlotResponse(
+                adminService.setBookingCounted(bezirkSlug, slotId, Boolean.TRUE.equals(request.getCounted()))));
+    }
+
+    @Override
+    public ResponseEntity<BookingCommentResponse> addAdminSlotComment(
+            String bezirkSlug,
+            UUID slotId,
+            CreateBookingCommentRequest request) {
+        User admin = currentActorService.requireAdmin();
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toBookingCommentResponse(
+                adminService.addBookingComment(bezirkSlug, slotId, admin, request.getComment())));
     }
 
     @Override
@@ -158,7 +184,12 @@ public class AdminController implements AdminApi {
             UpdateBezirkRequest updateBezirkRequest) {
         currentActorService.requirePermission(UserPermission.CAN_MANAGE_USERS);
         return ResponseEntity.ok(mapper.toAdminBezirkResponse(
-                bezirkService.updateCleaningStoreId(bezirkSlug, updateBezirkRequest.getCleaningStoreId())));
+                bezirkService.updateSettings(
+                        bezirkSlug,
+                        updateBezirkRequest.getCleaningStoreId(),
+                        updateBezirkRequest.getPreventDuplicateTeacherBookings(),
+                        updateBezirkRequest.getPreventDuplicateCategoryBookings(),
+                        updateBezirkRequest.getMaxActiveBookingsPerUser())));
     }
 
     @Override

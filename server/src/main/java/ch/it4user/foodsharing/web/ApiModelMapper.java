@@ -67,6 +67,9 @@ public class ApiModelMapper {
         response.setName(bezirk.getName());
         response.setSlug(bezirk.getSlug());
         response.setCleaningStoreId(bezirk.getCleaningStoreId());
+        response.setPreventDuplicateTeacherBookings(bezirk.isPreventDuplicateTeacherBookings());
+        response.setPreventDuplicateCategoryBookings(bezirk.isPreventDuplicateCategoryBookings());
+        response.setMaxActiveBookingsPerUser(bezirk.getMaxActiveBookingsPerUser());
         return response;
     }
 

@@ -218,12 +218,15 @@ public class TeacherService {
                              Integer minimumPickupCount,
                              boolean admin) {
         Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
-        validateEinAb(category, slotCount, location, publicLocation, onlineCallLink, minimumPickupCount);
         EinAb einAb = requireTeacherEinAb(teacher, einAbId, admin, bezirk);
+        if (einAb.getStartDateTime().isBefore(Instant.now())) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.PAST_EINAB_NOT_EDITABLE);
+        }
         if (!admin) {
             ensureTeacherBezirk(teacher, bezirk);
             ensureTeacherActive(teacher);
         }
+        validateEinAb(category, slotCount, location, publicLocation, onlineCallLink, minimumPickupCount);
         int existingSlots = (int) slotRepository.findAllByEinAbOrderByCreatedAtAsc(einAb).stream()
                 .filter(slot -> slot.getStatus() != SlotStatus.CANCELLED)
                 .count();
@@ -255,6 +258,9 @@ public class TeacherService {
             ensureTeacherBezirk(teacher, bezirk);
         }
         EinAb einAb = requireTeacherEinAb(teacher, einAbId, admin, bezirk);
+        if (einAb.getStartDateTime().isBefore(Instant.now())) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.PAST_EINAB_NOT_DELETABLE);
+        }
         if (slotRepository.existsByEinAbAndStatusIn(einAb, BLOCKING_STATUSES)) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.BOOKED_SLOTS_PREVENT_DELETE);
         }
@@ -331,12 +337,34 @@ public class TeacherService {
     }
 
     @Transactional
+    public Slot countCancelledSlot(String bezirkSlug, User teacher, UUID slotId, boolean admin) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        if (!admin) {
+            ensureTeacherBezirk(teacher, bezirk);
+        }
+        Slot slot = slotRepository.findForUpdateByIdAndBezirk(slotId, bezirk)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.SLOT_NOT_FOUND));
+        if (!admin && !isSlotTeacher(teacher, slot)) {
+            throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ONLY_OWN_EINABS_MANAGEABLE);
+        }
+        if (slot.getStatus() != SlotStatus.CANCELLED || slot.getBookingUser() == null) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.ONLY_CANCELLED_APPOINTMENTS_COUNTABLE);
+        }
+        slot.setStatus(SlotStatus.BOOKED);
+        slot.setDoneAt(null);
+        return slot;
+    }
+
+    @Transactional
     public EinAb assignTeacherToEinAb(String bezirkSlug, User teacher, UUID einAbId, UUID assignedTeacherId) {
         Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
         ensureTeacherBezirk(teacher, bezirk);
         ensureTeacherActive(teacher);
         EinAb einAb = einAbRepository.findWithTeacherForUpdateByIdAndBezirk(einAbId, bezirk)
                 .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.EINAB_NOT_FOUND));
+        if (einAb.getStartDateTime().isBefore(Instant.now())) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.PAST_EINAB_NOT_REASSIGNABLE);
+        }
         if (!einAb.getTeacher().getId().equals(teacher.getId())) {
             throw new ApiException(HttpStatus.FORBIDDEN, ApiErrorCode.ONLY_OWN_EINABS_MANAGEABLE);
         }

@@ -13,10 +13,12 @@ import ch.it4user.foodsharing.repository.SlotRepository;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,7 +87,50 @@ public class AdminService {
                 org.springframework.data.domain.PageRequest.of(Math.max(page, 0), Math.min(Math.max(size, 1), 100)));
     }
 
+    @Transactional
+    public Slot setBookingCounted(String bezirkSlug, UUID slotId, boolean counted) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        Slot slot = slotRepository.findForUpdateByIdAndBezirk(slotId, bezirk)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.BOOKING_NOT_FOUND));
+        if (slot.getBookingUser() == null) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.BOOKING_NOT_FOUND);
+        }
+        if (!slot.getEinAb().getStartDateTime().isBefore(java.time.Instant.now())) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.ONLY_PAST_APPOINTMENTS_COUNTABLE);
+        }
+        if (counted) {
+            if (slot.getStatus() != SlotStatus.CANCELLED) {
+                throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.ONLY_CANCELLED_APPOINTMENTS_COUNTABLE);
+            }
+            slot.setStatus(SlotStatus.BOOKED);
+        } else {
+            if (slot.getStatus() != SlotStatus.BOOKED && slot.getStatus() != SlotStatus.DONE) {
+                throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.ONLY_COUNTED_APPOINTMENTS_NOT_COUNTABLE);
+            }
+            slot.setStatus(SlotStatus.CANCELLED);
+        }
+        slot.setDoneAt(null);
+        return slot;
+    }
+
+    @Transactional
+    public BookingComment addBookingComment(String bezirkSlug, UUID slotId, User admin, String comment) {
+        Bezirk bezirk = bezirkService.requireActive(bezirkSlug);
+        Slot slot = slotRepository.findByIdAndEinAbBezirk(slotId, bezirk)
+                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.SLOT_NOT_FOUND));
+        if (slot.getBookingUser() == null) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.BOOKING_NOT_FOUND);
+        }
+        BookingComment bookingComment = new BookingComment();
+        bookingComment.setBookingUser(slot.getBookingUser());
+        bookingComment.setSlot(slot);
+        bookingComment.setTeacher(admin);
+        bookingComment.setComment(comment.trim());
+        return bookingCommentRepository.save(bookingComment);
+    }
+
     public AdminUsersView getUsers(String bezirkSlug,
+                                   String search,
                                    boolean unassigned,
                                    boolean allBezirke,
                                    int page,
@@ -94,6 +139,7 @@ public class AdminService {
                                    boolean activeOnly) {
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 100);
+        String normalizedSearch = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
         Bezirk bezirk = unassigned || allBezirke ? null : bezirkService.requireActive(bezirkSlug);
         List<User> users = allBezirke
                 ? userRepository.findAllWithBezirk()
@@ -103,6 +149,7 @@ public class AdminService {
         Map<UUID, List<Slot>> bookingsByUser = groupBookings(users, bezirk, allBezirke);
         Map<UUID, List<BookingComment>> commentsByUser = groupComments(users);
         List<User> sortedUsers = users.stream()
+                .filter(user -> matchesSearch(user, normalizedSearch))
                 .filter(user -> !activeOnly || user.isActive())
                 .filter(user -> !threePickupsOnly || countedPickupCount(bookingsByUser.getOrDefault(user.getId(), List.of())) >= 3)
                 .sorted(Comparator
@@ -117,6 +164,12 @@ public class AdminService {
                 org.springframework.data.domain.PageRequest.of(safePage, safeSize),
                 sortedUsers.size());
         return new AdminUsersView(bookingUsers, bookingsByUser, commentsByUser);
+    }
+
+    private boolean matchesSearch(User user, String search) {
+        return search.isBlank()
+                || user.getName().toLowerCase(Locale.ROOT).contains(search)
+                || user.getFoodsharingId().toLowerCase(Locale.ROOT).contains(search);
     }
 
     @Transactional

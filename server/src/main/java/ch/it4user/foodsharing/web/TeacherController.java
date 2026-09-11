@@ -209,6 +209,16 @@ public class TeacherController implements TeacherApi {
     }
 
     @Override
+    public ResponseEntity<SlotResponse> countTeacherSlotBooking(String bezirkSlug, UUID slotId) {
+        return ResponseEntity.ok(mapper.toSlotResponse(
+                teacherService.countCancelledSlot(
+                        bezirkSlug,
+                        currentActorService.requireTeacher(),
+                        slotId,
+                        currentActorService.canManageUsers())));
+    }
+
+    @Override
     public ResponseEntity<TeacherEinAbResponse> assignTeacherToEinAb(
             String bezirkSlug,
             UUID einAbId,

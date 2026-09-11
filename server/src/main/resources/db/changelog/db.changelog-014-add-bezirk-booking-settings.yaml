@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 014-add-bezirk-booking-settings
+      author: codex
+      changes:
+        - addColumn:
+            tableName: bezirke
+            columns:
+              - column:
+                  name: prevent_duplicate_teacher_bookings
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: prevent_duplicate_category_bookings
+                  type: BOOLEAN
+                  defaultValueBoolean: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: max_active_bookings_per_user
+                  type: INTEGER
+                  defaultValueNumeric: 3
+                  constraints:
+                    nullable: false

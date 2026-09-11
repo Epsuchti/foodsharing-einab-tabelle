@@ -571,6 +571,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SlotResponse'
+    post:
+      tags: [teacher]
+      operationId: countTeacherSlotBooking
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
+        - $ref: '#/components/parameters/SlotId'
+      responses:
+        '200':
+          description: Slot booking counted again by teacher
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/admin/bezirke/{bezirkSlug}/teachers:
     parameters:
       - $ref: '#/components/parameters/BezirkSlug'
@@ -718,6 +737,11 @@ paths:
       operationId: getAdminUsers
       parameters:
         - $ref: '#/components/parameters/BezirkSlug'
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
         - name: page
           in: query
           required: false
@@ -763,6 +787,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdminBookingUserPageResponse'
+  /api/admin/bezirke/{bezirkSlug}/slots/{slotId}/booking/count:
+    put:
+      tags: [admin]
+      operationId: setAdminBookingCounted
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
+        - $ref: '#/components/parameters/SlotId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminBookingCountRequest'
+      responses:
+        '200':
+          description: Booking count state updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SlotResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/admin/bezirke/{bezirkSlug}/slots/{slotId}/comments:
+    post:
+      tags: [admin]
+      operationId: addAdminSlotComment
+      parameters:
+        - $ref: '#/components/parameters/BezirkSlug'
+        - $ref: '#/components/parameters/SlotId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingCommentRequest'
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingCommentResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /api/admin/users/{bookingUserId}/enable:
     put:
       tags: [admin]
@@ -1609,7 +1687,7 @@ components:
             type: string
     ErrorCode:
       type: string
-      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, BEZIRK_NOT_FOUND, USER_BEZIRK_MISMATCH, NOTIFICATION_SUBSCRIPTION_BEZIRK_MISMATCH, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, INVALID_UNSUBSCRIBE_TOKEN, TEACHER_ACCOUNT_REQUIRED, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_ASSIGNABLE, ASSIGNABLE_TEACHER_NOT_FOUND, EINAB_NOT_FOUND, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, LOCATION_REQUIRED, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED, INVALID_BOOKING_CONFIRMATION_TOKEN, BOOKING_CONFIRMATION_EXPIRED]
+      enum: [AUTHENTICATION_REQUIRED, ACCESS_DENIED, VALIDATION_FAILED, RESOURCE_NOT_FOUND, UNEXPECTED_ERROR, BEZIRK_NOT_FOUND, USER_BEZIRK_MISMATCH, NOTIFICATION_SUBSCRIPTION_BEZIRK_MISMATCH, INVALID_LOGIN_TOKEN, LOGIN_TOKEN_EXPIRED_OR_USED, ACCOUNT_NOT_FOUND, INVALID_UNSUBSCRIBE_TOKEN, TEACHER_ACCOUNT_REQUIRED, TEACHER_FOODSHARING_ID_ALREADY_EXISTS, TEACHER_NOT_FOUND, TEACHER_INACTIVE, BOOKING_USER_DISABLED, BOOKING_USER_NOT_FOUND, SLOT_NOT_FOUND, BOOKING_NOT_FOUND, SLOT_NOT_AVAILABLE, USER_ALREADY_BOOKED_WITH_TEACHER, USER_ALREADY_BOOKED_IN_CATEGORY, USER_BOOKING_LIMIT_REACHED, MINIMUM_PICKUP_COUNT_NOT_REACHED, ONLY_OWN_BOOKINGS_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_CANCELLABLE, PAST_BOOKING_NOT_CANCELLABLE, ONLY_BOOKED_APPOINTMENTS_ASSIGNABLE, ONLY_CANCELLED_APPOINTMENTS_COUNTABLE, ONLY_COUNTED_APPOINTMENTS_NOT_COUNTABLE, ONLY_PAST_APPOINTMENTS_COUNTABLE, ASSIGNABLE_TEACHER_NOT_FOUND, EINAB_NOT_FOUND, PAST_EINAB_NOT_EDITABLE, PAST_EINAB_NOT_DELETABLE, PAST_EINAB_NOT_REASSIGNABLE, ONLY_OWN_EINABS_MANAGEABLE, SLOT_COUNT_OUT_OF_RANGE, SLOT_COUNT_REDUCTION_NOT_SUPPORTED, BOOKED_SLOTS_PREVENT_DELETE, LOCATION_REQUIRED, PUBLIC_LOCATION_REQUIRED, DEFAULT_ADMIN_CANNOT_BE_CHANGED, INVALID_BOOKING_CONFIRMATION_TOKEN, BOOKING_CONFIRMATION_EXPIRED]
     BezirkResponse:
       type: object
       required: [id, name, slug]
@@ -1633,11 +1711,19 @@ components:
       allOf:
         - $ref: '#/components/schemas/BezirkResponse'
         - type: object
+          required: [preventDuplicateTeacherBookings, preventDuplicateCategoryBookings, maxActiveBookingsPerUser]
           properties:
             cleaningStoreId:
               type: integer
               format: int64
               nullable: true
+            preventDuplicateTeacherBookings:
+              type: boolean
+            preventDuplicateCategoryBookings:
+              type: boolean
+            maxActiveBookingsPerUser:
+              type: integer
+              minimum: 1
     UpdateBezirkRequest:
       type: object
       properties:
@@ -1646,6 +1732,13 @@ components:
           format: int64
           minimum: 1
           nullable: true
+        preventDuplicateTeacherBookings:
+          type: boolean
+        preventDuplicateCategoryBookings:
+          type: boolean
+        maxActiveBookingsPerUser:
+          type: integer
+          minimum: 1
     UpdateUserBezirkRequest:
       type: object
       properties:
@@ -1662,6 +1755,12 @@ components:
         bezirkSlug:
           type: string
           minLength: 1
+    AdminBookingCountRequest:
+      type: object
+      required: [counted]
+      properties:
+        counted:
+          type: boolean
     Language:
       type: string
       enum: [de, en, gws]

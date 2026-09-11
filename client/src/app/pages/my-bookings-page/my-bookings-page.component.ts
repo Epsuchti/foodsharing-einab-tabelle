@@ -52,6 +52,10 @@ export class MyBookingsPageComponent implements OnInit {
     this.loadPage(event.page ?? 0);
   }
 
+  protected isPast(startDateTime: string): boolean {
+    return new Date(startDateTime).getTime() <= Date.now();
+  }
+
   private reload(): void {
     this.loadPage(this.bookingsPage()?.page ?? 0);
   }

@@ -139,6 +139,10 @@ public interface SlotRepository extends JpaRepository<Slot, UUID> {
 
     long countByBookingUserAndStatusAndEinAbBezirk(User bookingUser, SlotStatus status, Bezirk bezirk);
 
+    long countByBookingUserAndStatusInAndEinAbBezirk(User bookingUser,
+                                                     Collection<SlotStatus> statuses,
+                                                     Bezirk bezirk);
+
     @Query("""
         select (count(s) > 0) from Slot s
         where s.bookingUser = :bookingUser

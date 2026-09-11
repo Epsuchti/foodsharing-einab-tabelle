@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import {
   AdminBezirkResponse,
@@ -8,8 +8,11 @@ import {
   AdminBookingUserResponse,
   AdminService,
   BezirkResponse,
+  BookingDetailResponse,
   BookingUserResponse,
-  PublicService
+  CreateBookingCommentRequest,
+  PublicService,
+  SlotStatus
 } from '../../api';
 import { resolveApiError } from '../../core/api-error';
 import { BezirkContextService } from '../../core/bezirk-context.service';
@@ -19,12 +22,14 @@ import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { CheckboxModule } from 'primeng/checkbox';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogModule } from 'primeng/dialog';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { PaginatorModule } from 'primeng/paginator';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
+import { TextareaModule } from 'primeng/textarea';
 import { ConfirmationService, MessageService } from 'primeng/api';
 
 @Component({
@@ -38,12 +43,15 @@ import { ConfirmationService, MessageService } from 'primeng/api';
     ButtonModule,
     CheckboxModule,
     ConfirmDialogModule,
+    DialogModule,
     InputNumberModule,
     InputTextModule,
+    ReactiveFormsModule,
     PaginatorModule,
     SelectModule,
     TableModule,
-    TagModule
+    TagModule,
+    TextareaModule
   ],
   templateUrl: './admin-dashboard-page.component.html',
   styleUrl: './admin-dashboard-page.component.scss'
@@ -53,20 +61,31 @@ export class AdminDashboardPageComponent implements OnInit {
   private static readonly UNASSIGNED_BEZIRK = '__unassigned__';
 
   readonly i18n = inject(I18nService);
+  readonly SlotStatus = SlotStatus;
 
   protected readonly usersPage = signal<AdminBookingUserPageResponse | null>(null);
   protected readonly bezirkSettings = signal<AdminBezirkResponse | null>(null);
   protected readonly bezirke = signal<BezirkResponse[]>([]);
   protected readonly selectedUserBezirki = signal<Record<string, string | null>>({});
   protected readonly cleaningStoreId = signal<number | null>(null);
+  protected readonly preventDuplicateTeacherBookings = signal(true);
+  protected readonly preventDuplicateCategoryBookings = signal(true);
+  protected readonly maxActiveBookingsPerUser = signal(3);
   protected readonly settingsSaving = signal(false);
   protected readonly onlyThreePickups = signal(false);
   protected readonly activeOnly = signal(true);
   protected readonly selectedBezirkFilter = signal('');
+  protected readonly userSearch = signal('');
   protected readonly newUserFoodsharingId = signal('');
   protected readonly creatingUser = signal(false);
   protected readonly usersLoading = signal(true);
   protected readonly expandedPickupUserIds = signal<Record<string, boolean>>({});
+  protected readonly commentLoading = signal(false);
+  protected readonly commentDialogVisible = signal(false);
+  protected readonly commentTarget = signal<BookingDetailResponse | null>(null);
+  protected readonly commentForm = inject(FormBuilder).nonNullable.group({
+    comment: ['', [Validators.required, Validators.minLength(2)]]
+  });
 
   protected readonly pageSize = 20;
 
@@ -91,6 +110,7 @@ export class AdminDashboardPageComponent implements OnInit {
       : this.bezirkContext.currentSlug();
     this.adminApi.getAdminUsers({
       bezirkSlug,
+      search: this.userSearch().trim() || undefined,
       page,
       size: this.pageSize,
       threePickupsOnly: this.onlyThreePickups(),
@@ -129,6 +149,11 @@ export class AdminDashboardPageComponent implements OnInit {
     this.loadUsersPage(0);
   }
 
+  setUserSearch(search: string): void {
+    this.userSearch.set(search);
+    this.loadUsersPage(0);
+  }
+
   createBookingUser(): void {
     const foodsharingId = this.newUserFoodsharingId().trim();
     if (!foodsharingId || this.creatingUser()) {
@@ -158,11 +183,19 @@ export class AdminDashboardPageComponent implements OnInit {
     this.settingsSaving.set(true);
     this.adminApi.updateAdminBezirk({
       bezirkSlug: this.bezirkContext.currentSlug(),
-      updateBezirkRequest: { cleaningStoreId: this.cleaningStoreId() }
+      updateBezirkRequest: {
+        cleaningStoreId: this.cleaningStoreId(),
+        preventDuplicateTeacherBookings: this.preventDuplicateTeacherBookings(),
+        preventDuplicateCategoryBookings: this.preventDuplicateCategoryBookings(),
+        maxActiveBookingsPerUser: this.maxActiveBookingsPerUser()
+      }
     }).subscribe({
       next: (response) => {
         this.bezirkSettings.set(response);
         this.cleaningStoreId.set(response.cleaningStoreId ?? null);
+        this.preventDuplicateTeacherBookings.set(response.preventDuplicateTeacherBookings ?? true);
+        this.preventDuplicateCategoryBookings.set(response.preventDuplicateCategoryBookings ?? true);
+        this.maxActiveBookingsPerUser.set(response.maxActiveBookingsPerUser ?? 3);
         this.settingsSaving.set(false);
         this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') });
       },
@@ -194,25 +227,32 @@ export class AdminDashboardPageComponent implements OnInit {
   }
 
   selectedBezirkSlug(user: AdminBookingUserResponse): string | null {
-    return this.selectedUserBezirki()[user.user.id] ?? user.user.bezirk?.slug ?? null;
+    const selectedBezirki = this.selectedUserBezirki();
+    return Object.prototype.hasOwnProperty.call(selectedBezirki, user.user.id)
+      ? selectedBezirki[user.user.id]
+      : user.user.bezirk?.slug ?? null;
   }
 
   setSelectedBezirkSlug(user: AdminBookingUserResponse, bezirkSlug: string | null): void {
+    const previousBezirkSlug = this.selectedBezirkSlug(user);
+    if (previousBezirkSlug === bezirkSlug) {
+      return;
+    }
     this.selectedUserBezirki.update((current) => ({ ...current, [user.user.id]: bezirkSlug }));
-  }
-
-  saveUserBezirk(user: AdminBookingUserResponse): void {
     this.adminApi.updateAdminUserBezirk({
       userId: user.user.id,
       updateUserBezirkRequest: {
-        bezirkSlug: this.selectedBezirkSlug(user)
+        bezirkSlug
       }
     }).subscribe({
       next: (updatedUser) => {
         this.patchUser(updatedUser);
         this.messageService.add({ severity: 'success', summary: this.i18n.t('common.saved') });
       },
-      error: (error) => this.toastError(resolveApiError(error, this.i18n))
+      error: (error) => {
+        this.selectedUserBezirki.update((current) => ({ ...current, [user.user.id]: previousBezirkSlug }));
+        this.toastError(resolveApiError(error, this.i18n));
+      }
     });
   }
 
@@ -238,6 +278,62 @@ export class AdminDashboardPageComponent implements OnInit {
           next: () => this.loadUsersPage(this.usersPage()?.page ?? 0),
           error: (error) => this.toastError(resolveApiError(error, this.i18n))
         });
+      }
+    });
+  }
+
+  confirmBookingCount(booking: BookingDetailResponse, counted: boolean): void {
+    if (!this.isPast(booking.startDateTime)) {
+      return;
+    }
+    this.confirmationService.confirm({
+      message: this.i18n.t(counted ? 'confirm.countAgain' : 'confirm.markDidNotShowUp'),
+      accept: () => {
+        this.adminApi.setAdminBookingCounted({
+          bezirkSlug: booking.bezirk.slug,
+          slotId: booking.slotId,
+          adminBookingCountRequest: { counted }
+        }).subscribe({
+          next: () => this.loadUsersPage(this.usersPage()?.page ?? 0),
+          error: (error) => this.toastError(resolveApiError(error, this.i18n))
+        });
+      }
+    });
+  }
+
+  openCommentDialog(booking: BookingDetailResponse): void {
+    if (!booking.bookingUser) {
+      return;
+    }
+    this.commentTarget.set(booking);
+    this.commentForm.reset({ comment: '' });
+    this.commentLoading.set(false);
+    this.commentDialogVisible.set(true);
+  }
+
+  saveComment(): void {
+    const booking = this.commentTarget();
+    const comment = this.commentForm.getRawValue().comment.trim();
+    if (!booking?.bookingUser || !comment || this.commentForm.invalid || this.commentLoading()) {
+      return;
+    }
+
+    this.commentLoading.set(true);
+    const createBookingCommentRequest: CreateBookingCommentRequest = { comment };
+    this.adminApi.addAdminSlotComment({
+      bezirkSlug: booking.bezirk.slug,
+      slotId: booking.slotId,
+      createBookingCommentRequest
+    }).subscribe({
+      next: () => {
+        this.commentLoading.set(false);
+        this.commentDialogVisible.set(false);
+        this.commentTarget.set(null);
+        this.loadUsersPage(this.usersPage()?.page ?? 0);
+      },
+      error: (error) => {
+        this.commentLoading.set(false);
+        this.toastError(resolveApiError(error, this.i18n));
       }
     });
   }
@@ -277,11 +373,18 @@ export class AdminDashboardPageComponent implements OnInit {
     return this.expandedPickupUserIds()[user.user.id];
   }
 
+  protected isPast(startDateTime: string): boolean {
+    return new Date(startDateTime).getTime() < Date.now();
+  }
+
   private loadBezirkSettings(): void {
     this.adminApi.getAdminBezirk({ bezirkSlug: this.bezirkContext.currentSlug() }).subscribe({
       next: (response) => {
         this.bezirkSettings.set(response);
         this.cleaningStoreId.set(response.cleaningStoreId ?? null);
+        this.preventDuplicateTeacherBookings.set(response.preventDuplicateTeacherBookings ?? true);
+        this.preventDuplicateCategoryBookings.set(response.preventDuplicateCategoryBookings ?? true);
+        this.maxActiveBookingsPerUser.set(response.maxActiveBookingsPerUser ?? 3);
       },
       error: (error) => this.toastError(resolveApiError(error, this.i18n))
     });

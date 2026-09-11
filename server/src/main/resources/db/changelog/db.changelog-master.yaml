@@ -32,3 +32,6 @@ databaseChangeLog:
   - include:
       file: db.changelog-013-link-booking-comments-to-slots.yaml
       relativeToChangelogFile: true
+  - include:
+      file: db.changelog-014-add-bezirk-booking-settings.yaml
+      relativeToChangelogFile: true

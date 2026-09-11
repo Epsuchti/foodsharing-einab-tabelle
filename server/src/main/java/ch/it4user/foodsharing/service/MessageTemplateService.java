@@ -92,6 +92,20 @@ public class MessageTemplateService {
                 formatDetails(details));
     }
 
+    public String teacherBookingCancellationSubject(LanguageCode language) {
+        return message(language, "message.teacher-booking-cancellation.subject");
+    }
+
+    public String teacherBookingCancellationBody(LanguageCode language, Slot slot) {
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put(message(language, "message.details.category"), categoryLabel(language, slot.getEinAb().getCategory()));
+        details.put(message(language, "message.details.start"), swissDateTime(slot.getEinAb().getStartDateTime()));
+        return String.join("\n\n",
+                message(language, "message.greeting.named", slotTeacher(slot).getName()),
+                message(language, "message.teacher-booking-cancellation.intro", slot.getBookingUser().getName()),
+                formatDetails(details));
+    }
+
     public String swissDateTime(Instant value) {
         return value == null ? "" : SWISS_DATE_TIME.format(value.atZone(SWISS_ZONE));
     }

@@ -12,6 +12,33 @@
           [placeholder]="i18n.t('admin.cleaningStoreIdPlaceholder')">
         </p-inputNumber>
       </label>
+      <div class="admin-booking-settings">
+        <label class="admin-booking-settings__toggle">
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="preventDuplicateTeacherBookings()"
+            (onChange)="preventDuplicateTeacherBookings.set($event.checked)">
+          </p-checkbox>
+          <span>{{ i18n.t('admin.preventDuplicateTeacherBookings') }}</span>
+        </label>
+        <label class="admin-booking-settings__toggle">
+          <p-checkbox
+            [binary]="true"
+            [ngModel]="preventDuplicateCategoryBookings()"
+            (onChange)="preventDuplicateCategoryBookings.set($event.checked)">
+          </p-checkbox>
+          <span>{{ i18n.t('admin.preventDuplicateCategoryBookings') }}</span>
+        </label>
+        <label>
+          {{ i18n.t('admin.maxActiveBookingsPerUser') }}
+          <p-inputNumber
+            [ngModel]="maxActiveBookingsPerUser()"
+            (ngModelChange)="maxActiveBookingsPerUser.set($event)"
+            [useGrouping]="false"
+            [min]="1">
+          </p-inputNumber>
+        </label>
+      </div>
       <div class="dialog-actions">
         <button pButton type="button" icon="pi pi-save" [label]="i18n.t('common.save')" [loading]="settingsSaving()" (click)="saveBezirkSettings()"></button>
       </div>
@@ -58,6 +85,15 @@
           (ngModelChange)="setBezirkFilter($event)"
           appendTo="body">
         </p-select>
+      </label>
+      <label>
+        {{ i18n.t('admin.searchUsers') }}
+        <input
+          pInputText
+          type="search"
+          [ngModel]="userSearch()"
+          (ngModelChange)="setUserSearch($event)"
+          [placeholder]="i18n.t('admin.searchUsersPlaceholder')">
       </label>
       <label class="filter-toggle">
         <p-checkbox [binary]="true" [ngModel]="activeOnly()" (onChange)="setActiveOnly($event.checked)"></p-checkbox>
@@ -139,7 +175,6 @@
               } @else {
                 <button pButton type="button" size="small" severity="contrast" [label]="i18n.t('admin.enableBookingUser')" (click)="enableBookingUser(user)"></button>
               }
-              <button pButton type="button" size="small" [label]="i18n.t('admin.saveBezirk')" (click)="saveUserBezirk(user)"></button>
             </td>
           </tr>
           @if (isUserPickupsExpanded(user)) {
@@ -173,6 +208,7 @@
                             <th>{{ i18n.t('common.location') }}</th>
                             <th>{{ i18n.t('slots.teacher') }}</th>
                             <th>{{ i18n.t('common.status') }}</th>
+                            <th>{{ i18n.t('common.actions') }}</th>
                           </tr>
                         </ng-template>
                         <ng-template pTemplate="body" let-booking>
@@ -182,6 +218,14 @@
                             <td>{{ booking.location ?? '-' }}</td>
                             <td>{{ booking.teacherName }}</td>
                             <td><p-tag [value]="i18n.statusLabel(booking.status)"></p-tag></td>
+                            <td class="actions-cell">
+                              <button pButton type="button" size="small" icon="pi pi-comment" [label]="i18n.t('teacherBookings.addComment')" (click)="openCommentDialog(booking)"></button>
+                              @if (isPast(booking.startDateTime) && (booking.status === SlotStatus.Booked || booking.status === SlotStatus.Done)) {
+                                <button pButton type="button" size="small" severity="danger" [label]="i18n.t('admin.markNotCounted')" (click)="confirmBookingCount(booking, false)"></button>
+                              } @else if (isPast(booking.startDateTime) && booking.status === SlotStatus.Cancelled) {
+                                <button pButton type="button" size="small" severity="success" [label]="i18n.t('admin.countAgain')" (click)="confirmBookingCount(booking, true)"></button>
+                              }
+                            </td>
                           </tr>
                         </ng-template>
                       </p-table>
@@ -289,7 +333,6 @@
               } @else {
                 <button pButton type="button" severity="contrast" [label]="i18n.t('admin.enableBookingUser')" (click)="enableBookingUser(user)"></button>
               }
-              <button pButton type="button" [label]="i18n.t('admin.saveBezirk')" (click)="saveUserBezirk(user)"></button>
             </div>
 
             @if (isUserPickupsExpanded(user)) {
@@ -316,6 +359,14 @@
                             <span class="admin-user-card__label">{{ i18n.t('slots.teacher') }}</span>
                             <span>{{ booking.teacherName }}</span>
                           </div>
+                        </div>
+                        <div class="actions-cell">
+                          <button pButton type="button" size="small" icon="pi pi-comment" [label]="i18n.t('teacherBookings.addComment')" (click)="openCommentDialog(booking)"></button>
+                          @if (isPast(booking.startDateTime) && (booking.status === SlotStatus.Booked || booking.status === SlotStatus.Done)) {
+                            <button pButton type="button" size="small" severity="danger" [label]="i18n.t('admin.markNotCounted')" (click)="confirmBookingCount(booking, false)"></button>
+                          } @else if (isPast(booking.startDateTime) && booking.status === SlotStatus.Cancelled) {
+                            <button pButton type="button" size="small" severity="success" [label]="i18n.t('admin.countAgain')" (click)="confirmBookingCount(booking, true)"></button>
+                          }
                         </div>
                       </article>
                     }
@@ -378,3 +429,24 @@
   </p-card>
 
 </section>
+
+<p-dialog
+  [(visible)]="commentDialogVisible"
+  [modal]="true"
+  [style]="{ width: 'min(36rem, 96vw)' }"
+  [header]="i18n.t('teacherBookings.addComment')">
+  <form class="stack-form" [formGroup]="commentForm">
+    <div>
+      <strong>{{ commentTarget()?.bookingUser?.name }}</strong>
+      <div>{{ commentTarget()?.bookingUser?.foodsharingId }}</div>
+    </div>
+    <label>
+      <span>{{ i18n.t('common.comment') }}</span>
+      <textarea pTextarea rows="5" formControlName="comment"></textarea>
+    </label>
+    <div class="dialog-actions">
+      <button pButton type="button" severity="secondary" [label]="i18n.t('common.cancel')" (click)="commentDialogVisible.set(false)"></button>
+      <button pButton type="button" icon="pi pi-save" [label]="i18n.t('common.save')" [loading]="commentLoading()" [disabled]="commentForm.invalid" (click)="saveComment()"></button>
+    </div>
+  </form>
+</p-dialog>

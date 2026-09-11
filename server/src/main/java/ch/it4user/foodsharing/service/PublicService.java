@@ -82,13 +82,19 @@ public class PublicService {
         if (slot.getStatus() != SlotStatus.AVAILABLE) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.SLOT_NOT_AVAILABLE);
         }
-        if (slotRepository.existsByBookingUserAndStatusInAndTeacherAndEinAbBezirk(
+        if (bezirk.isPreventDuplicateTeacherBookings()
+                && slotRepository.existsByBookingUserAndStatusInAndTeacherAndEinAbBezirk(
                 bookingUser, ACTIVE_BOOKING_STATUSES, slot.getTeacher(), bezirk)) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_ALREADY_BOOKED_WITH_TEACHER);
         }
-        if (slotRepository.existsByBookingUserAndStatusInAndEinAbCategoryAndEinAbBezirk(
+        if (bezirk.isPreventDuplicateCategoryBookings()
+                && slotRepository.existsByBookingUserAndStatusInAndEinAbCategoryAndEinAbBezirk(
                 bookingUser, ACTIVE_BOOKING_STATUSES, slot.getEinAb().getCategory(), bezirk)) {
             throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_ALREADY_BOOKED_IN_CATEGORY);
+        }
+        if (slotRepository.countByBookingUserAndStatusInAndEinAbBezirk(
+                bookingUser, ACTIVE_BOOKING_STATUSES, bezirk) >= bezirk.getMaxActiveBookingsPerUser()) {
+            throw new ApiException(HttpStatus.CONFLICT, ApiErrorCode.USER_BOOKING_LIMIT_REACHED);
         }
         Integer minimumPickupCount = slot.getEinAb().getMinimumPickupCount();
         if (minimumPickupCount != null

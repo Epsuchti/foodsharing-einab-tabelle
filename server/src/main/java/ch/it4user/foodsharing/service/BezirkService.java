@@ -36,10 +36,18 @@ public class BezirkService {
     }
 
     @Transactional
-    public Bezirk updateCleaningStoreId(String slug, Long cleaningStoreId) {
+    public Bezirk updateSettings(String slug,
+                                 Long cleaningStoreId,
+                                 Boolean preventDuplicateTeacherBookings,
+                                 Boolean preventDuplicateCategoryBookings,
+                                 Integer maxActiveBookingsPerUser) {
         if (cleaningStoreId != null && cleaningStoreId <= 0) {
             throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED,
                     List.of("Cleaning store ID must be positive."));
+        }
+        if (maxActiveBookingsPerUser != null && maxActiveBookingsPerUser < 1) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.VALIDATION_FAILED,
+                    List.of("Maximum active bookings per user must be positive."));
         }
         Bezirk bezirk = requireActive(slug);
         if (cleaningStoreId != null
@@ -48,6 +56,15 @@ public class BezirkService {
                     List.of("Cleaning store ID is already assigned to another Bezirk."));
         }
         bezirk.setCleaningStoreId(cleaningStoreId);
+        if (preventDuplicateTeacherBookings != null) {
+            bezirk.setPreventDuplicateTeacherBookings(preventDuplicateTeacherBookings);
+        }
+        if (preventDuplicateCategoryBookings != null) {
+            bezirk.setPreventDuplicateCategoryBookings(preventDuplicateCategoryBookings);
+        }
+        if (maxActiveBookingsPerUser != null) {
+            bezirk.setMaxActiveBookingsPerUser(maxActiveBookingsPerUser);
+        }
         if (cleaningStoreId == null) {
             storeAutomationRepository.findAllByBezirkAndCleaningRuleEnabledTrue(bezirk)
                     .forEach(automation -> automation.setCleaningRuleEnabled(false));
