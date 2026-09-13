@@ -84,6 +84,7 @@ public class MessageTemplateService {
 
     public String teacherBookingConfirmationBody(LanguageCode language, Slot slot) {
         Map<String, String> details = new LinkedHashMap<>();
+        details.put(message(language, "message.details.foodsharing-id"), slot.getBookingUser().getFoodsharingId());
         details.put(message(language, "message.details.category"), categoryLabel(language, slot.getEinAb().getCategory()));
         details.put(message(language, "message.details.start"), swissDateTime(slot.getEinAb().getStartDateTime()));
         return String.join("\n\n",
@@ -98,6 +99,7 @@ public class MessageTemplateService {
 
     public String teacherBookingCancellationBody(LanguageCode language, Slot slot) {
         Map<String, String> details = new LinkedHashMap<>();
+        details.put(message(language, "message.details.foodsharing-id"), slot.getBookingUser().getFoodsharingId());
         details.put(message(language, "message.details.category"), categoryLabel(language, slot.getEinAb().getCategory()));
         details.put(message(language, "message.details.start"), swissDateTime(slot.getEinAb().getStartDateTime()));
         return String.join("\n\n",

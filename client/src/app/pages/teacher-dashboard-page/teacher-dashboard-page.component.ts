@@ -539,7 +539,7 @@ export class TeacherDashboardPageComponent implements OnInit {
     publicLocation.setValidators(isOnline ? [] : [Validators.required]);
     onlineCallLink.setValidators(isOnline ? [Validators.required] : []);
     if (isOnline) {
-      this.einabForm.patchValue({ location: '', publicLocation: '', privateInfo: '', publicInfo: '', visitFairteiler: false, slotCount: 1, minimumPickupCount: null }, { emitEvent: false });
+      this.einabForm.patchValue({ location: '', publicLocation: '', visitFairteiler: false, slotCount: 1, minimumPickupCount: null }, { emitEvent: false });
     } else {
       this.einabForm.patchValue({ onlineCallLink: '' }, { emitEvent: false });
     }
